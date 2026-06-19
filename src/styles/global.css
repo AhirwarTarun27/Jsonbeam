@@ -44,6 +44,15 @@
   --color-highlight-pink: #ff0080;
   --color-highlight-magenta: #eb367f;
 
+  /* ── Editor surfaces — the dark code workbench (= DESIGN.md `code-editor-mockup`,
+     {colors.primary}) plus its light variant. Syntax colours reuse the palette
+     above so the live editor matches the homepage mockups exactly. ─────────── */
+  --color-editor-bg: #171717;        /* dark code surface */
+  --color-editor-fg: #ededed;        /* soft near-white keys/text (matches the hero mockup) */
+  --color-editor-line: #1e1e1e;      /* active-line tint on dark */
+  --color-editor-sel-dark: #2d4a63;  /* calm desaturated-blue selection on dark */
+  --color-editor-sel-light: #dbe7fb; /* calm selection on the light canvas */
+
   /* Brand mesh-gradient stops (hero scale only — never miniaturised) */
   --color-grad-develop-start: #007cf0;
   --color-grad-develop-end: #00dfd8;

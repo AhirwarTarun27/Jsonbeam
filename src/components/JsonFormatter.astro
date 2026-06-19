@@ -34,6 +34,13 @@
 		</label>
 
 		<div class="ml-auto flex items-center gap-1.5">
+			<button
+				type="button"
+				data-action="theme"
+				class="jb-btn jb-btn-icon"
+				aria-label="Switch to light editor theme"
+				title="Toggle dark / light editor"
+			><span data-theme-icon aria-hidden="true"></span></button>
 			<button type="button" data-action="sample" class="jb-btn" title="Load a messy sample to try Repair">Sample</button>
 			<button type="button" data-action="copy" class="jb-btn" title="Copy to clipboard">Copy</button>
 			<button type="button" data-action="download" class="jb-btn" title="Download as data.json">Download</button>
@@ -86,19 +93,45 @@
 	.jb-btn-primary:hover {
 		background: #2a2a2a;
 	}
+	.jb-btn-icon {
+		width: 32px;
+		padding: 0;
+		justify-content: center;
+		color: var(--color-body);
+	}
+	/* Dark by default so the mount area matches the editor before hydration. */
+	#jb-editor {
+		background-color: var(--color-editor-bg);
+	}
 	#jb-editor :global(.cm-editor) {
 		height: 100%;
+	}
+
+	/*
+	 * Selection fix. The site-wide ::selection paints an ink block with
+	 * near-white text — right for marketing copy, but it washed code out to
+	 * near-invisibility inside the editor. Override it per theme so selected
+	 * JSON always stays readable (default = dark editor).
+	 */
+	:global(#jb-editor .cm-editor ::selection) {
+		color: var(--color-on-primary);
+		background-color: var(--color-editor-sel-dark);
+	}
+	:global(#jb-editor.jb-theme-light .cm-editor ::selection) {
+		color: var(--color-ink);
+		background-color: var(--color-editor-sel-light);
 	}
 
 	/* Inflate dense in-app controls to the 44px touch floor on coarse pointers. */
 	@media (pointer: coarse) {
 		.jb-btn { height: 44px; }
+		.jb-btn-icon { width: 44px; }
 		#jb-indent { height: 44px; }
 	}
 </style>
 
 <script>
-	import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, drawSelection, highlightSpecialChars } from '@codemirror/view';
+	import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, highlightSpecialChars } from '@codemirror/view';
 	import { Compartment } from '@codemirror/state';
 	import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 	import { json } from '@codemirror/lang-json';
@@ -111,6 +144,8 @@
 	const root = document.getElementById('jb-formatter');
 	const mount = document.getElementById('jb-editor');
 	if (root && mount) {
+		// Non-null alias so the narrowing survives into the closures below.
+		const editorEl = mount;
 		const DEFAULT_DOC = [
 			'{',
 			'  "app": "JSON Beam",',
@@ -130,34 +165,67 @@
 			'}',
 		].join('\n');
 
-		// ── Theme + syntax colours (all from the brand palette) ──────────────
-		const jbTheme = EditorView.theme(
-			{
-				'&': { backgroundColor: 'var(--color-canvas)', color: 'var(--color-ink)', fontSize: '13px', height: '100%' },
-				'&.cm-focused': { outline: 'none' },
-				'.cm-scroller': { fontFamily: 'var(--font-mono)', lineHeight: '1.6' },
-				'.cm-content': { padding: '14px 0', caretColor: 'var(--color-ink)' },
-				'.cm-gutters': { backgroundColor: 'var(--color-canvas)', color: 'var(--color-mute)', border: 'none', borderRight: '1px solid var(--color-hairline)' },
-				'.cm-lineNumbers .cm-gutterElement': { padding: '0 10px 0 14px' },
-				'.cm-activeLine': { backgroundColor: 'var(--color-canvas-soft)' },
-				'.cm-activeLineGutter': { backgroundColor: 'var(--color-canvas-soft)', color: 'var(--color-body)' },
-				'.cm-cursor': { borderLeftColor: 'var(--color-ink)' },
-				'.cm-selectionBackground, &.cm-focused .cm-selectionBackground': { backgroundColor: 'var(--color-link-bg-soft)' },
-				'.cm-matchingBracket': { backgroundColor: 'var(--color-link-bg-soft)', outline: 'none' },
-				'.cm-tooltip': { border: '1px solid var(--color-hairline)', backgroundColor: 'var(--color-canvas)', borderRadius: '6px', boxShadow: 'var(--shadow-e4)', overflow: 'hidden' },
-				'.cm-diagnostic': { fontFamily: 'var(--font-sans)', fontSize: '13px', padding: '6px 10px' },
-				'.cm-diagnostic-error': { borderLeftColor: 'var(--color-error)' },
-			},
-			{ dark: false }
-		);
+		// ── Theme + syntax — dark code workbench (default) or light variant ──
+		// Surface + palette mirror DESIGN.md's `code-editor-mockup` and the
+		// homepage hero/workbench mockups, so the live editor matches them.
+		type Mode = 'dark' | 'light';
 
-		const jbHighlight = HighlightStyle.define([
-			{ tag: t.propertyName, color: 'var(--color-ink)', fontWeight: '500' },
-			{ tag: t.string, color: 'var(--color-link-deep)' },
-			{ tag: t.number, color: 'var(--color-violet)' },
-			{ tag: [t.bool, t.null], color: 'var(--color-cyan-deep)' },
-			{ tag: [t.brace, t.squareBracket, t.punctuation, t.separator], color: 'var(--color-mute)' },
-		]);
+		function editorTheme(mode: Mode) {
+			const dark = mode === 'dark';
+			return EditorView.theme(
+				{
+					'&': { backgroundColor: dark ? 'var(--color-editor-bg)' : 'var(--color-canvas)', color: dark ? 'var(--color-editor-fg)' : 'var(--color-ink)', colorScheme: dark ? 'dark' : 'light', fontSize: '13px', height: '100%' },
+					'&.cm-focused': { outline: 'none' },
+					'.cm-scroller': { fontFamily: 'var(--font-mono)', lineHeight: '1.6' },
+					'.cm-content': { padding: '14px 0', caretColor: dark ? 'var(--color-editor-fg)' : 'var(--color-ink)' },
+					'.cm-gutters': { backgroundColor: dark ? 'var(--color-editor-bg)' : 'var(--color-canvas)', color: dark ? 'var(--color-hairline-strong)' : 'var(--color-mute)', border: 'none', borderRight: dark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid var(--color-hairline)' },
+					'.cm-lineNumbers .cm-gutterElement': { padding: '0 10px 0 14px' },
+					'.cm-activeLine': { backgroundColor: dark ? 'var(--color-editor-line)' : 'var(--color-canvas-soft)' },
+					'.cm-activeLineGutter': { backgroundColor: dark ? 'var(--color-editor-line)' : 'var(--color-canvas-soft)', color: dark ? 'var(--color-editor-fg)' : 'var(--color-body)' },
+					'.cm-matchingBracket': { backgroundColor: dark ? 'rgba(255, 255, 255, 0.14)' : 'var(--color-canvas-soft-2)', outline: dark ? '1px solid rgba(255, 255, 255, 0.22)' : '1px solid var(--color-hairline-strong)' },
+					'.cm-tooltip': { border: dark ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid var(--color-hairline)', backgroundColor: dark ? 'var(--color-editor-line)' : 'var(--color-canvas)', color: dark ? 'var(--color-editor-fg)' : 'var(--color-ink)', borderRadius: '6px', boxShadow: 'var(--shadow-e4)', overflow: 'hidden' },
+					'.cm-diagnostic': { fontFamily: 'var(--font-sans)', fontSize: '13px', padding: '6px 10px' },
+					'.cm-diagnostic-error': { borderLeftColor: 'var(--color-error)' },
+				},
+				{ dark }
+			);
+		}
+
+		function editorHighlight(mode: Mode) {
+			return mode === 'dark'
+				? HighlightStyle.define([
+						{ tag: t.propertyName, color: 'var(--color-editor-fg)', fontWeight: '500' },
+						{ tag: t.string, color: 'var(--color-cyan)' },
+						{ tag: t.number, color: 'var(--color-violet-soft)' },
+						{ tag: [t.bool, t.null], color: 'var(--color-warning)' },
+						{ tag: [t.brace, t.squareBracket, t.punctuation, t.separator], color: 'var(--color-hairline-strong)' },
+					])
+				: HighlightStyle.define([
+						{ tag: t.propertyName, color: 'var(--color-ink)', fontWeight: '500' },
+						{ tag: t.string, color: 'var(--color-link-deep)' },
+						{ tag: t.number, color: 'var(--color-violet)' },
+						{ tag: [t.bool, t.null], color: 'var(--color-cyan-deep)' },
+						{ tag: [t.brace, t.squareBracket, t.punctuation, t.separator], color: 'var(--color-mute)' },
+					]);
+		}
+
+		function themeExtensions(mode: Mode) {
+			return [editorTheme(mode), syntaxHighlighting(editorHighlight(mode))];
+		}
+
+		// Persisted editor theme — default dark (the developer-native, on-brand surface).
+		const THEME_KEY = 'jb-theme';
+		function readMode(): Mode {
+			try {
+				const stored = localStorage.getItem(THEME_KEY);
+				if (stored === 'light' || stored === 'dark') return stored;
+			} catch {
+				/* storage blocked (private mode / disabled) — fall through to default */
+			}
+			return 'dark';
+		}
+		const themeComp = new Compartment();
+		let mode: Mode = readMode();
 
 		// ── Validation: precise, line-anchored error messages (see lib/json.ts) ─
 		function diagnostics(view: EditorView): Diagnostic[] {
@@ -210,18 +278,16 @@
 				highlightActiveLineGutter(),
 				highlightSpecialChars(),
 				history(),
-				drawSelection(),
 				indentOnInput(),
 				bracketMatching(),
 				foldGutter(),
 				highlightActiveLine(),
 				indentComp.of(indentUnit.of(indentStrings[indentKey])),
 				json(),
-				syntaxHighlighting(jbHighlight),
+				themeComp.of(themeExtensions(mode)),
 				linter(diagnostics, { delay: 350 }),
 				lintGutter(),
 				keymap.of([...defaultKeymap, ...historyKeymap, ...foldKeymap, indentWithTab]),
-				jbTheme,
 				EditorView.contentAttributes.of({ 'aria-label': 'JSON editor', spellcheck: 'false' }),
 				EditorView.updateListener.of((u) => {
 					if (u.docChanged) {
@@ -304,6 +370,30 @@
 			URL.revokeObjectURL(url);
 		}
 
+		// ── Theme toggle (icon shows the theme you'll switch *to*) ───────────
+		const ICON_SUN =
+			'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>';
+		const ICON_MOON =
+			'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"></path></svg>';
+		const themeBtn = root.querySelector<HTMLButtonElement>('[data-action="theme"]');
+		const themeIcon = themeBtn?.querySelector<HTMLElement>('[data-theme-icon]') ?? null;
+
+		function paintThemeButton() {
+			if (themeIcon) themeIcon.innerHTML = mode === 'dark' ? ICON_SUN : ICON_MOON;
+			if (themeBtn) themeBtn.setAttribute('aria-label', mode === 'dark' ? 'Switch to light editor theme' : 'Switch to dark editor theme');
+			editorEl.classList.toggle('jb-theme-light', mode === 'light');
+		}
+		function applyMode(next: Mode) {
+			mode = next;
+			view.dispatch({ effects: themeComp.reconfigure(themeExtensions(mode)) });
+			try {
+				localStorage.setItem(THEME_KEY, mode);
+			} catch {
+				/* storage blocked — keep the choice in memory for this session */
+			}
+			paintThemeButton();
+		}
+
 		const actions: Record<string, () => void | Promise<void>> = {
 			format: doFormat,
 			minify: doMinify,
@@ -313,6 +403,7 @@
 			download: doDownload,
 			clear: () => { setText(''); view.focus(); },
 			sample: () => setText(MESSY_DOC),
+			theme: () => applyMode(mode === 'dark' ? 'light' : 'dark'),
 		};
 
 		root.querySelectorAll('[data-action]').forEach((btn) => {
@@ -334,6 +425,7 @@
 			});
 		}
 
+		paintThemeButton();
 		refreshStatus();
 	}
 </script>
