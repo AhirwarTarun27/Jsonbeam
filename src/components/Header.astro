@@ -1,0 +1,85 @@
+---
+/**
+ * Sticky top nav. Logo + a focused link set + one ink CTA. Marketing pages
+ * ship zero JS, so the mobile menu is a native <details> disclosure.
+ * Nav-scale buttons use the 6px radius (not the marketing 100px pill).
+ */
+import { SITE_NAME } from '../consts';
+
+const links = [
+	{ label: 'Formatter', href: '/json-formatter' },
+	{ label: 'Tools', href: '/#tools' },
+	{ label: 'FAQ', href: '/#faq' },
+];
+---
+
+<header
+	class="sticky top-0 z-50 border-b border-hairline bg-canvas/80 backdrop-blur-md"
+>
+	<div class="container-page flex h-16 items-center justify-between gap-4">
+		<!-- Logo -->
+		<a href="/" class="flex shrink-0 items-center gap-2.5" aria-label={`${SITE_NAME} home`}>
+			<span
+				class="grid h-7 w-7 place-items-center rounded-md bg-ink font-mono text-code leading-none text-on-primary"
+			>{'{}'}</span>
+			<span class="text-body-lg font-semibold tracking-[-0.4px]">JSON Beam</span>
+		</a>
+
+		<!-- Desktop links -->
+		<nav class="hidden items-center gap-1 md:flex" aria-label="Primary">
+			{
+				links.map((l) => (
+					<a
+						href={l.href}
+						class="rounded-full px-3 py-2 text-body-sm text-body transition-colors hover:bg-canvas-soft hover:text-ink"
+					>
+						{l.label}
+					</a>
+				))
+			}
+		</nav>
+
+		<!-- Desktop CTA -->
+		<div class="hidden md:flex">
+			<a
+				href="/json-formatter"
+				class="inline-flex h-8 items-center rounded-sm bg-ink px-3 text-body-sm font-medium text-on-primary transition-colors hover:bg-ink/85"
+			>
+				Format JSON
+			</a>
+		</div>
+
+		<!-- Mobile menu (no JS — native disclosure) -->
+		<details class="relative md:hidden">
+			<summary
+				class="grid h-11 w-11 cursor-pointer place-items-center rounded-md text-ink marker:hidden [&::-webkit-details-marker]:hidden"
+				aria-label="Open menu"
+			>
+				<svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+					<path d="M3 6h14M3 10h14M3 14h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+				</svg>
+			</summary>
+			<nav
+				class="absolute right-0 mt-2 w-52 rounded-md border border-hairline bg-canvas p-2 shadow-e4"
+				aria-label="Mobile"
+			>
+				{
+					links.map((l) => (
+						<a
+							href={l.href}
+							class="flex min-h-11 items-center rounded-sm px-3 text-body-sm text-body transition-colors hover:bg-canvas-soft hover:text-ink"
+						>
+							{l.label}
+						</a>
+					))
+				}
+				<a
+					href="/json-formatter"
+					class="mt-1 flex min-h-11 items-center justify-center rounded-sm bg-ink px-3 text-body-sm font-medium text-on-primary"
+				>
+					Format JSON
+				</a>
+			</nav>
+		</details>
+	</div>
+</header>

@@ -1,11 +1,282 @@
 ---
-import Welcome from '../components/Welcome.astro';
 import Layout from '../layouts/Layout.astro';
+import Button from '../components/Button.astro';
+import MeshGradient from '../components/MeshGradient.astro';
+import { SITE_NAME, SITE_URL, SITE_DESCRIPTION } from '../consts';
+import { webSite, softwareApplication, faqPage, type FaqItem } from '../lib/jsonld';
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+const title = `${SITE_NAME} — The fast, private JSON workbench`;
+
+const promises = [
+	{
+		title: 'Private by design',
+		body: 'Every byte is processed in your browser. Nothing is uploaded, logged, or sent to a server. Ever.',
+		icon: 'shield',
+	},
+	{
+		title: 'No ceiling',
+		body: 'Format and explore files into the tens of megabytes without freezing the tab — where other tools give up.',
+		icon: 'layers',
+	},
+	{
+		title: 'Instant',
+		body: 'Sub-second load. The editor is usable before the rest of the page has even finished painting.',
+		icon: 'bolt',
+	},
+	{
+		title: 'Free forever',
+		body: 'No ads. No signup. No dark patterns. The core is open source — verifiable, not just promised.',
+		icon: 'heart',
+	},
+];
+
+const tools = [
+	{ name: 'JSON Formatter', href: '/json-formatter', desc: 'Beautify, minify, repair, and validate — the anchor tool.', live: true },
+	{ name: 'JSON Validator', href: '/json-validator', desc: 'Pinpoint syntax errors with line-anchored messages.', live: false },
+	{ name: 'JSON Repair', href: '/json-repair', desc: 'Fix trailing commas, single quotes, comments, unquoted keys.', live: false },
+	{ name: 'JSON Minifier', href: '/json-minifier', desc: 'Strip whitespace down to the smallest possible payload.', live: false },
+	{ name: 'Tree & Graph Viewer', href: '/json-viewer', desc: 'Explore structure visually — pan, zoom, collapse subtrees.', live: false },
+	{ name: 'JSON → CSV / YAML / TS', href: '/json-to-csv', desc: 'Convert between JSON and the formats you actually ship.', live: false },
+];
+
+const faqs: FaqItem[] = [
+	{
+		question: 'Is my JSON uploaded to a server?',
+		answer:
+			'No. JSON Beam runs entirely in your browser using client-side JavaScript. Your data is never uploaded, transmitted, logged, or stored anywhere. You can confirm this by opening your browser dev tools network tab, or by using the tool fully offline.',
+	},
+	{
+		question: 'Does JSON Beam cost anything?',
+		answer:
+			'No. The core tools are free forever, with no ads, no account, and no usage limits. The project is built to be open source so the privacy claims are verifiable rather than just stated.',
+	},
+	{
+		question: 'How large a file can it handle?',
+		answer:
+			'Far more than typical online formatters. Parsing and formatting are engineered to handle files into the tens of megabytes without freezing the tab, with large-file streaming and virtualization expanding that ceiling further.',
+	},
+	{
+		question: 'Do I need to install anything?',
+		answer:
+			'No. JSON Beam is a website that works in any modern browser. It can also be installed as a progressive web app and used offline, with no extensions or downloads required.',
+	},
+];
+
+// Hand-coloured JSON for the hero mockup. Built as a string so literal braces
+// don't collide with Astro's expression syntax; rendered via set:html.
+const heroSnippet = [
+	'<span class="p">{</span>',
+	'  <span class="k">"app"</span><span class="p">:</span> <span class="s">"JSON Beam"</span><span class="p">,</span>',
+	'  <span class="k">"private"</span><span class="p">:</span> <span class="b">true</span><span class="p">,</span>',
+	'  <span class="k">"upload"</span><span class="p">:</span> <span class="n">null</span><span class="p">,</span>',
+	'  <span class="k">"maxFileSizeMB"</span><span class="p">:</span> <span class="n">100</span><span class="p">,</span>',
+	'  <span class="k">"modes"</span><span class="p">:</span> <span class="p">[</span><span class="s">"text"</span><span class="p">,</span> <span class="s">"tree"</span><span class="p">,</span> <span class="s">"table"</span><span class="p">,</span> <span class="s">"graph"</span><span class="p">]</span>',
+	'<span class="p">}</span>',
+].join('\n');
+
+const jsonLd = [
+	webSite(),
+	softwareApplication({ name: SITE_NAME, description: SITE_DESCRIPTION, url: SITE_URL }),
+	faqPage(faqs),
+];
 ---
 
-<Layout>
-	<Welcome />
+<Layout title={title} jsonLd={jsonLd}>
+	<!-- ── Hero ─────────────────────────────────────────────────────────── -->
+	<section class="relative overflow-hidden">
+		<MeshGradient />
+		<div class="container-page relative z-10 flex flex-col items-center pt-24 pb-16 text-center sm:pt-28">
+			<span
+				class="inline-flex items-center gap-2 rounded-full bg-canvas-soft px-3 py-1 font-mono text-caption text-body shadow-e1"
+			>
+				<span class="inline-block h-1.5 w-1.5 rounded-full bg-cyan-deep"></span>
+				100% client-side · nothing uploaded
+			</span>
+
+			<h1 class="mt-6 max-w-3xl text-balance text-display-xl">
+				The JSON workbench that never leaves your browser.
+			</h1>
+
+			<p class="mt-5 max-w-2xl text-body-lg text-body">
+				Format, validate, repair, and convert JSON instantly — free, private, and
+				fast enough for the files other tools choke on.
+			</p>
+
+			<div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+				<Button href="/json-formatter">Open the formatter</Button>
+				<Button href="#tools" variant="secondary">Explore tools</Button>
+			</div>
+
+			<p class="mt-5 font-mono text-caption text-mute">
+				No upload · No signup · Works offline
+			</p>
+
+			<!-- Static code mockup (code-editor-mockup token) -->
+			<div class="mt-14 w-full max-w-2xl text-left">
+				<div class="overflow-hidden rounded-md bg-ink shadow-e5">
+					<div class="flex items-center gap-2 border-b border-white/10 px-4 py-3">
+						<span class="h-3 w-3 rounded-full bg-white/20"></span>
+						<span class="h-3 w-3 rounded-full bg-white/20"></span>
+						<span class="h-3 w-3 rounded-full bg-white/20"></span>
+						<span class="ml-3 font-mono text-caption text-white/45">data.json</span>
+					</div>
+					<pre class="hero-code overflow-x-auto p-6 font-mono text-code leading-relaxed"><code set:html={heroSnippet} /></pre>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- ── Brand promises ───────────────────────────────────────────────── -->
+	<section class="bg-canvas-soft">
+		<div class="container-page py-24">
+			<div class="max-w-2xl">
+				<p class="font-mono text-caption uppercase tracking-wide text-mute">Why JSON Beam</p>
+				<h2 class="mt-3 text-display-lg">Built for the JSON you actually work with.</h2>
+			</div>
+			<div class="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+				{
+					promises.map((p) => (
+						<div class="rounded-md bg-canvas p-6 shadow-e3">
+							<div class="grid h-9 w-9 place-items-center rounded-md bg-canvas-soft-2 text-ink">
+								<svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+									{p.icon === 'shield' && (
+										<path d="M10 2 3.5 4.5v4c0 3.7 2.7 7.1 6.5 8 3.8-.9 6.5-4.3 6.5-8v-4L10 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+									)}
+									{p.icon === 'layers' && (
+										<path d="M10 3 3 6.5 10 10l7-3.5L10 3Zm-7 7L10 13.5 17 10m-14 3.5L10 17l7-3.5" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" />
+									)}
+									{p.icon === 'bolt' && (
+										<path d="M11 2 4 11h5l-1 7 7-9h-5l1-7Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+									)}
+									{p.icon === 'heart' && (
+										<path d="M10 16.5S3.5 12.4 3.5 7.8A3.3 3.3 0 0 1 10 6a3.3 3.3 0 0 1 6.5 1.8c0 4.6-6.5 8.7-6.5 8.7Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+									)}
+								</svg>
+							</div>
+							<h3 class="mt-4 text-display-sm">{p.title}</h3>
+							<p class="mt-2 text-body-sm text-body">{p.body}</p>
+						</div>
+					))
+				}
+			</div>
+		</div>
+	</section>
+
+	<!-- ── Dark workbench band (polarity flip = depth cue) ──────────────── -->
+	<section class="bg-ink text-on-primary">
+		<div class="container-page py-24">
+			<div class="grid items-center gap-12 lg:grid-cols-2">
+				<div>
+					<p class="font-mono text-caption uppercase tracking-wide text-white/45">The workbench</p>
+					<h2 class="mt-3 text-display-lg">One document. Every view.</h2>
+					<p class="mt-4 max-w-md text-body-md text-white/65">
+						Text, tree, table, and graph — four ways to read the same JSON, with
+						your edits round-tripping losslessly between them. The full workbench is
+						on the way; the formatter is live today.
+					</p>
+					<div class="mt-7">
+						<Button href="/json-formatter">Try the formatter now</Button>
+					</div>
+				</div>
+				<div class="rounded-md bg-white/[0.04] p-2 shadow-e1">
+					<div class="flex flex-wrap gap-1.5 rounded-sm bg-black/30 p-1.5">
+						{
+							['Text', 'Tree', 'Table', 'Graph'].map((mode, i) => (
+								<span
+									class:list={[
+										'rounded-sm px-4 py-2 font-mono text-body-sm',
+										i === 0 ? 'bg-white text-ink' : 'text-white/55',
+									]}
+								>
+									{mode}
+								</span>
+							))
+						}
+					</div>
+					<div class="px-4 py-6 font-mono text-code text-white/70">
+						<p><span class="text-white/35">// switch modes — never lose your edits</span></p>
+						<p class="mt-2">document.view = <span style="color: var(--color-cyan)">"tree"</span></p>
+						<p>document.dirty = <span style="color: var(--color-warning)">false</span></p>
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- ── Tools grid ───────────────────────────────────────────────────── -->
+	<section id="tools" class="scroll-mt-20 bg-canvas">
+		<div class="container-page py-24">
+			<div class="max-w-2xl">
+				<p class="font-mono text-caption uppercase tracking-wide text-mute">Tools</p>
+				<h2 class="mt-3 text-display-lg">Pick a tool. Each one is its own page.</h2>
+				<p class="mt-4 text-body-md text-body">
+					Focused, fast entry points — formatting today, the full suite rolling out next.
+				</p>
+			</div>
+			<div class="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+				{
+					tools.map((tool) =>
+						tool.live ? (
+							<a
+								href={tool.href}
+								class="group flex flex-col rounded-md bg-canvas p-6 shadow-e3 transition-shadow hover:shadow-e4"
+							>
+								<div class="flex items-center justify-between">
+									<h3 class="text-display-sm">{tool.name}</h3>
+									<span class="rounded-full bg-link-bg-soft px-2 py-0.5 text-caption text-link-deep">Live</span>
+								</div>
+								<p class="mt-2 text-body-sm text-body">{tool.desc}</p>
+								<span class="mt-4 inline-flex items-center gap-1 text-body-sm font-medium text-link">
+									Open
+									<span class="transition-transform group-hover:translate-x-0.5" aria-hidden="true">→</span>
+								</span>
+							</a>
+						) : (
+							<div class="flex flex-col rounded-md bg-canvas-soft p-6 shadow-e1">
+								<div class="flex items-center justify-between">
+									<h3 class="text-display-sm text-body">{tool.name}</h3>
+									<span class="rounded-full bg-canvas px-2 py-0.5 text-caption text-mute">Soon</span>
+								</div>
+								<p class="mt-2 text-body-sm text-mute">{tool.desc}</p>
+							</div>
+						),
+					)
+				}
+			</div>
+		</div>
+	</section>
+
+	<!-- ── FAQ ──────────────────────────────────────────────────────────── -->
+	<section id="faq" class="scroll-mt-20 bg-canvas-soft">
+		<div class="container-page py-24">
+			<div class="max-w-2xl">
+				<p class="font-mono text-caption uppercase tracking-wide text-mute">FAQ</p>
+				<h2 class="mt-3 text-display-lg">Questions, answered.</h2>
+			</div>
+			<div class="mt-10 max-w-3xl divide-y divide-hairline border-t border-hairline">
+				{
+					faqs.map((faq) => (
+						<details class="group py-5">
+							<summary class="flex cursor-pointer items-center justify-between gap-4 text-body-md font-medium text-ink marker:hidden [&::-webkit-details-marker]:hidden">
+								{faq.question}
+								<span class="text-mute transition-transform group-open:rotate-45" aria-hidden="true">+</span>
+							</summary>
+							<p class="mt-3 max-w-2xl text-body-md text-body">{faq.answer}</p>
+						</details>
+					))
+				}
+			</div>
+		</div>
+	</section>
+
+	<style is:global>
+		/* Hero mockup syntax tokens — all from the brand palette, on the ink card.
+		   Global (class-scoped) because the spans are injected via set:html, which
+		   Astro's scoped-style hashing does not reach. */
+		.hero-code .k { color: #ededed; }
+		.hero-code .s { color: var(--color-cyan); }
+		.hero-code .n { color: var(--color-violet-soft); }
+		.hero-code .b { color: var(--color-warning); }
+		.hero-code .p { color: var(--color-mute); }
+	</style>
 </Layout>

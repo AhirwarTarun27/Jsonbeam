@@ -1,0 +1,41 @@
+---
+/**
+ * Marketing-scale CTA — the 100px ink pill (`button-primary`) and its white
+ * sibling (`button-secondary`). Renders <a> when `href` is set, else <button>.
+ */
+interface Props {
+	href?: string;
+	variant?: 'primary' | 'secondary';
+	size?: 'md' | 'lg';
+	type?: 'button' | 'submit';
+	class?: string;
+}
+
+const {
+	href,
+	variant = 'primary',
+	size = 'lg',
+	type = 'button',
+	class: extra = '',
+} = Astro.props;
+
+const base =
+	'inline-flex items-center justify-center gap-2 rounded-pill font-medium transition-colors duration-150 select-none';
+
+const sizes: Record<string, string> = {
+	md: 'h-10 px-5 text-body-sm',
+	lg: 'h-12 px-6 text-body-md',
+};
+
+const variants: Record<string, string> = {
+	primary: 'bg-ink text-on-primary hover:bg-ink/85',
+	secondary: 'bg-canvas text-ink shadow-e1 hover:bg-canvas-soft',
+};
+
+const cls = `${base} ${sizes[size]} ${variants[variant]} ${extra}`;
+const Tag = href ? 'a' : 'button';
+---
+
+<Tag class={cls} href={href} type={href ? undefined : type}>
+	<slot />
+</Tag>

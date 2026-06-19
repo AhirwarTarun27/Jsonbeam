@@ -1,5 +1,5 @@
 {
-  "name": "regular-rotation",
+  "name": "jsonbeam",
   "type": "module",
   "version": "0.0.1",
   "engines": {
@@ -9,9 +9,32 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "check": "astro check",
+    "check:budget": "node scripts/check-budget.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "ci": "astro check && astro build && node scripts/check-budget.mjs && vitest run"
   },
   "dependencies": {
-    "astro": "^6.4.7"
+    "@astrojs/sitemap": "^3.7.3",
+    "@codemirror/commands": "^6.10.3",
+    "@codemirror/lang-json": "^6.0.2",
+    "@codemirror/language": "^6.12.3",
+    "@codemirror/lint": "^6.9.7",
+    "@codemirror/state": "^6.6.0",
+    "@codemirror/view": "^6.43.1",
+    "@fontsource/geist-mono": "^5.2.8",
+    "@fontsource/geist-sans": "^5.2.5",
+    "@lezer/highlight": "^1.2.3",
+    "@tailwindcss/vite": "^4.3.1",
+    "astro": "^6.4.7",
+    "jsonrepair": "^3.14.0",
+    "tailwindcss": "^4.3.1"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.9",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.9"
   }
 }

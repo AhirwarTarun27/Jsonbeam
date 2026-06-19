@@ -31,3 +31,5 @@ CLAUDE.md
 # Commit skills-lock.json (source of truth); ignore the generated content + local links.
 .agents/skills/
 .claude/skills/
+
+BUILD_PROMPT.md
