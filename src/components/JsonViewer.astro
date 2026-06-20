@@ -262,6 +262,7 @@ const sample = `{
 
 <script>
 	import { checkJson } from '../lib/json';
+	import { loadDoc, saveDoc } from '../lib/doc-store';
 
 	const root = document.getElementById('jb-viewer');
 	const inputEl = document.getElementById('jb-input') as HTMLTextAreaElement | null;
@@ -276,6 +277,12 @@ const sample = `{
 
 		// Captured once so the Sample button can restore the starting document.
 		const SAMPLE = input.value;
+
+		// "Paste once" carry: rehydrate the document the user already has going this
+		// session (from another tool) before the first render. A fresh visitor with
+		// nothing carried keeps the sample above, so the page still demos itself.
+		const carried = loadDoc();
+		if (carried !== null) input.value = carried;
 
 		const dot = root.querySelector<HTMLElement>('[data-dot]');
 		const label = root.querySelector<HTMLElement>('[data-label]');
@@ -590,6 +597,14 @@ const sample = `{
 			renderRoot(parsed);
 		}
 
+		// Re-render, then carry the working doc to the next tool page. Used for every
+		// user-driven change (typing, Sample, Clear) — never for the first-load seed,
+		// so a fresh visitor's demo document doesn't follow them around.
+		function applyInput(): void {
+			update();
+			saveDoc(input.value);
+		}
+
 		// ── Actions ──────────────────────────────────────────────────────────────
 		async function copyJson(): Promise<void> {
 			let out = input.value;
@@ -665,12 +680,12 @@ const sample = `{
 			theme: () => applyMode(mode === 'dark' ? 'light' : 'dark'),
 			sample: () => {
 				input.value = SAMPLE;
-				update();
+				applyInput();
 			},
 			copy: copyJson,
 			clear: () => {
 				input.value = '';
-				update();
+				applyInput();
 				input.focus();
 			},
 		};
@@ -701,7 +716,7 @@ const sample = `{
 		let inputTimer = 0;
 		input.addEventListener('input', () => {
 			clearTimeout(inputTimer);
-			inputTimer = window.setTimeout(update, 300);
+			inputTimer = window.setTimeout(applyInput, 300);
 		});
 
 		paintTheme();

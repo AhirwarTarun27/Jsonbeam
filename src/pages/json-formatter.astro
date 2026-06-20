@@ -1,19 +1,19 @@
 ---
-import Layout from '../layouts/Layout.astro';
-import JsonFormatter from '../components/JsonFormatter.astro';
-import { SITE_URL } from '../consts';
-import { softwareApplication, faqPage, breadcrumbs, type FaqItem } from '../lib/jsonld';
-
-const title = 'JSON Formatter — Beautify, Validate & Repair JSON';
-const description =
-	'Free online JSON formatter. Beautify, minify, validate, and repair JSON in your browser — 100% private, no upload, no signup. Fast even on large files.';
-const pageUrl = `${SITE_URL}/json-formatter`;
+import ToolPage from '../components/ToolPage.astro';
+import type { FaqItem } from '../lib/jsonld';
+import type { RelatedTool } from '../components/ToolPage.astro';
 
 const steps = [
 	{ title: 'Paste or type your JSON', body: 'Drop it straight into the editor. Nothing is uploaded — it stays in your browser.' },
 	{ title: 'Choose your indentation', body: 'Pick 2 spaces, 4 spaces, or tabs to match your codebase style.' },
 	{ title: 'Format, minify, or repair', body: 'Beautify for readability, minify for the wire, or repair to fix common mistakes.' },
 	{ title: 'Copy or download', body: 'Grab the result to your clipboard or save it as data.json in one click.' },
+];
+
+const whatIs = [
+	'JSON (JavaScript Object Notation) is the lingua franca of APIs and config files, but it is unforgiving about syntax and painful to read once it has been minified. A formatter re-indents it into a clean, scannable shape.',
+	"JSON Beam goes further than a pretty-printer. <strong class='font-medium text-ink'>Format</strong> re-indents with your chosen spacing; <strong class='font-medium text-ink'>Minify</strong> strips every byte of whitespace for the wire; <strong class='font-medium text-ink'>Validate</strong> underlines exactly where and why parsing fails; and <strong class='font-medium text-ink'>Repair</strong> fixes the usual suspects — trailing commas, single quotes, comments, and unquoted keys — then re-formats the result.",
+	'Everything runs locally in your browser, so you can safely format sensitive payloads, and it keeps working offline.',
 ];
 
 const faqs: FaqItem[] = [
@@ -44,140 +44,27 @@ const faqs: FaqItem[] = [
 	},
 ];
 
-const related = [
+const related: RelatedTool[] = [
 	{ name: 'JSON Validator', href: '/json-validator', desc: 'Line-anchored syntax errors.' },
 	{ name: 'JSON Repair', href: '/json-repair', desc: 'Auto-fix broken JSON.' },
 	{ name: 'JSON Minifier', href: '/json-minifier', desc: 'Smallest possible payload.' },
 	{ name: 'JSON Beautifier', href: '/json-beautifier', desc: 'Clean, readable indentation.' },
 ];
-
-const jsonLd = [
-	softwareApplication({ name: 'JSON Beam — JSON Formatter', description, url: pageUrl }),
-	faqPage(faqs),
-	breadcrumbs([
-		{ name: 'Home', url: SITE_URL },
-		{ name: 'JSON Formatter', url: pageUrl },
-	]),
-];
 ---
 
-<Layout title={title} description={description} jsonLd={jsonLd}>
-	<section class="border-b border-hairline bg-canvas-soft">
-		<div class="container-page py-10">
-			<!-- Breadcrumb -->
-			<nav aria-label="Breadcrumb" class="font-mono text-caption text-mute">
-				<a href="/" class="hover:text-ink">Home</a>
-				<span class="px-1.5">/</span>
-				<span class="text-body">JSON Formatter</span>
-			</nav>
-
-			<h1 class="mt-4 max-w-3xl text-display-lg">
-				JSON formatter, validator &amp; repair — right in your browser.
-			</h1>
-			<p class="mt-4 max-w-2xl text-body-lg text-body">
-				Beautify, minify, validate, and fix JSON instantly. Private by design —
-				nothing you paste ever leaves your browser.
-			</p>
-		</div>
-	</section>
-
-	<!-- The tool -->
-	<section class="bg-canvas">
-		<div class="container-page py-10">
-			<JsonFormatter />
-		</div>
-	</section>
-
-	<!-- How to -->
-	<section class="bg-canvas-soft">
-		<div class="container-page py-20">
-			<div class="max-w-2xl">
-				<p class="font-mono text-caption uppercase tracking-wide text-mute">How to use it</p>
-				<h2 class="mt-3 text-display-md">Format JSON in four steps.</h2>
-			</div>
-			<ol class="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-				{
-					steps.map((step, i) => (
-						<li class="rounded-md bg-canvas p-6 shadow-e2">
-							<span class="font-mono text-caption text-mute">0{i + 1}</span>
-							<h3 class="mt-2 text-display-sm">{step.title}</h3>
-							<p class="mt-2 text-body-sm text-body">{step.body}</p>
-						</li>
-					))
-				}
-			</ol>
-		</div>
-	</section>
-
-	<!-- What is -->
-	<section class="bg-canvas">
-		<div class="container-page grid gap-10 py-20 lg:grid-cols-[1fr_1.4fr]">
-			<div>
-				<p class="font-mono text-caption uppercase tracking-wide text-mute">What it is</p>
-				<h2 class="mt-3 text-display-md">A formatter that does the whole job.</h2>
-			</div>
-			<div class="max-w-2xl space-y-4 text-body-md text-body">
-				<p>
-					JSON (JavaScript Object Notation) is the lingua franca of APIs and config
-					files, but it is unforgiving about syntax and painful to read once it has
-					been minified. A formatter re-indents it into a clean, scannable shape.
-				</p>
-				<p>
-					JSON Beam goes further than a pretty-printer. <strong class="font-medium text-ink">Format</strong>
-					re-indents with your chosen spacing; <strong class="font-medium text-ink">Minify</strong>
-					strips every byte of whitespace for the wire; <strong class="font-medium text-ink">Validate</strong>
-					underlines exactly where and why parsing fails; and <strong class="font-medium text-ink">Repair</strong>
-					fixes the usual suspects — trailing commas, single quotes, comments, and
-					unquoted keys — then re-formats the result.
-				</p>
-				<p>
-					Everything runs locally in your browser, so you can safely format
-					sensitive payloads, and it keeps working offline.
-				</p>
-			</div>
-		</div>
-	</section>
-
-	<!-- FAQ -->
-	<section class="bg-canvas-soft">
-		<div class="container-page grid gap-x-12 gap-y-8 py-20 lg:grid-cols-[1fr_1.7fr]">
-			<div>
-				<p class="font-mono text-caption uppercase tracking-wide text-mute">FAQ</p>
-				<h2 class="mt-3 text-display-md">JSON formatter questions.</h2>
-			</div>
-			<div class="divide-y divide-hairline border-t border-hairline">
-				{
-					faqs.map((faq) => (
-						<details class="group py-5">
-							<summary class="flex cursor-pointer items-center justify-between gap-4 text-body-md font-medium text-ink marker:hidden [&::-webkit-details-marker]:hidden">
-								{faq.question}
-								<span class="text-mute transition-transform group-open:rotate-45" aria-hidden="true">+</span>
-							</summary>
-							<p class="mt-3 text-body-md text-body">{faq.answer}</p>
-						</details>
-					))
-				}
-			</div>
-		</div>
-	</section>
-
-	<!-- Related tools -->
-	<section class="bg-canvas">
-		<div class="container-page py-20">
-			<h2 class="text-display-sm">Related tools</h2>
-			<div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-				{
-					related.map((tool) => (
-						<a
-							href={tool.href}
-							class="flex flex-col rounded-md bg-canvas-soft p-5 shadow-e1 transition-shadow hover:shadow-e3"
-						>
-							<h3 class="text-body-md font-medium text-ink">{tool.name}</h3>
-							<p class="mt-1.5 text-body-sm text-body">{tool.desc}</p>
-						</a>
-					))
-				}
-			</div>
-		</div>
-	</section>
-</Layout>
+<ToolPage
+	variant="format"
+	slug="/json-formatter"
+	title="JSON Formatter — Beautify, Validate & Repair JSON"
+	description="Free online JSON formatter. Beautify, minify, validate, and repair JSON in your browser — 100% private, no upload, no signup. Fast even on large files."
+	breadcrumbLabel="JSON Formatter"
+	h1="JSON formatter, validator &amp; repair — right in your browser."
+	intro="Beautify, minify, validate, and fix JSON instantly. Private by design — nothing you paste ever leaves your browser."
+	howToTitle="Format JSON in four steps."
+	steps={steps}
+	whatIsTitle="A formatter that does the whole job."
+	whatIs={whatIs}
+	faqTitle="JSON formatter questions."
+	faqs={faqs}
+	related={related}
+/>

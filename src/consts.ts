@@ -79,3 +79,57 @@ export const FOOTER_NAV: NavColumn[] = [
 		],
 	},
 ];
+
+/**
+ * In-app tool switcher surface. A compact, grouped rail rendered above every
+ * tool island (see `ToolSwitcher.astro`) so any tool is one click away from
+ * inside any tool page — discoverability without scroll-hunting the footer.
+ * Mirrors FOOTER_NAV's tool entries, but with short, rail-friendly labels.
+ */
+export interface ToolTab {
+	/** Short rail label, e.g. "Validate". */
+	label: string;
+	href: string;
+	soon?: boolean;
+}
+export interface ToolTabGroup {
+	/** Job-based cluster: Format · View · Query · Convert. */
+	title: string;
+	items: ToolTab[];
+}
+
+export const TOOL_NAV: ToolTabGroup[] = [
+	{
+		title: 'Format',
+		items: [
+			{ label: 'Format', href: '/json-formatter' },
+			{ label: 'Beautify', href: '/json-beautifier' },
+			{ label: 'Minify', href: '/json-minifier' },
+			{ label: 'Validate', href: '/json-validator' },
+			{ label: 'Repair', href: '/json-repair' },
+		],
+	},
+	{
+		title: 'View',
+		items: [
+			{ label: 'Viewer', href: '/json-viewer' },
+			{ label: 'Tree', href: '/json-tree-viewer', soon: true },
+			{ label: 'Graph', href: '/json-graph-viewer', soon: true },
+			{ label: 'Table', href: '/json-table-viewer', soon: true },
+			{ label: 'Diff', href: '/json-diff', soon: true },
+		],
+	},
+	{
+		title: 'Query',
+		items: [{ label: 'jq / JSONPath', href: '/json-query', soon: true }],
+	},
+	{
+		title: 'Convert',
+		items: [
+			{ label: 'CSV', href: '/json-to-csv', soon: true },
+			{ label: 'YAML', href: '/json-to-yaml', soon: true },
+			{ label: 'TypeScript', href: '/json-to-typescript', soon: true },
+			{ label: 'Go', href: '/json-to-go', soon: true },
+		],
+	},
+];

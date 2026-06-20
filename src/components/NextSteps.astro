@@ -1,0 +1,40 @@
+---
+/**
+ * Contextual "do next" strip, rendered right under the tool island (at the
+ * result) so one job flows into the next without scrolling to the footer.
+ * Derived from the page's own `related` tools (live ones only) — zero per-page
+ * config. Bordered in-app buttons (.jb-btn), short verbs — never the pill.
+ *
+ * This is the static, tool-level version; the result-aware variant (tailor the
+ * chips to the live validate/format outcome) rides in with the shared-document
+ * engine — see the build notes.
+ */
+import type { RelatedTool } from './ToolPage.astro';
+
+interface Props {
+	items: RelatedTool[];
+}
+const { items } = Astro.props;
+
+// Up to three live suggestions; strip the leading "JSON " for a tight label.
+const steps = items
+	.filter((t) => !t.soon)
+	.slice(0, 3)
+	.map((t) => ({ ...t, short: t.name.replace(/^JSON\s+/i, '') }));
+---
+
+{
+	steps.length > 0 && (
+		<div class="mt-3 flex flex-wrap items-center gap-2">
+			<span class="font-mono text-caption uppercase tracking-wide text-mute">Next</span>
+			{steps.map((t) => (
+				<a href={t.href} class="jb-btn" title={t.desc}>
+					{t.short}
+					<span class="ml-1.5 text-mute" aria-hidden="true">
+						→
+					</span>
+				</a>
+			))}
+		</div>
+	)
+}

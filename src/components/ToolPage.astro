@@ -13,6 +13,9 @@
  */
 import Layout from '../layouts/Layout.astro';
 import JsonFormatter from './JsonFormatter.astro';
+import ToolSwitcher from './ToolSwitcher.astro';
+import NextSteps from './NextSteps.astro';
+import CommandPalette from './CommandPalette.astro';
 import { SITE_URL, type ToolVariant } from '../consts';
 import { softwareApplication, faqPage, breadcrumbs, type FaqItem } from '../lib/jsonld';
 
@@ -100,9 +103,14 @@ const jsonLd = [
 	     otherwise the shared formatter island renders for the given variant. -->
 	<section class="bg-canvas">
 		<div class="container-page py-10">
+			<ToolSwitcher current={slug} />
 			<slot name="tool"><JsonFormatter variant={variant} /></slot>
+			<NextSteps items={related} />
 		</div>
 	</section>
+
+	<!-- ⌘K command palette: lazy-loaded loader script, no markup. Tool pages only. -->
+	<CommandPalette />
 
 	<!-- How to -->
 	<section class="bg-canvas-soft">

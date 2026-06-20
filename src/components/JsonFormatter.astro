@@ -126,6 +126,7 @@ const primaryAction: 'format' | 'minify' | 'validate' | 'repair' =
 	import { tags as t } from '@lezer/highlight';
 	import { lintGutter, linter, type Diagnostic } from '@codemirror/lint';
 	import { checkJson } from '../lib/json';
+	import { loadDoc, saveDoc } from '../lib/doc-store';
 	// jsonrepair is lazy-loaded on first Repair click (kept out of the initial bundle).
 
 	const root = document.getElementById('jb-formatter');
@@ -155,7 +156,12 @@ const primaryAction: 'format' | 'minify' | 'validate' | 'repair' =
 		// Variant re-skins behavior (see component frontmatter). On the repair
 		// page we open with broken JSON so the fix is one click away.
 		const variant = root.dataset.variant ?? 'format';
-		const INITIAL_DOC = variant === 'repair' ? MESSY_DOC : DEFAULT_DOC;
+
+		// "Paste once" carry: if the user already has a document going (from another
+		// tool this session), rehydrate it; otherwise fall back to the variant's
+		// demo seed so first-time visitors still land on something to try.
+		const carried = loadDoc();
+		const INITIAL_DOC = carried !== null ? carried : variant === 'repair' ? MESSY_DOC : DEFAULT_DOC;
 
 		// ── Theme + syntax — dark code workbench (default) or light variant ──
 		// Surface + palette mirror DESIGN.md's `code-editor-mockup` and the
@@ -284,7 +290,11 @@ const primaryAction: 'format' | 'minify' | 'validate' | 'repair' =
 				EditorView.updateListener.of((u) => {
 					if (u.docChanged) {
 						clearTimeout(statusTimer);
-						statusTimer = window.setTimeout(refreshStatus, 250);
+						statusTimer = window.setTimeout(() => {
+							refreshStatus();
+							// Carry the working doc to the next tool page (sessionStorage only).
+							saveDoc(view.state.doc.toString());
+						}, 250);
 					}
 				}),
 				// Ctrl/Cmd+S runs the page's primary action (format/minify/repair/validate).
