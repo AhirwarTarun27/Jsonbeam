@@ -1,22 +1,38 @@
 ---
 /**
- * The /json-formatter workbench island. Framework-free: markup + a single
+ * The shared JSON workbench island. Framework-free: markup + a single
  * client-side module that mounts CodeMirror 6. Does format / minify / repair /
  * validate with inline error squiggles. All processing is local — nothing is
  * uploaded. In-app controls use the 6px radius scale (not marketing pills).
+ *
+ * The `variant` prop re-skins behavior for each landing page (validator,
+ * minifier, repair, beautifier) without re-bundling: it picks the primary
+ * (ink) toolbar button, what Ctrl+S runs, and — for repair — a broken default
+ * document so the payoff is one click away.
  */
+import type { ToolVariant } from '../consts';
+
+interface Props {
+	variant?: ToolVariant;
+}
+
+const { variant = 'format' } = Astro.props;
+// 'beautify' is the formatter's Format action under a search-friendlier name.
+const primaryAction: 'format' | 'minify' | 'validate' | 'repair' =
+	variant === 'beautify' ? 'format' : variant;
 ---
 
 <div
 	id="jb-formatter"
+	data-variant={variant}
 	class="overflow-hidden rounded-md border border-hairline bg-canvas shadow-e3"
 >
 	<!-- Toolbar -->
 	<div class="flex flex-wrap items-center gap-1.5 border-b border-hairline bg-canvas-soft px-3 py-2">
-		<button type="button" data-action="format" class="jb-btn jb-btn-primary" title="Beautify (Ctrl+S)">Format</button>
-		<button type="button" data-action="minify" class="jb-btn" title="Strip all whitespace">Minify</button>
-		<button type="button" data-action="repair" class="jb-btn" title="Fix common JSON mistakes">Repair</button>
-		<button type="button" data-action="validate" class="jb-btn" title="Check for errors">Validate</button>
+		<button type="button" data-action="format" class:list={['jb-btn', { 'jb-btn-primary': primaryAction === 'format' }]} title="Beautify">Format</button>
+		<button type="button" data-action="minify" class:list={['jb-btn', { 'jb-btn-primary': primaryAction === 'minify' }]} title="Strip all whitespace">Minify</button>
+		<button type="button" data-action="repair" class:list={['jb-btn', { 'jb-btn-primary': primaryAction === 'repair' }]} title="Fix common JSON mistakes">Repair</button>
+		<button type="button" data-action="validate" class:list={['jb-btn', { 'jb-btn-primary': primaryAction === 'validate' }]} title="Check for errors">Validate</button>
 
 		<span class="mx-1 hidden h-5 w-px bg-hairline sm:block" aria-hidden="true"></span>
 
@@ -165,6 +181,11 @@
 			'}',
 		].join('\n');
 
+		// Variant re-skins behavior (see component frontmatter). On the repair
+		// page we open with broken JSON so the fix is one click away.
+		const variant = root.dataset.variant ?? 'format';
+		const INITIAL_DOC = variant === 'repair' ? MESSY_DOC : DEFAULT_DOC;
+
 		// ── Theme + syntax — dark code workbench (default) or light variant ──
 		// Surface + palette mirror DESIGN.md's `code-editor-mockup` and the
 		// homepage hero/workbench mockups, so the live editor matches them.
@@ -272,7 +293,7 @@
 
 		const view = new EditorView({
 			parent: mount,
-			doc: DEFAULT_DOC,
+			doc: INITIAL_DOC,
 			extensions: [
 				lineNumbers(),
 				highlightActiveLineGutter(),
@@ -295,8 +316,8 @@
 						statusTimer = window.setTimeout(refreshStatus, 250);
 					}
 				}),
-				// Format on Ctrl/Cmd+S
-				keymap.of([{ key: 'Mod-s', preventDefault: true, run: () => { doFormat(); return true; } }]),
+				// Ctrl/Cmd+S runs the page's primary action (format/minify/repair/validate).
+				keymap.of([{ key: 'Mod-s', preventDefault: true, run: () => { runPrimary(); return true; } }]),
 			],
 		});
 
@@ -368,6 +389,15 @@
 			a.download = 'data.json';
 			a.click();
 			URL.revokeObjectURL(url);
+		}
+		// The variant's headline action, fired by Ctrl/Cmd+S.
+		function runPrimary() {
+			switch (variant) {
+				case 'minify': void doMinify(); break;
+				case 'repair': void doRepair(); break;
+				case 'validate': refreshStatus(); break;
+				default: void doFormat();
+			}
 		}
 
 		// ── Theme toggle (icon shows the theme you'll switch *to*) ───────────

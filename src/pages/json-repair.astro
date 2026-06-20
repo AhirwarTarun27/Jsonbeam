@@ -1,0 +1,70 @@
+---
+import ToolPage from '../components/ToolPage.astro';
+import type { FaqItem } from '../lib/jsonld';
+import type { RelatedTool } from '../components/ToolPage.astro';
+
+const steps = [
+	{ title: 'Paste your broken JSON', body: 'Drop in the malformed JSON. The editor even opens with a messy sample to try.' },
+	{ title: 'Click Repair', body: 'Common mistakes are fixed automatically and the result is re-formatted.' },
+	{ title: 'Review the result', body: 'The status bar confirms valid JSON; the editor shows the clean output.' },
+	{ title: 'Copy or download', body: 'Grab the repaired JSON to your clipboard or save it as data.json.' },
+];
+
+const whatIs = [
+	'Hand-written or copied JSON is often <strong class="font-medium text-ink">almost</strong> valid. Repair targets the most common breakages: trailing commas, single quotes instead of double quotes, JavaScript-style comments, unquoted keys, and stray newlines inside strings.',
+	'It rewrites those into spec-compliant JSON, then pretty-prints the result, so you immediately get a clean, valid document — not just a parse that scrapes by.',
+	'Everything runs locally in your browser, so you can safely repair sensitive payloads, and it keeps working offline. If a document is too broken to auto-fix, the validator points you to the exact spot to fix by hand.',
+];
+
+const faqs: FaqItem[] = [
+	{
+		question: 'What can JSON repair fix automatically?',
+		answer:
+			'Trailing commas, single quotes instead of double quotes, comments, unquoted keys, and some stray-character issues. After fixing, the JSON is re-formatted into a clean structure.',
+	},
+	{
+		question: 'Will repair ever change my data?',
+		answer:
+			"Repair only corrects syntax — quoting, commas, comments, and brackets. It doesn't alter your actual keys or values. Always eyeball the result for anything ambiguous.",
+	},
+	{
+		question: 'What if my JSON is too broken to repair?',
+		answer:
+			"If the structure is too damaged to infer, repair can't guess your intent. In that case the validator underlines the exact spot that fails so you can fix it manually.",
+	},
+	{
+		question: 'Is this JSON repair tool free and private?',
+		answer:
+			'Yes. It is completely free with no account or ads, and it runs entirely in your browser. Your JSON is never uploaded, so broken or sensitive data stays put.',
+	},
+	{
+		question: 'Does it work offline?',
+		answer:
+			'Yes. Because all processing happens client-side, repair keeps working with no network connection once the page has loaded.',
+	},
+];
+
+const related: RelatedTool[] = [
+	{ name: 'JSON Validator', href: '/json-validator', desc: 'Line-anchored syntax errors.' },
+	{ name: 'JSON Formatter', href: '/json-formatter', desc: 'Beautify, minify, validate & repair.' },
+	{ name: 'JSON Beautifier', href: '/json-beautifier', desc: 'Clean, readable indentation.' },
+	{ name: 'JSON Minifier', href: '/json-minifier', desc: 'Strip whitespace for the wire.' },
+];
+---
+
+<ToolPage
+	variant="repair"
+	slug="/json-repair"
+	title="JSON Repair — Fix Broken or Invalid JSON Online"
+	description="Free online JSON repair tool. Automatically fix trailing commas, single quotes, comments, and unquoted keys, then re-format — in-browser, no upload."
+	breadcrumbLabel="JSON Repair"
+	h1="JSON repair — fix broken JSON automatically."
+	intro="Pasted JSON that won't parse? Repair fixes the usual suspects — trailing commas, single quotes, comments, unquoted keys — and re-formats the result. The editor opens with a broken sample to try. Nothing leaves your browser."
+	howToTitle="Repair JSON in four steps."
+	steps={steps}
+	whatIsTitle="The fixes it makes for you."
+	whatIs={whatIs}
+	faqTitle="JSON repair questions."
+	faqs={faqs}
+	related={related}
+/>

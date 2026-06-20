@@ -1,0 +1,75 @@
+---
+import ToolPage from '../components/ToolPage.astro';
+import type { FaqItem } from '../lib/jsonld';
+import type { RelatedTool } from '../components/ToolPage.astro';
+
+const steps = [
+	{ title: 'Paste or type your JSON', body: 'Drop in minified or untidy JSON. It stays in your browser.' },
+	{ title: 'Pick your indentation', body: "Choose 2 spaces, 4 spaces, or tabs to match your project's style." },
+	{ title: 'Click Format', body: 'The JSON is re-indented into a clean, consistently spaced structure.' },
+	{ title: 'Copy or download', body: 'Grab the beautified result to your clipboard or save it as data.json.' },
+];
+
+const whatIs = [
+	"Beautifying (or pretty-printing) JSON re-indents a document with consistent spacing and line breaks so it's easy to read and diff. It's the same data — just laid out for humans instead of the wire.",
+	"JSON Beam lets you choose the exact indentation — <strong class='font-medium text-ink'>2 spaces</strong>, <strong class='font-medium text-ink'>4 spaces</strong>, or <strong class='font-medium text-ink'>tabs</strong> — so the output drops cleanly into your codebase and matches your linter. Change it and the document re-formats instantly.",
+	'Everything runs locally in your browser, so you can safely beautify sensitive payloads, and it keeps working offline. Need the compact version for production? The Minify button reverses it.',
+];
+
+const faqs: FaqItem[] = [
+	{
+		question: "What's the difference between a beautifier and a formatter?",
+		answer:
+			"They are the same thing — both pretty-print JSON with clean indentation. JSON Beam's beautifier is the formatter focused on readable output, with selectable 2-space, 4-space, or tab indentation.",
+	},
+	{
+		question: 'Can I choose the indentation?',
+		answer:
+			'Yes. Pick 2 spaces, 4 spaces, or tabs from the indent selector. The document re-formats immediately when you change it.',
+	},
+	{
+		question: 'Is beautifying the opposite of minifying?',
+		answer:
+			'Yes. Beautifying adds readable indentation and line breaks; minifying strips them. Both keep the underlying data identical, and you can switch between them at will.',
+	},
+	{
+		question: 'Does beautifying change my data?',
+		answer:
+			'No. It only adds whitespace for readability. Keys, values, ordering, and types are all preserved exactly — it parses to the same object.',
+	},
+	{
+		question: 'Is this JSON beautifier free and private?',
+		answer:
+			'Yes. It is completely free with no account or ads, and it runs entirely in your browser. Your JSON is never uploaded to a server.',
+	},
+	{
+		question: 'Does it work offline?',
+		answer:
+			'Yes. Because all processing happens client-side, the beautifier keeps working with no network connection once the page has loaded.',
+	},
+];
+
+const related: RelatedTool[] = [
+	{ name: 'JSON Minifier', href: '/json-minifier', desc: 'The reverse — strip whitespace.' },
+	{ name: 'JSON Formatter', href: '/json-formatter', desc: 'Beautify, minify, validate & repair.' },
+	{ name: 'JSON Validator', href: '/json-validator', desc: 'Line-anchored syntax errors.' },
+	{ name: 'JSON Viewer', href: '/json-viewer', desc: 'Explore structure as a tree.', soon: true },
+];
+---
+
+<ToolPage
+	variant="beautify"
+	slug="/json-beautifier"
+	title="JSON Beautifier — Pretty-Print & Indent JSON"
+	description="Free online JSON beautifier. Pretty-print and indent JSON with 2 spaces, 4 spaces, or tabs for clean, readable output — in-browser, nothing uploaded."
+	breadcrumbLabel="JSON Beautifier"
+	h1="JSON beautifier — clean, readable indentation."
+	intro="Paste minified or messy JSON and get back a clean, indented, scannable structure. Choose 2 spaces, 4 spaces, or tabs to match your codebase. Nothing you paste leaves your browser."
+	howToTitle="Beautify JSON in four steps."
+	steps={steps}
+	whatIsTitle="Indentation that matches your code."
+	whatIs={whatIs}
+	faqTitle="JSON beautifier questions."
+	faqs={faqs}
+	related={related}
+/>

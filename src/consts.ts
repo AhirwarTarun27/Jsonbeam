@@ -18,6 +18,13 @@ export const BRAND_PROMISES = [
 	'Free forever — no ads, no signup, no dark patterns.',
 ] as const;
 
+/**
+ * Variants of the shared formatter island. Drives which toolbar button is the
+ * primary (ink) action, what Ctrl+S runs, and the default document. One island,
+ * one JS chunk — the variant only re-skins behavior, never re-bundles.
+ */
+export type ToolVariant = 'format' | 'beautify' | 'minify' | 'validate' | 'repair';
+
 /** Footer mega-nav model — every tool is an indexable landing page. */
 export interface NavLink {
 	label: string;
@@ -35,10 +42,10 @@ export const FOOTER_NAV: NavColumn[] = [
 		title: 'Format & validate',
 		links: [
 			{ label: 'JSON Formatter', href: '/json-formatter' },
-			{ label: 'JSON Beautifier', href: '/json-beautifier', soon: true },
-			{ label: 'JSON Minifier', href: '/json-minifier', soon: true },
-			{ label: 'JSON Validator', href: '/json-validator', soon: true },
-			{ label: 'JSON Repair', href: '/json-repair', soon: true },
+			{ label: 'JSON Beautifier', href: '/json-beautifier' },
+			{ label: 'JSON Minifier', href: '/json-minifier' },
+			{ label: 'JSON Validator', href: '/json-validator' },
+			{ label: 'JSON Repair', href: '/json-repair' },
 		],
 	},
 	{
