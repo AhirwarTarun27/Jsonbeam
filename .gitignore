@@ -25,7 +25,7 @@ pnpm-debug.log*
 
 #claude
 CLAUDE.md
-.claude/settings.local.json
+.claude
 
 # agent skills: content is regenerated from skills-lock.json via `npx skills`.
 # Commit skills-lock.json (source of truth); ignore the generated content + local links.
