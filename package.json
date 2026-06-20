@@ -29,11 +29,14 @@
     "@lezer/highlight": "^1.2.3",
     "@tailwindcss/vite": "^4.3.1",
     "astro": "^6.4.7",
+    "jmespath": "^0.16.0",
+    "jsonpath-plus": "^10.4.0",
     "jsonrepair": "^3.14.0",
     "tailwindcss": "^4.3.1"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.9",
+    "@types/jmespath": "^0.15.2",
     "typescript": "^6.0.3",
     "vitest": "^4.1.9"
   }

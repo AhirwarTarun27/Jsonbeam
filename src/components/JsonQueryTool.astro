@@ -1,0 +1,1144 @@
+---
+// NOTE: sample JSON is defined in the <script> block below (not here) because
+// Astro frontmatter is server-side only and cannot be referenced by client scripts.
+/**
+ * JSON Query Tool island — JSONPath, JMESPath, and jq in one surface.
+ *
+ * What puts this ahead of every competitor:
+ *   • Three languages in one tool — JSONPath (RFC 9535), JMESPath, and jq —
+ *     with a per-language snippet library. No competitor does all three.
+ *   • Live evaluation: 300 ms debounce, result updates as you type.
+ *   • Syntax-highlighted output with line counts and type annotations.
+ *   • Copy as code — one click to get a runnable JS / Python / CLI snippet.
+ *   • Query history: last 5 queries per language, shown as clickable chips.
+ *   • Result modes: pretty JSON, raw, and count-only.
+ *   • Multi-value output: jq / JSONPath can yield many values — each shown
+ *     individually with its index.
+ *   • "Download as JSON" for the full result array.
+ *   • Theme toggle (dark/light) shared via localStorage (jb-theme key).
+ *   • Doc-store carry: the current document follows from any other tool page.
+ *
+ * Language engines are lazy-loaded on first use — zero bundle cost until needed.
+ * Framework-free: HTML + one typed client module. Nothing is ever uploaded.
+ */
+---
+
+<div id="jb-qt" class="overflow-hidden rounded-md border border-hairline bg-canvas shadow-e3">
+
+	<!-- Toolbar -->
+	<div class="flex flex-wrap items-center gap-1.5 border-b border-hairline bg-canvas-soft px-3 py-2">
+		<button type="button" data-action="sample" class="jb-btn">Sample</button>
+
+		<span class="mx-1 hidden h-5 w-px bg-hairline sm:block" aria-hidden="true"></span>
+
+		<!-- Result mode -->
+		<div role="group" aria-label="Result mode" class="flex gap-0.5">
+			<button type="button" data-mode="pretty" data-action="mode" aria-pressed="true"
+				class="jb-btn" title="Pretty-print result JSON">Pretty</button>
+			<button type="button" data-mode="raw" data-action="mode" aria-pressed="false"
+				class="jb-btn" title="Raw JSON values (one per line)">Raw</button>
+			<button type="button" data-mode="count" data-action="mode" aria-pressed="false"
+				class="jb-btn" title="Show only count of results">Count</button>
+		</div>
+
+		<span class="mx-1 hidden h-5 w-px bg-hairline sm:block" aria-hidden="true"></span>
+
+		<div class="ml-auto flex flex-wrap items-center gap-1.5">
+			<div class="relative" id="jb-qt-code-wrap">
+				<button type="button" data-action="copy-code" class="jb-btn" title="Copy as runnable code snippet">
+					Code ↓
+				</button>
+				<div id="jb-qt-code-menu"
+					class="absolute right-0 z-20 mt-1 hidden w-52 rounded-md border border-hairline bg-canvas py-1 shadow-e4"
+					role="menu"
+				>
+					<button role="menuitem" data-lang-code="js-jsonpath" class="jb-code-opt">JavaScript · jsonpath-plus</button>
+					<button role="menuitem" data-lang-code="js-jmespath" class="jb-code-opt">JavaScript · jmespath.js</button>
+					<button role="menuitem" data-lang-code="js-jq"       class="jb-code-opt">JavaScript · jq-web</button>
+					<button role="menuitem" data-lang-code="py-jsonpath"  class="jb-code-opt">Python · jsonpath-ng</button>
+					<button role="menuitem" data-lang-code="py-jmespath"  class="jb-code-opt">Python · jmespath.py</button>
+					<button role="menuitem" data-lang-code="cli-jq"       class="jb-code-opt">CLI · jq</button>
+					<button role="menuitem" data-lang-code="go-gjson"     class="jb-code-opt">Go · tidwall/gjson</button>
+				</div>
+			</div>
+			<button type="button" data-action="download-result" class="jb-btn" title="Download result as JSON">Result ↓</button>
+			<button type="button" data-action="copy-result"  class="jb-btn" title="Copy result to clipboard">Copy result</button>
+			<button
+				type="button"
+				data-action="theme"
+				class="jb-btn jb-btn-icon"
+				aria-label="Switch to light theme"
+				title="Toggle dark / light"
+			><span data-theme-icon aria-hidden="true"></span></button>
+			<button type="button" data-action="clear" class="jb-btn" title="Clear input">Clear</button>
+		</div>
+	</div>
+
+	<!-- Query bar -->
+	<div class="flex flex-wrap items-center gap-2 border-b border-hairline bg-canvas-soft px-3 py-2">
+		<!-- Language selector -->
+		<div role="tablist" aria-label="Query language" class="flex gap-0.5">
+			<button role="tab" data-lang="jsonpath" aria-selected="true"
+				class="jb-tab" title="JSONPath (RFC 9535 / Goessner extended)">JSONPath</button>
+			<button role="tab" data-lang="jmespath" aria-selected="false"
+				class="jb-tab" title="JMESPath — AWS-style structured query">JMESPath</button>
+			<button role="tab" data-lang="jq" aria-selected="false"
+				class="jb-tab" title="jq — the Swiss army knife for JSON">jq</button>
+		</div>
+
+		<span class="hidden h-5 w-px bg-hairline sm:block" aria-hidden="true"></span>
+
+		<!-- Expression input -->
+		<div class="flex min-w-0 flex-1 items-center gap-1.5">
+			<label class="sr-only" for="jb-qt-expr">Query expression</label>
+			<input
+				id="jb-qt-expr"
+				type="text"
+				spellcheck="false"
+				autocomplete="off"
+				placeholder="$.store.books[*].title"
+				aria-label="Query expression"
+				class="h-8 min-w-0 flex-1 rounded-sm border border-hairline bg-canvas px-3 font-mono text-code text-ink placeholder:text-mute outline-none focus:border-link focus:ring-1 focus:ring-link"
+			/>
+			<button type="button" data-action="run" class="jb-btn jb-btn-primary flex-shrink-0" title="Run query (Ctrl+Enter)">
+				Run ▶
+			</button>
+		</div>
+	</div>
+
+	<!-- Query history chips -->
+	<div id="jb-qt-history" class="hidden border-b border-hairline bg-canvas-soft px-3 py-1.5">
+		<span class="mr-2 font-mono text-caption text-mute">Recent:</span>
+		<div id="jb-qt-history-chips" class="inline-flex flex-wrap gap-1"></div>
+	</div>
+
+	<!-- Main two-pane content -->
+	<div class="grid grid-cols-1 lg:grid-cols-2">
+		<!-- Left: JSON input -->
+		<div class="border-b border-hairline lg:border-b-0 lg:border-r">
+			<div class="flex items-center gap-2 border-b border-hairline bg-canvas-soft px-3 py-1">
+				<span class="font-mono text-caption uppercase tracking-wide text-mute">JSON input</span>
+				<span id="jb-qt-input-status" class="ml-auto font-mono text-caption" aria-live="polite"></span>
+			</div>
+			<label class="sr-only" for="jb-qt-input">JSON input document</label>
+			<textarea
+				id="jb-qt-input"
+				spellcheck="false"
+				autocomplete="off"
+				autocapitalize="off"
+				aria-label="JSON input document"
+				class="h-[36vh] min-h-[260px] w-full"
+			></textarea>
+		</div>
+
+		<!-- Right: Result -->
+		<div class="flex flex-col">
+			<div class="flex items-center gap-2 border-b border-hairline bg-canvas-soft px-3 py-1">
+				<span class="font-mono text-caption uppercase tracking-wide text-mute">Result</span>
+				<span id="jb-qt-count" class="font-mono text-caption text-mute" aria-live="polite"></span>
+				<span id="jb-qt-eval-ms" class="ml-auto font-mono text-caption text-mute"></span>
+			</div>
+			<div id="jb-qt-result" class="relative h-[36vh] min-h-[260px] overflow-auto" role="region" aria-label="Query result">
+				<div id="jb-qt-out"     class="hidden px-3 py-3 font-mono text-code" aria-live="polite"></div>
+				<div id="jb-qt-empty"   class="hidden flex-col items-center justify-center gap-2 px-6 py-12 text-center">
+					<p class="font-mono text-caption text-mute">Enter a query above and press Run.</p>
+				</div>
+				<div id="jb-qt-error"   class="hidden px-3 py-3">
+					<p class="font-mono text-caption font-medium text-error" data-message></p>
+					<p class="mt-1 font-mono text-caption text-mute" data-hint></p>
+				</div>
+				<div id="jb-qt-loading" class="hidden items-center justify-center gap-2 px-3 py-8 text-center">
+					<span class="font-mono text-caption text-mute">Evaluating…</span>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Snippet library — collapsible -->
+	<details id="jb-qt-snippets" class="border-t border-hairline">
+		<summary class="flex cursor-pointer items-center gap-2 bg-canvas-soft px-3 py-2 text-body-sm font-medium text-ink hover:bg-canvas-soft-2">
+			<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" class="transition-transform group-open:rotate-90" id="jb-qt-snip-arrow">
+				<path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+			</svg>
+			Snippet library
+			<span class="ml-1 font-mono text-caption text-mute">— click any snippet to run it</span>
+		</summary>
+		<div class="bg-canvas px-3 py-4">
+			<!-- Language sub-tabs inside snippets -->
+			<div role="tablist" aria-label="Snippet language" class="mb-4 flex gap-0.5">
+				<button role="tab" data-snip-lang="jsonpath" aria-selected="true" class="jb-tab">JSONPath</button>
+				<button role="tab" data-snip-lang="jmespath" aria-selected="false" class="jb-tab">JMESPath</button>
+				<button role="tab" data-snip-lang="jq" aria-selected="false" class="jb-tab">jq</button>
+			</div>
+
+			<!-- JSONPath snippets -->
+			<div data-snip-panel="jsonpath">
+				<div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+					<!-- Group: Basic access -->
+					<div class="col-span-full font-mono text-caption uppercase tracking-wide text-mute">Basic access</div>
+					<button data-snip="$.store.name" data-snip-lang="jsonpath" class="jb-snip">
+						<code>$.store.name</code>
+						<span>Single field</span>
+					</button>
+					<button data-snip="$.store.books[0]" data-snip-lang="jsonpath" class="jb-snip">
+						<code>$.store.books[0]</code>
+						<span>First element</span>
+					</button>
+					<button data-snip="$.store.books[-1]" data-snip-lang="jsonpath" class="jb-snip">
+						<code>$.store.books[-1]</code>
+						<span>Last element</span>
+					</button>
+					<button data-snip="$.store.books[0:3]" data-snip-lang="jsonpath" class="jb-snip">
+						<code>$.store.books[0:3]</code>
+						<span>Slice [0–3)</span>
+					</button>
+					<button data-snip="$.store.books[*]" data-snip-lang="jsonpath" class="jb-snip">
+						<code>$.store.books[*]</code>
+						<span>All books</span>
+					</button>
+					<button data-snip="$.store.books[*].title" data-snip-lang="jsonpath" class="jb-snip">
+						<code>$.store.books[*].title</code>
+						<span>All titles</span>
+					</button>
+
+					<!-- Group: Filters -->
+					<div class="col-span-full mt-2 font-mono text-caption uppercase tracking-wide text-mute">Filter expressions</div>
+					<button data-snip="$.store.books[?(@.inStock == true)]" data-snip-lang="jsonpath" class="jb-snip">
+						<code>$.store.books[?(@.inStock == true)]</code>
+						<span>In-stock books</span>
+					</button>
+					<button data-snip="$.store.books[?(@.price < 40)]" data-snip-lang="jsonpath" class="jb-snip">
+						<code>$.store.books[?(@.price &lt; 40)]</code>
+						<span>Books under $40</span>
+					</button>
+					<button data-snip='$.store.books[?(@.author == "Martin Fowler")]' data-snip-lang="jsonpath" class="jb-snip">
+						<code>$.store.books[?(@.author == "Martin Fowler")]</code>
+						<span>Filter by author</span>
+					</button>
+
+					<!-- Group: Recursive descent -->
+					<div class="col-span-full mt-2 font-mono text-caption uppercase tracking-wide text-mute">Recursive descent</div>
+					<button data-snip="$..author" data-snip-lang="jsonpath" class="jb-snip">
+						<code>$..author</code>
+						<span>All authors (deep)</span>
+					</button>
+					<button data-snip="$..price" data-snip-lang="jsonpath" class="jb-snip">
+						<code>$..price</code>
+						<span>All prices (deep)</span>
+					</button>
+					<button data-snip="$..books.length" data-snip-lang="jsonpath" class="jb-snip">
+						<code>$..books.length</code>
+						<span>Array length</span>
+					</button>
+
+					<!-- Group: Multiple -->
+					<div class="col-span-full mt-2 font-mono text-caption uppercase tracking-wide text-mute">Multiple selectors</div>
+					<button data-snip="$.store.books[*]['title','author']" data-snip-lang="jsonpath" class="jb-snip">
+						<code>$.store.books[*]['title','author']</code>
+						<span>Two fields</span>
+					</button>
+					<button data-snip="$.store.books[0,2,4]" data-snip-lang="jsonpath" class="jb-snip">
+						<code>$.store.books[0,2,4]</code>
+						<span>Multiple indices</span>
+					</button>
+				</div>
+			</div>
+
+			<!-- JMESPath snippets -->
+			<div data-snip-panel="jmespath" class="hidden">
+				<div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+					<div class="col-span-full font-mono text-caption uppercase tracking-wide text-mute">Basic access</div>
+					<button data-snip="store.name" data-snip-lang="jmespath" class="jb-snip">
+						<code>store.name</code>
+						<span>Single field</span>
+					</button>
+					<button data-snip="store.books[0].title" data-snip-lang="jmespath" class="jb-snip">
+						<code>store.books[0].title</code>
+						<span>Nested field</span>
+					</button>
+					<button data-snip="store.books[*].title" data-snip-lang="jmespath" class="jb-snip">
+						<code>store.books[*].title</code>
+						<span>All titles</span>
+					</button>
+					<button data-snip="store.books[-1].title" data-snip-lang="jmespath" class="jb-snip">
+						<code>store.books[-1].title</code>
+						<span>Last title</span>
+					</button>
+
+					<div class="col-span-full mt-2 font-mono text-caption uppercase tracking-wide text-mute">Filter projections</div>
+					<button data-snip="store.books[?inStock == `true`].title" data-snip-lang="jmespath" class="jb-snip">
+						<code>store.books[?inStock == `true`].title</code>
+						<span>In-stock titles</span>
+					</button>
+					<button data-snip="store.books[?price < `40`]" data-snip-lang="jmespath" class="jb-snip">
+						<code>store.books[?price &lt; `40`]</code>
+						<span>Books under $40</span>
+					</button>
+					<button data-snip="store.books[?contains(tags, 'programming')]" data-snip-lang="jmespath" class="jb-snip">
+						<code>store.books[?contains(tags, 'programming')]</code>
+						<span>Books with tag</span>
+					</button>
+
+					<div class="col-span-full mt-2 font-mono text-caption uppercase tracking-wide text-mute">Multi-select &amp; functions</div>
+					<button data-snip="store.books[*].{title: title, price: price}" data-snip-lang="jmespath" class="jb-snip">
+						<code>store.books[*].&#123;title: title, price: price&#125;</code>
+						<span>Project two fields</span>
+					</button>
+					<button data-snip="length(store.books)" data-snip-lang="jmespath" class="jb-snip">
+						<code>length(store.books)</code>
+						<span>Book count</span>
+					</button>
+					<button data-snip="max_by(store.books, &price).title" data-snip-lang="jmespath" class="jb-snip">
+						<code>max_by(store.books, &price).title</code>
+						<span>Most expensive title</span>
+					</button>
+					<button data-snip="sort_by(store.books, &price)[*].title" data-snip-lang="jmespath" class="jb-snip">
+						<code>sort_by(store.books, &price)[*].title</code>
+						<span>Titles by price</span>
+					</button>
+					<button data-snip="keys(store)" data-snip-lang="jmespath" class="jb-snip">
+						<code>keys(store)</code>
+						<span>Store keys</span>
+					</button>
+					<button data-snip="to_array(store.books[0])" data-snip-lang="jmespath" class="jb-snip">
+						<code>to_array(store.books[0])</code>
+						<span>Coerce to array</span>
+					</button>
+				</div>
+			</div>
+
+			<!-- jq snippets -->
+			<div data-snip-panel="jq" class="hidden">
+				<div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+					<div class="col-span-full font-mono text-caption uppercase tracking-wide text-mute">Basic access</div>
+					<button data-snip=".store.name" data-snip-lang="jq" class="jb-snip">
+						<code>.store.name</code>
+						<span>Single field</span>
+					</button>
+					<button data-snip=".store.books[0].title" data-snip-lang="jq" class="jb-snip">
+						<code>.store.books[0].title</code>
+						<span>Nested field</span>
+					</button>
+					<button data-snip=".store.books[].title" data-snip-lang="jq" class="jb-snip">
+						<code>.store.books[].title</code>
+						<span>All titles (stream)</span>
+					</button>
+					<button data-snip="[.store.books[].title]" data-snip-lang="jq" class="jb-snip">
+						<code>[.store.books[].title]</code>
+						<span>All titles (array)</span>
+					</button>
+					<button data-snip=".store.books | length" data-snip-lang="jq" class="jb-snip">
+						<code>.store.books | length</code>
+						<span>Book count</span>
+					</button>
+					<button data-snip=".store | keys" data-snip-lang="jq" class="jb-snip">
+						<code>.store | keys</code>
+						<span>Store keys</span>
+					</button>
+
+					<div class="col-span-full mt-2 font-mono text-caption uppercase tracking-wide text-mute">Filter &amp; transform</div>
+					<button data-snip='.store.books[] | select(.inStock == true)' data-snip-lang="jq" class="jb-snip">
+						<code>.store.books[] | select(.inStock == true)</code>
+						<span>In-stock books</span>
+					</button>
+					<button data-snip='.store.books[] | select(.price < 40)' data-snip-lang="jq" class="jb-snip">
+						<code>.store.books[] | select(.price &lt; 40)</code>
+						<span>Books under $40</span>
+					</button>
+					<button data-snip='.store.books | map(select(.inStock)) | map(.title)' data-snip-lang="jq" class="jb-snip">
+						<code>.store.books | map(select(.inStock)) | map(.title)</code>
+						<span>In-stock titles</span>
+					</button>
+					<button data-snip='.store.books | map({title, price})' data-snip-lang="jq" class="jb-snip">
+						<code>.store.books | map(&#123;title, price&#125;)</code>
+						<span>Project two fields</span>
+					</button>
+
+					<div class="col-span-full mt-2 font-mono text-caption uppercase tracking-wide text-mute">Sort, group &amp; aggregate</div>
+					<button data-snip='.store.books | sort_by(.price)' data-snip-lang="jq" class="jb-snip">
+						<code>.store.books | sort_by(.price)</code>
+						<span>Sort by price</span>
+					</button>
+					<button data-snip='.store.books | group_by(.inStock)' data-snip-lang="jq" class="jb-snip">
+						<code>.store.books | group_by(.inStock)</code>
+						<span>Group by inStock</span>
+					</button>
+					<button data-snip='.store.books | max_by(.price)' data-snip-lang="jq" class="jb-snip">
+						<code>.store.books | max_by(.price)</code>
+						<span>Most expensive</span>
+					</button>
+					<button data-snip='[.store.books[].price] | add' data-snip-lang="jq" class="jb-snip">
+						<code>[.store.books[].price] | add</code>
+						<span>Sum all prices</span>
+					</button>
+
+					<div class="col-span-full mt-2 font-mono text-caption uppercase tracking-wide text-mute">Advanced jq</div>
+					<button data-snip='.store.books[] | .title + " ($" + (.price|tostring) + ")"' data-snip-lang="jq" class="jb-snip">
+						<code>.store.books[] | .title + " ($" + (.price|tostring) + ")"</code>
+						<span>String interpolation</span>
+					</button>
+					<button data-snip='.store.books | to_entries | map({(.key|tostring): .value.title}) | add' data-snip-lang="jq" class="jb-snip">
+						<code>.store.books | to_entries | map(&#123;(.key|tostring): .value.title&#125;) | add</code>
+						<span>Index → title map</span>
+					</button>
+					<button data-snip='.store.books | map(.tags[]) | unique | sort' data-snip-lang="jq" class="jb-snip">
+						<code>.store.books | map(.tags[]) | unique | sort</code>
+						<span>All unique tags</span>
+					</button>
+					<button data-snip='reduce .store.books[] as $b (0; . + $b.price)' data-snip-lang="jq" class="jb-snip">
+						<code>reduce .store.books[] as $b (0; . + $b.price)</code>
+						<span>Reduce sum</span>
+					</button>
+					<button data-snip='[paths] | length' data-snip-lang="jq" class="jb-snip">
+						<code>[paths] | length</code>
+						<span>Count all paths</span>
+					</button>
+					<button data-snip='.store.books | map(select(.inStock)) | length' data-snip-lang="jq" class="jb-snip">
+						<code>.store.books | map(select(.inStock)) | length</code>
+						<span>Count in-stock</span>
+					</button>
+				</div>
+			</div>
+		</div>
+	</details>
+
+	<!-- Status bar -->
+	<div class="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-hairline bg-canvas-soft px-3 py-2 text-body-sm">
+		<span
+			id="jb-qt-status"
+			class="inline-flex items-center gap-1.5 font-medium"
+			role="status"
+			aria-live="polite"
+		>
+			<span class="h-2 w-2 rounded-full bg-mute" data-dot></span>
+			<span data-label>Ready</span>
+		</span>
+		<span class="ml-auto inline-flex items-center gap-1.5 text-caption text-mute">
+			<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+				<path d="M8 1.5 3 3.5v3.2c0 3 2.1 5.8 5 6.8 2.9-1 5-3.8 5-6.8V3.5L8 1.5Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"></path>
+			</svg>
+			Processed locally — nothing uploaded
+		</span>
+	</div>
+</div>
+
+<style>
+/* ── Input textarea ─────────────────────────────────────────────────────────── */
+#jb-qt-input {
+	background-color: var(--color-editor-bg);
+	color: var(--color-editor-fg);
+	font-family: var(--font-mono);
+	font-size: 13px;
+	line-height: 1.6;
+	padding: 12px 14px;
+	border: none;
+	outline: none;
+	resize: none;
+	display: block;
+	tab-size: 2;
+	width: 100%;
+}
+/* ── Result pane ────────────────────────────────────────────────────────────── */
+#jb-qt-result {
+	background-color: var(--color-editor-bg);
+	color: var(--color-editor-fg);
+}
+#jb-qt-empty, #jb-qt-loading {
+	display: flex;
+	height: 100%;
+	align-items: center;
+	justify-content: center;
+}
+/* ── Result value syntax colours (dark) ─────────────────────────────────────── */
+:global(#jb-qt-out .jb-q-s)  { color: var(--color-cyan); }
+:global(#jb-qt-out .jb-q-n)  { color: var(--color-violet-soft); }
+:global(#jb-qt-out .jb-q-b)  { color: var(--color-warning); }
+:global(#jb-qt-out .jb-q-nl) { color: var(--color-mute); }
+:global(#jb-qt-out .jb-q-k)  { color: var(--color-editor-fg); font-weight: 500; }
+:global(#jb-qt-out .jb-q-p)  { color: var(--color-hairline-strong); }
+:global(#jb-qt-out .jb-q-idx){ color: var(--color-mute); user-select: none; font-size: 11px; padding-right: 8px; }
+:global(#jb-qt-out .jb-q-sep){ display: block; border-top: 1px solid rgba(255,255,255,0.06); margin: 2px 0; }
+/* ── Snippet cards ──────────────────────────────────────────────────────────── */
+.jb-snip {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 2px;
+	padding: 8px 10px;
+	border-radius: var(--radius-sm);
+	border: 1px solid var(--color-hairline);
+	background: var(--color-canvas-soft);
+	cursor: pointer;
+	text-align: left;
+	transition: background-color 0.1s ease, border-color 0.1s ease;
+}
+.jb-snip:hover {
+	background: var(--color-canvas-soft-2);
+	border-color: var(--color-link);
+}
+.jb-snip code {
+	font-family: var(--font-mono);
+	font-size: 12px;
+	color: var(--color-link);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	max-width: 100%;
+	display: block;
+}
+.jb-snip span {
+	font-size: var(--text-caption);
+	color: var(--color-mute);
+}
+/* ── Code menu ──────────────────────────────────────────────────────────────── */
+.jb-code-opt {
+	display: block;
+	width: 100%;
+	padding: 6px 12px;
+	text-align: left;
+	font-size: var(--text-body-sm);
+	color: var(--color-ink);
+	transition: background-color 0.1s;
+}
+.jb-code-opt:hover { background: var(--color-canvas-soft); }
+/* ── History chips ───────────────────────────────────────────────────────────── */
+:global(.jb-qt-chip) {
+	display: inline-flex;
+	align-items: center;
+	height: 22px;
+	padding: 0 8px;
+	border-radius: 100px;
+	border: 1px solid var(--color-hairline);
+	background: var(--color-canvas);
+	font-family: var(--font-mono);
+	font-size: 11px;
+	color: var(--color-body);
+	cursor: pointer;
+	max-width: 180px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	transition: border-color 0.1s;
+}
+:global(.jb-qt-chip:hover) { border-color: var(--color-link); color: var(--color-link); }
+/* ── Active tab within query tool ────────────────────────────────────────────── */
+:global(#jb-qt [role="tab"][aria-selected="true"]) {
+	background: var(--color-ink);
+	color: var(--color-on-primary);
+	border-color: var(--color-ink);
+}
+/* ── Snippet arrow animation ─────────────────────────────────────────────────── */
+#jb-qt-snippets[open] #jb-qt-snip-arrow { transform: rotate(90deg); }
+/* ── Light theme overrides ───────────────────────────────────────────────────── */
+:global(#jb-qt.jb-theme-light #jb-qt-input) {
+	background-color: var(--color-canvas);
+	color: var(--color-ink);
+}
+:global(#jb-qt.jb-theme-light #jb-qt-result) {
+	background-color: var(--color-canvas);
+	color: var(--color-ink);
+}
+:global(#jb-qt.jb-theme-light #jb-qt-out .jb-q-s)  { color: var(--color-cyan-deep); }
+:global(#jb-qt.jb-theme-light #jb-qt-out .jb-q-n)  { color: var(--color-violet); }
+:global(#jb-qt.jb-theme-light #jb-qt-out .jb-q-b)  { color: var(--color-warning-deep); }
+:global(#jb-qt.jb-theme-light #jb-qt-out .jb-q-nl) { color: var(--color-mute); }
+:global(#jb-qt.jb-theme-light #jb-qt-out .jb-q-k)  { color: var(--color-ink); }
+:global(#jb-qt.jb-theme-light #jb-qt-out .jb-q-p)  { color: var(--color-mute); }
+:global(#jb-qt.jb-theme-light #jb-qt-out .jb-q-sep){ border-top-color: var(--color-hairline); }
+</style>
+
+<script>
+import { loadDoc, saveDoc } from '../lib/doc-store';
+
+const sample = `{
+  "store": {
+    "name": "Acme Books",
+    "location": "San Francisco",
+    "books": [
+      { "id": 1, "title": "Clean Code",           "author": "Robert Martin",  "price": 34.99, "tags": ["programming", "best-practices"], "inStock": true  },
+      { "id": 2, "title": "The Pragmatic Programmer", "author": "Andrew Hunt", "price": 44.95, "tags": ["programming", "career"],         "inStock": true  },
+      { "id": 3, "title": "Design Patterns",       "author": "Gang of Four",  "price": 54.99, "tags": ["programming", "architecture"],    "inStock": false },
+      { "id": 4, "title": "Refactoring",           "author": "Martin Fowler", "price": 39.99, "tags": ["programming", "best-practices"], "inStock": true  },
+      { "id": 5, "title": "The Mythical Man-Month","author": "Fred Brooks",   "price": 28.50, "tags": ["management", "classic"],         "inStock": true  }
+    ],
+    "members": 1240,
+    "rating": 4.7
+  }
+}`;
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type Lang = 'jsonpath' | 'jmespath' | 'jq';
+type Mode = 'pretty' | 'raw' | 'count';
+
+// ─── DOM refs ─────────────────────────────────────────────────────────────────
+
+const rootEl        = document.getElementById('jb-qt');
+const inputEl       = document.getElementById('jb-qt-input') as HTMLTextAreaElement | null;
+const exprEl        = document.getElementById('jb-qt-expr') as HTMLInputElement | null;
+const outEl         = document.getElementById('jb-qt-out');
+const emptyEl       = document.getElementById('jb-qt-empty');
+const errorEl       = document.getElementById('jb-qt-error');
+const loadingEl     = document.getElementById('jb-qt-loading');
+const countEl       = document.getElementById('jb-qt-count');
+const evalMsEl      = document.getElementById('jb-qt-eval-ms');
+const statusEl      = document.getElementById('jb-qt-status');
+const inputStatusEl = document.getElementById('jb-qt-input-status');
+const codeMenuEl    = document.getElementById('jb-qt-code-menu');
+const historyEl     = document.getElementById('jb-qt-history');
+const historyCEl    = document.getElementById('jb-qt-history-chips');
+const themeIconEl   = document.querySelector<HTMLElement>('[data-theme-icon]');
+
+if (!(
+	rootEl && inputEl && exprEl && outEl && emptyEl && errorEl && loadingEl &&
+	countEl && statusEl && inputStatusEl && codeMenuEl && historyEl && historyCEl
+)) throw new Error('jb-qt: DOM not found');
+
+// Non-null aliases for use in callbacks
+const root       = rootEl;
+const input      = inputEl;
+const expr       = exprEl;
+const out        = outEl;
+const empty      = emptyEl;
+const errorBox   = errorEl;
+const loading    = loadingEl;
+const count      = countEl;
+const evalMs     = evalMsEl;
+const status     = statusEl;
+const inputStat  = inputStatusEl;
+const codeMenu   = codeMenuEl;
+const history    = historyEl;
+const historyC   = historyCEl;
+
+// ─── State ────────────────────────────────────────────────────────────────────
+
+let lang: Lang = 'jsonpath';
+let mode: Mode = 'pretty';
+let lastResult: unknown[] = [];
+let debounceTimer = 0;
+const DEBOUNCE = 300;
+
+// ─── History ─────────────────────────────────────────────────────────────────
+
+const HIST_MAX = 5;
+
+function histKey(l: Lang): string { return `jb-qhist-${l}`; }
+
+function loadHistory(l: Lang): string[] {
+	try { return JSON.parse(sessionStorage.getItem(histKey(l)) ?? '[]'); }
+	catch { return []; }
+}
+
+function saveHistory(l: Lang, q: string) {
+	if (!q.trim()) return;
+	let h = loadHistory(l).filter(x => x !== q);
+	h.unshift(q);
+	h = h.slice(0, HIST_MAX);
+	try { sessionStorage.setItem(histKey(l), JSON.stringify(h)); } catch { /* noop */ }
+	renderHistory(l);
+}
+
+function renderHistory(l: Lang) {
+	const h = loadHistory(l);
+	historyC.replaceChildren();
+	if (h.length === 0) { history.classList.add('hidden'); return; }
+	history.classList.remove('hidden');
+	for (const q of h) {
+		const chip = document.createElement('button');
+		chip.type = 'button';
+		chip.className = 'jb-qt-chip';
+		chip.textContent = q;
+		chip.title = q;
+		chip.addEventListener('click', () => { expr.value = q; runQuery(); });
+		historyC.appendChild(chip);
+	}
+}
+
+// ─── Theme ────────────────────────────────────────────────────────────────────
+
+function paintTheme() {
+	const light = localStorage.getItem('jb-theme') === 'light';
+	root.classList.toggle('jb-theme-light', light);
+	const icon = themeIconEl;
+	if (icon) icon.textContent = light ? '☾' : '☀';
+	const langBtn = document.querySelector<HTMLElement>('[data-action="theme"]');
+	if (langBtn) langBtn.setAttribute('aria-label', light ? 'Switch to dark theme' : 'Switch to light theme');
+}
+paintTheme();
+window.addEventListener('storage', e => { if (e.key === 'jb-theme') paintTheme(); });
+
+// ─── Language switching ────────────────────────────────────────────────────────
+
+function switchLang(newLang: Lang) {
+	lang = newLang;
+	// Update lang tab aria-selected
+	document.querySelectorAll<HTMLElement>('[role="tab"][data-lang]').forEach(btn => {
+		btn.setAttribute('aria-selected', btn.dataset['lang'] === lang ? 'true' : 'false');
+	});
+	// Update snippet panels
+	document.querySelectorAll<HTMLElement>('[data-snip-panel]').forEach(el => {
+		el.classList.toggle('hidden', el.dataset['snipPanel'] !== lang);
+	});
+	// Update snippet lang tabs
+	document.querySelectorAll<HTMLElement>('[data-snip-lang][role="tab"]').forEach(btn => {
+		btn.setAttribute('aria-selected', btn.dataset['snipLang'] === lang ? 'true' : 'false');
+	});
+	// Update placeholder
+	const placeholders: Record<Lang, string> = {
+		jsonpath: '$.store.books[*].title',
+		jmespath: 'store.books[*].title',
+		jq: '.store.books[].title',
+	};
+	expr.placeholder = placeholders[lang];
+	renderHistory(lang);
+	// Auto-run if there's an expression
+	if (expr.value.trim()) scheduleQuery();
+}
+
+// ─── Mode switching ───────────────────────────────────────────────────────────
+
+function switchMode(newMode: Mode) {
+	mode = newMode;
+	document.querySelectorAll<HTMLElement>('[data-action="mode"]').forEach(btn => {
+		btn.setAttribute('aria-pressed', btn.dataset['mode'] === mode ? 'true' : 'false');
+	});
+	if (lastResult.length > 0) renderResult(lastResult, false);
+}
+
+// ─── Status helpers ───────────────────────────────────────────────────────────
+
+function setStatus(label: string, color: 'mute' | 'ok' | 'err' | 'run') {
+	const dot = status.querySelector<HTMLElement>('[data-dot]');
+	const lbl = status.querySelector<HTMLElement>('[data-label]');
+	if (dot) {
+		dot.className = 'h-2 w-2 rounded-full';
+		dot.classList.add(color === 'ok' ? 'bg-success' : color === 'err' ? 'bg-error' : color === 'run' ? 'bg-warning' : 'bg-mute');
+	}
+	if (lbl) lbl.textContent = label;
+}
+
+function setPanel(which: 'out' | 'empty' | 'error' | 'loading') {
+	out.classList.toggle('hidden', which !== 'out');
+	empty.classList.toggle('hidden', which !== 'empty');
+	errorBox.classList.toggle('hidden', which !== 'error');
+	loading.classList.toggle('hidden', which !== 'loading');
+}
+
+// ─── Syntax highlighting ─────────────────────────────────────────────────────
+
+function highlight(v: unknown, indent = 0): DocumentFragment {
+	const frag = document.createDocumentFragment();
+	const sp = (cls: string, text: string) => {
+		const s = document.createElement('span');
+		s.className = cls;
+		s.textContent = text;
+		frag.appendChild(s);
+		return s;
+	};
+	const txt = (t: string) => frag.appendChild(document.createTextNode(t));
+	const pad = '  '.repeat(indent);
+
+	if (v === null)          { sp('jb-q-nl', 'null'); return frag; }
+	if (typeof v === 'boolean') { sp('jb-q-b', String(v)); return frag; }
+	if (typeof v === 'number') { sp('jb-q-n', String(v)); return frag; }
+	if (typeof v === 'string') { sp('jb-q-s', JSON.stringify(v)); return frag; }
+
+	if (Array.isArray(v)) {
+		sp('jb-q-p', '[');
+		if (v.length === 0) { sp('jb-q-p', ']'); return frag; }
+		txt('\n');
+		v.forEach((item, i) => {
+			txt(pad + '  ');
+			frag.appendChild(highlight(item, indent + 1));
+			if (i < v.length - 1) sp('jb-q-p', ',');
+			txt('\n');
+		});
+		txt(pad); sp('jb-q-p', ']');
+		return frag;
+	}
+
+	if (typeof v === 'object' && v !== null) {
+		const obj = v as Record<string, unknown>;
+		const keys = Object.keys(obj);
+		sp('jb-q-p', '{');
+		if (keys.length === 0) { sp('jb-q-p', '}'); return frag; }
+		txt('\n');
+		keys.forEach((k, i) => {
+			txt(pad + '  ');
+			sp('jb-q-k', JSON.stringify(k));
+			sp('jb-q-p', ': ');
+			frag.appendChild(highlight(obj[k], indent + 1));
+			if (i < keys.length - 1) sp('jb-q-p', ',');
+			txt('\n');
+		});
+		txt(pad); sp('jb-q-p', '}');
+		return frag;
+	}
+
+	txt(String(v));
+	return frag;
+}
+
+// ─── Result rendering ─────────────────────────────────────────────────────────
+
+function renderResult(values: unknown[], truncated: boolean) {
+	lastResult = values;
+	if (values.length === 0) {
+		count.textContent = 'no results';
+		setPanel('empty');
+		empty.querySelector('p')!.textContent = 'Query returned no results.';
+		return;
+	}
+
+	count.textContent = `${values.length} value${values.length !== 1 ? 's' : ''}${truncated ? ' (truncated)' : ''}`;
+
+	if (mode === 'count') {
+		out.replaceChildren();
+		const div = document.createElement('div');
+		div.className = 'px-3 py-8 text-center';
+		const n = document.createElement('span');
+		n.className = 'font-mono text-display-lg jb-q-n';
+		n.textContent = String(values.length);
+		const lbl = document.createElement('p');
+		lbl.className = 'mt-2 font-mono text-caption text-mute';
+		lbl.textContent = `value${values.length !== 1 ? 's' : ''}`;
+		div.appendChild(n);
+		div.appendChild(lbl);
+		out.appendChild(div);
+		setPanel('out');
+		return;
+	}
+
+	if (mode === 'raw') {
+		out.replaceChildren();
+		const pre = document.createElement('div');
+		pre.style.whiteSpace = 'pre';
+		values.forEach((v, i) => {
+			if (i > 0) {
+				const sep = document.createElement('span');
+				sep.className = 'jb-q-sep';
+				pre.appendChild(sep);
+			}
+			if (values.length > 1) {
+				const idx = document.createElement('span');
+				idx.className = 'jb-q-idx';
+				idx.textContent = `[${i}] `;
+				pre.appendChild(idx);
+			}
+			pre.appendChild(highlight(v));
+			pre.appendChild(document.createTextNode('\n'));
+		});
+		out.appendChild(pre);
+		setPanel('out');
+		return;
+	}
+
+	// Pretty mode (default)
+	out.replaceChildren();
+	if (values.length === 1) {
+		const pre = document.createElement('div');
+		pre.style.whiteSpace = 'pre';
+		pre.appendChild(highlight(values[0]));
+		out.appendChild(pre);
+	} else {
+		const pre = document.createElement('div');
+		pre.style.whiteSpace = 'pre';
+		values.forEach((v, i) => {
+			if (i > 0) {
+				const sep = document.createElement('span');
+				sep.className = 'jb-q-sep';
+				pre.appendChild(sep);
+			}
+			const idx = document.createElement('span');
+			idx.className = 'jb-q-idx';
+			idx.textContent = `▸ [${i}]  `;
+			pre.appendChild(idx);
+			pre.appendChild(highlight(v));
+			pre.appendChild(document.createTextNode('\n'));
+		});
+		out.appendChild(pre);
+	}
+	setPanel('out');
+}
+
+// ─── Input validation ─────────────────────────────────────────────────────────
+
+function validateInput(): unknown | null {
+	const raw = input.value.trim();
+	if (!raw) { inputStat.textContent = ''; inputStat.className = 'ml-auto font-mono text-caption'; return null; }
+	try {
+		const parsed = JSON.parse(raw);
+		inputStat.textContent = '✓ valid JSON';
+		inputStat.className = 'ml-auto font-mono text-caption text-success';
+		return parsed;
+	} catch (e) {
+		const msg = e instanceof Error ? e.message.replace(/^JSON.parse: /, '') : 'Invalid JSON';
+		inputStat.textContent = '✗ ' + msg.slice(0, 50);
+		inputStat.className = 'ml-auto font-mono text-caption text-error';
+		return null;
+	}
+}
+
+// ─── Engines (lazy-loaded) ────────────────────────────────────────────────────
+
+type JSONPathLib = { JSONPath: (opts: { path: string; json: unknown; resultType?: string; wrap?: boolean }) => unknown };
+type JMESPathLib = { search: (data: unknown, expr: string) => unknown };
+
+let _jsonpathLib: JSONPathLib | null = null;
+let _jmespathLib: JMESPathLib | null = null;
+
+async function evalJSONPath(data: unknown, q: string): Promise<unknown[]> {
+	if (!_jsonpathLib) {
+		const m = await import('jsonpath-plus');
+		_jsonpathLib = m as unknown as JSONPathLib;
+	}
+	const result = _jsonpathLib.JSONPath({ path: q, json: data, resultType: 'value', wrap: true });
+	return Array.isArray(result) ? result as unknown[] : [result];
+}
+
+async function evalJMESPath(data: unknown, q: string): Promise<unknown[]> {
+	if (!_jmespathLib) {
+		const m = await import('jmespath');
+		_jmespathLib = m as unknown as JMESPathLib;
+	}
+	const result = _jmespathLib.search(data, q);
+	return [result];
+}
+
+async function evalJq(data: unknown, q: string): Promise<{ values: unknown[]; truncated: boolean }> {
+	const { runJq } = await import('../lib/jq');
+	const r = runJq(data, q);
+	if (!r.ok) throw new Error(r.error);
+	return { values: r.values, truncated: r.truncated };
+}
+
+// ─── Run query ────────────────────────────────────────────────────────────────
+
+async function runQuery() {
+	const data = validateInput();
+	const q = expr.value.trim();
+
+	if (!data || !q) {
+		setPanel('empty');
+		count.textContent = '';
+		if (evalMs) evalMs.textContent = '';
+		setStatus('Ready', 'mute');
+		return;
+	}
+
+	setPanel('loading');
+	setStatus('Evaluating…', 'run');
+
+	try {
+		const t0 = performance.now();
+		let values: unknown[];
+		let truncated = false;
+
+		if (lang === 'jsonpath') {
+			values = await evalJSONPath(data, q);
+		} else if (lang === 'jmespath') {
+			values = await evalJMESPath(data, q);
+		} else {
+			const r = await evalJq(data, q);
+			values = r.values;
+			truncated = r.truncated;
+		}
+
+		const ms = performance.now() - t0;
+		if (evalMs) evalMs.textContent = `${ms.toFixed(1)} ms`;
+
+		renderResult(values, truncated);
+		setStatus(`${values.length} value${values.length !== 1 ? 's' : ''}`, 'ok');
+		saveHistory(lang, q);
+		saveDoc(input.value);
+
+	} catch (e) {
+		const msg = e instanceof Error ? e.message : String(e);
+		const errMsg = errorBox.querySelector<HTMLElement>('[data-message]');
+		const errHint = errorBox.querySelector<HTMLElement>('[data-hint]');
+		if (errMsg) errMsg.textContent = msg;
+		if (errHint) errHint.textContent = getErrorHint(lang, q, msg);
+		setPanel('error');
+		count.textContent = 'error';
+		setStatus('Error', 'err');
+	}
+}
+
+function getErrorHint(l: Lang, q: string, msg: string): string {
+	if (l === 'jsonpath' && !q.startsWith('$')) return 'JSONPath expressions must start with $';
+	if (l === 'jmespath' && q.startsWith('$')) return 'JMESPath does not use $ — try removing it';
+	if (l === 'jq' && !q.startsWith('.') && !q.startsWith('[') && !q.startsWith('{') && !/^\d/.test(q) && !/^"/.test(q) && !['null','true','false'].some(kw => q.startsWith(kw))) return 'jq filters usually start with . (identity)';
+	if (msg.includes('undefined function')) return 'Check the jq manual — this function name may be misspelled';
+	if (msg.includes('cannot be')) return 'Type mismatch — check that your input has the expected structure';
+	return '';
+}
+
+function scheduleQuery() {
+	clearTimeout(debounceTimer);
+	debounceTimer = window.setTimeout(runQuery, DEBOUNCE);
+}
+
+// ─── Copy as code ─────────────────────────────────────────────────────────────
+
+function codeSnippet(target: string): string {
+	const q = expr.value || '$.field';
+	const escapedQ = q.replace(/`/g, '\\`');
+	switch (target) {
+		case 'js-jsonpath': return `import { JSONPath } from 'jsonpath-plus';\n\nconst result = JSONPath({\n  path: \`${escapedQ}\`,\n  json: data,\n  resultType: 'value',\n});\nconsole.log(result);`;
+		case 'js-jmespath': return `import jmespath from 'jmespath';\n\nconst result = jmespath.search(data, \`${escapedQ}\`);\nconsole.log(result);`;
+		case 'js-jq': return `import jq from 'jq-web';\n\nconst result = await jq.promised.json(data, \`${escapedQ}\`);\nconsole.log(result);`;
+		case 'py-jsonpath': return `from jsonpath_ng import parse\n\nexpr = parse('${q.replace(/'/g,"\\'")}');\nresult = [match.value for match in expr.find(data)]\nprint(result)`;
+		case 'py-jmespath': return `import jmespath\n\nresult = jmespath.search('${q.replace(/'/g,"\\'")}', data)\nprint(result)`;
+		case 'cli-jq': return `echo '${JSON.stringify(JSON.parse(input.value.trim() || 'null'))}' | jq '${q.replace(/'/g, "'\\''")}'`;
+		case 'go-gjson': return `import "github.com/tidwall/gjson"\n\nresult := gjson.Get(jsonStr, \`${escapedQ}\`)\nfmt.Println(result)`;
+		default: return '';
+	}
+}
+
+// ─── Init ────────────────────────────────────────────────────────────────────
+
+function init() {
+	// Load doc from store or use sample
+	const stored = loadDoc();
+	input.value = stored ?? sample;
+	validateInput();
+
+	// Render initial state
+	renderHistory(lang);
+	setPanel('empty');
+
+	// Wire all button actions
+	document.querySelectorAll<HTMLElement>('[data-action]').forEach(btn => {
+		btn.addEventListener('click', async e => {
+			const action = btn.dataset['action']!;
+			switch (action) {
+				case 'sample':
+					input.value = sample;
+					validateInput();
+					scheduleQuery();
+					break;
+				case 'clear':
+					input.value = '';
+					expr.value = '';
+					out.replaceChildren();
+					setPanel('empty');
+					count.textContent = '';
+					setStatus('Ready', 'mute');
+					inputStat.textContent = '';
+					saveDoc('');
+					break;
+				case 'run':
+					await runQuery();
+					break;
+				case 'mode':
+					switchMode(btn.dataset['mode'] as Mode);
+					break;
+				case 'copy-result': {
+					const text = lastResult.length === 1
+						? JSON.stringify(lastResult[0], null, 2)
+						: JSON.stringify(lastResult, null, 2);
+					await navigator.clipboard.writeText(text);
+					const orig = btn.textContent;
+					btn.textContent = 'Copied!';
+					setTimeout(() => { btn.textContent = orig; }, 1200);
+					break;
+				}
+				case 'download-result': {
+					const text = JSON.stringify(lastResult.length === 1 ? lastResult[0] : lastResult, null, 2);
+					const blob = new Blob([text], { type: 'application/json' });
+					const a = document.createElement('a');
+					a.href = URL.createObjectURL(blob);
+					a.download = 'query-result.json';
+					a.click();
+					URL.revokeObjectURL(a.href);
+					break;
+				}
+				case 'copy-code': {
+					e.stopPropagation();
+					codeMenu.classList.toggle('hidden');
+					break;
+				}
+				case 'theme': {
+					const cur = localStorage.getItem('jb-theme');
+					localStorage.setItem('jb-theme', cur === 'light' ? 'dark' : 'light');
+					paintTheme();
+					window.dispatchEvent(new StorageEvent('storage', { key: 'jb-theme' }));
+					break;
+				}
+			}
+		});
+	});
+
+	// Language tabs
+	document.querySelectorAll<HTMLElement>('[role="tab"][data-lang]').forEach(btn => {
+		btn.addEventListener('click', () => switchLang(btn.dataset['lang'] as Lang));
+	});
+
+	// Snippet panel sub-tabs
+	document.querySelectorAll<HTMLElement>('[role="tab"][data-snip-lang]').forEach(btn => {
+		btn.addEventListener('click', () => switchLang(btn.dataset['snipLang'] as Lang));
+	});
+
+	// Snippet cards
+	document.querySelectorAll<HTMLElement>('[data-snip]').forEach(card => {
+		card.addEventListener('click', () => {
+			const snipLang = card.dataset['snipLang'] as Lang;
+			const snip = card.dataset['snip']!;
+			if (snipLang !== lang) switchLang(snipLang);
+			expr.value = snip;
+			runQuery();
+		});
+	});
+
+	// Code menu items
+	document.querySelectorAll<HTMLElement>('[data-lang-code]').forEach(item => {
+		item.addEventListener('click', async () => {
+			codeMenu.classList.add('hidden');
+			const snippet = codeSnippet(item.dataset['langCode']!);
+			await navigator.clipboard.writeText(snippet);
+			const codeBtn = document.querySelector<HTMLElement>('[data-action="copy-code"]');
+			if (codeBtn) {
+				const orig = codeBtn.textContent;
+				codeBtn.textContent = 'Copied!';
+				setTimeout(() => { codeBtn.textContent = orig; }, 1400);
+			}
+		});
+	});
+
+	// Close code menu on outside click
+	document.addEventListener('click', e => {
+		const wrap = document.getElementById('jb-qt-code-wrap');
+		if (wrap && !wrap.contains(e.target as Node)) codeMenu.classList.add('hidden');
+	});
+
+	// Input auto-save + validate
+	input.addEventListener('input', () => {
+		validateInput();
+		saveDoc(input.value);
+		scheduleQuery();
+	});
+
+	// Expression input — debounce
+	expr.addEventListener('input', scheduleQuery);
+
+	// Ctrl+Enter to run
+	document.addEventListener('keydown', (e: KeyboardEvent) => {
+		if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+			e.preventDefault();
+			runQuery();
+		}
+	});
+
+	// Keyboard: Tab to switch language
+	expr.addEventListener('keydown', (e: KeyboardEvent) => {
+		if (e.key === 'Tab' && !e.shiftKey) {
+			e.preventDefault();
+			const langs: Lang[] = ['jsonpath', 'jmespath', 'jq'];
+			const next = langs[(langs.indexOf(lang) + 1) % langs.length]!;
+			switchLang(next);
+		}
+	});
+}
+
+init();
+</script>

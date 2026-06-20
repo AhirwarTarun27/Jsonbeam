@@ -61,7 +61,7 @@ export const FOOTER_NAV: NavColumn[] = [
 	{
 		title: 'Query & convert',
 		links: [
-			{ label: 'JSON Query (jq / JSONPath)', href: '/json-query', soon: true },
+			{ label: 'JSON Query (jq / JSONPath)', href: '/json-query' },
 			{ label: 'JSON → CSV', href: '/json-to-csv', soon: true },
 			{ label: 'JSON → YAML', href: '/json-to-yaml', soon: true },
 			{ label: 'JSON → TypeScript', href: '/json-to-typescript', soon: true },
@@ -121,7 +121,7 @@ export const TOOL_NAV: ToolTabGroup[] = [
 	},
 	{
 		title: 'Query',
-		items: [{ label: 'jq / JSONPath', href: '/json-query', soon: true }],
+		items: [{ label: 'jq / JSONPath', href: '/json-query' }],
 	},
 	{
 		title: 'Convert',
