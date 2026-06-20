@@ -1,0 +1,431 @@
+---
+/**
+ * The /json-formatter workbench island. Framework-free: markup + a single
+ * client-side module that mounts CodeMirror 6. Does format / minify / repair /
+ * validate with inline error squiggles. All processing is local — nothing is
+ * uploaded. In-app controls use the 6px radius scale (not marketing pills).
+ */
+---
+
+<div
+	id="jb-formatter"
+	class="overflow-hidden rounded-md border border-hairline bg-canvas shadow-e3"
+>
+	<!-- Toolbar -->
+	<div class="flex flex-wrap items-center gap-1.5 border-b border-hairline bg-canvas-soft px-3 py-2">
+		<button type="button" data-action="format" class="jb-btn jb-btn-primary" title="Beautify (Ctrl+S)">Format</button>
+		<button type="button" data-action="minify" class="jb-btn" title="Strip all whitespace">Minify</button>
+		<button type="button" data-action="repair" class="jb-btn" title="Fix common JSON mistakes">Repair</button>
+		<button type="button" data-action="validate" class="jb-btn" title="Check for errors">Validate</button>
+
+		<span class="mx-1 hidden h-5 w-px bg-hairline sm:block" aria-hidden="true"></span>
+
+		<label class="flex items-center gap-1.5 text-body-sm text-body">
+			<span class="hidden sm:inline">Indent</span>
+			<select
+				id="jb-indent"
+				class="h-8 rounded-sm border border-hairline bg-canvas px-2 text-body-sm text-ink"
+				aria-label="Indentation"
+			>
+				<option value="2">2 spaces</option>
+				<option value="4">4 spaces</option>
+				<option value="tab">Tab</option>
+			</select>
+		</label>
+
+		<div class="ml-auto flex items-center gap-1.5">
+			<button
+				type="button"
+				data-action="theme"
+				class="jb-btn jb-btn-icon"
+				aria-label="Switch to light editor theme"
+				title="Toggle dark / light editor"
+			><span data-theme-icon aria-hidden="true"></span></button>
+			<button type="button" data-action="sample" class="jb-btn" title="Load a messy sample to try Repair">Sample</button>
+			<button type="button" data-action="copy" class="jb-btn" title="Copy to clipboard">Copy</button>
+			<button type="button" data-action="download" class="jb-btn" title="Download as data.json">Download</button>
+			<button type="button" data-action="clear" class="jb-btn" title="Clear the editor">Clear</button>
+		</div>
+	</div>
+
+	<!-- Editor -->
+	<div id="jb-editor" class="h-[58vh] min-h-[380px] w-full overflow-hidden"></div>
+
+	<!-- Status bar -->
+	<div class="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-hairline bg-canvas-soft px-3 py-2 text-body-sm">
+		<span id="jb-status" class="inline-flex items-center gap-1.5 font-medium" role="status" aria-live="polite">
+			<span class="h-2 w-2 rounded-full bg-mute" data-dot></span>
+			<span data-label>Ready</span>
+		</span>
+		<span id="jb-stats" class="font-mono text-caption text-mute">0 lines · 0 chars</span>
+		<span class="ml-auto inline-flex items-center gap-1.5 text-caption text-mute">
+			<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+				<path d="M8 1.5 3 3.5v3.2c0 3 2.1 5.8 5 6.8 2.9-1 5-3.8 5-6.8V3.5L8 1.5Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"></path>
+			</svg>
+			Processed locally — nothing uploaded
+		</span>
+	</div>
+</div>
+
+<style>
+	.jb-btn {
+		display: inline-flex;
+		align-items: center;
+		height: 32px;
+		padding: 0 12px;
+		border-radius: 6px;
+		border: 1px solid var(--color-hairline);
+		background: var(--color-canvas);
+		color: var(--color-ink);
+		font-size: 14px;
+		font-weight: 500;
+		line-height: 1;
+		transition: background-color 0.12s ease;
+	}
+	.jb-btn:hover {
+		background: var(--color-canvas-soft-2);
+	}
+	.jb-btn-primary {
+		background: var(--color-ink);
+		color: var(--color-on-primary);
+		border-color: var(--color-ink);
+	}
+	.jb-btn-primary:hover {
+		background: #2a2a2a;
+	}
+	.jb-btn-icon {
+		width: 32px;
+		padding: 0;
+		justify-content: center;
+		color: var(--color-body);
+	}
+	/* Dark by default so the mount area matches the editor before hydration. */
+	#jb-editor {
+		background-color: var(--color-editor-bg);
+	}
+	#jb-editor :global(.cm-editor) {
+		height: 100%;
+	}
+
+	/*
+	 * Selection fix. The site-wide ::selection paints an ink block with
+	 * near-white text — right for marketing copy, but it washed code out to
+	 * near-invisibility inside the editor. Override it per theme so selected
+	 * JSON always stays readable (default = dark editor).
+	 */
+	:global(#jb-editor .cm-editor ::selection) {
+		color: var(--color-on-primary);
+		background-color: var(--color-editor-sel-dark);
+	}
+	:global(#jb-editor.jb-theme-light .cm-editor ::selection) {
+		color: var(--color-ink);
+		background-color: var(--color-editor-sel-light);
+	}
+
+	/* Inflate dense in-app controls to the 44px touch floor on coarse pointers. */
+	@media (pointer: coarse) {
+		.jb-btn { height: 44px; }
+		.jb-btn-icon { width: 44px; }
+		#jb-indent { height: 44px; }
+	}
+</style>
+
+<script>
+	import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, highlightSpecialChars } from '@codemirror/view';
+	import { Compartment } from '@codemirror/state';
+	import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
+	import { json } from '@codemirror/lang-json';
+	import { syntaxHighlighting, HighlightStyle, bracketMatching, foldGutter, foldKeymap, indentUnit, indentOnInput } from '@codemirror/language';
+	import { tags as t } from '@lezer/highlight';
+	import { lintGutter, linter, type Diagnostic } from '@codemirror/lint';
+	import { checkJson } from '../lib/json';
+	// jsonrepair is lazy-loaded on first Repair click (kept out of the initial bundle).
+
+	const root = document.getElementById('jb-formatter');
+	const mount = document.getElementById('jb-editor');
+	if (root && mount) {
+		// Non-null alias so the narrowing survives into the closures below.
+		const editorEl = mount;
+		const DEFAULT_DOC = [
+			'{',
+			'  "app": "JSON Beam",',
+			'  "private": true,',
+			'  "modes": ["text", "tree", "table", "graph"],',
+			'  "maxFileSizeMB": 100',
+			'}',
+		].join('\n');
+
+		const MESSY_DOC = [
+			'{',
+			"  app: 'JSON Beam',",
+			'  private: true,',
+			"  modes: ['text','tree','table','graph',],",
+			'  // unquoted keys, single quotes, trailing comma, and this comment',
+			'  maxFileSizeMB: 100,',
+			'}',
+		].join('\n');
+
+		// ── Theme + syntax — dark code workbench (default) or light variant ──
+		// Surface + palette mirror DESIGN.md's `code-editor-mockup` and the
+		// homepage hero/workbench mockups, so the live editor matches them.
+		type Mode = 'dark' | 'light';
+
+		function editorTheme(mode: Mode) {
+			const dark = mode === 'dark';
+			return EditorView.theme(
+				{
+					'&': { backgroundColor: dark ? 'var(--color-editor-bg)' : 'var(--color-canvas)', color: dark ? 'var(--color-editor-fg)' : 'var(--color-ink)', colorScheme: dark ? 'dark' : 'light', fontSize: '13px', height: '100%' },
+					'&.cm-focused': { outline: 'none' },
+					'.cm-scroller': { fontFamily: 'var(--font-mono)', lineHeight: '1.6' },
+					'.cm-content': { padding: '14px 0', caretColor: dark ? 'var(--color-editor-fg)' : 'var(--color-ink)' },
+					'.cm-gutters': { backgroundColor: dark ? 'var(--color-editor-bg)' : 'var(--color-canvas)', color: dark ? 'var(--color-hairline-strong)' : 'var(--color-mute)', border: 'none', borderRight: dark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid var(--color-hairline)' },
+					'.cm-lineNumbers .cm-gutterElement': { padding: '0 10px 0 14px' },
+					'.cm-activeLine': { backgroundColor: dark ? 'var(--color-editor-line)' : 'var(--color-canvas-soft)' },
+					'.cm-activeLineGutter': { backgroundColor: dark ? 'var(--color-editor-line)' : 'var(--color-canvas-soft)', color: dark ? 'var(--color-editor-fg)' : 'var(--color-body)' },
+					'.cm-matchingBracket': { backgroundColor: dark ? 'rgba(255, 255, 255, 0.14)' : 'var(--color-canvas-soft-2)', outline: dark ? '1px solid rgba(255, 255, 255, 0.22)' : '1px solid var(--color-hairline-strong)' },
+					'.cm-tooltip': { border: dark ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid var(--color-hairline)', backgroundColor: dark ? 'var(--color-editor-line)' : 'var(--color-canvas)', color: dark ? 'var(--color-editor-fg)' : 'var(--color-ink)', borderRadius: '6px', boxShadow: 'var(--shadow-e4)', overflow: 'hidden' },
+					'.cm-diagnostic': { fontFamily: 'var(--font-sans)', fontSize: '13px', padding: '6px 10px' },
+					'.cm-diagnostic-error': { borderLeftColor: 'var(--color-error)' },
+				},
+				{ dark }
+			);
+		}
+
+		function editorHighlight(mode: Mode) {
+			return mode === 'dark'
+				? HighlightStyle.define([
+						{ tag: t.propertyName, color: 'var(--color-editor-fg)', fontWeight: '500' },
+						{ tag: t.string, color: 'var(--color-cyan)' },
+						{ tag: t.number, color: 'var(--color-violet-soft)' },
+						{ tag: [t.bool, t.null], color: 'var(--color-warning)' },
+						{ tag: [t.brace, t.squareBracket, t.punctuation, t.separator], color: 'var(--color-hairline-strong)' },
+					])
+				: HighlightStyle.define([
+						{ tag: t.propertyName, color: 'var(--color-ink)', fontWeight: '500' },
+						{ tag: t.string, color: 'var(--color-link-deep)' },
+						{ tag: t.number, color: 'var(--color-violet)' },
+						{ tag: [t.bool, t.null], color: 'var(--color-cyan-deep)' },
+						{ tag: [t.brace, t.squareBracket, t.punctuation, t.separator], color: 'var(--color-mute)' },
+					]);
+		}
+
+		function themeExtensions(mode: Mode) {
+			return [editorTheme(mode), syntaxHighlighting(editorHighlight(mode))];
+		}
+
+		// Persisted editor theme — default dark (the developer-native, on-brand surface).
+		const THEME_KEY = 'jb-theme';
+		function readMode(): Mode {
+			try {
+				const stored = localStorage.getItem(THEME_KEY);
+				if (stored === 'light' || stored === 'dark') return stored;
+			} catch {
+				/* storage blocked (private mode / disabled) — fall through to default */
+			}
+			return 'dark';
+		}
+		const themeComp = new Compartment();
+		let mode: Mode = readMode();
+
+		// ── Validation: precise, line-anchored error messages (see lib/json.ts) ─
+		function diagnostics(view: EditorView): Diagnostic[] {
+			const res = checkJson(view.state.doc.toString());
+			if (res.ok) return [];
+			const len = view.state.doc.length;
+			const from = Math.min(Math.max(res.position, 0), len);
+			const to = Math.min(from + 1, len);
+			return [{ from, to: Math.max(to, from), severity: 'error', message: res.message }];
+		}
+
+		// ── Status bar ───────────────────────────────────────────────────────
+		const dot = root.querySelector<HTMLElement>('#jb-status [data-dot]');
+		const label = root.querySelector<HTMLElement>('#jb-status [data-label]');
+		const statsEl = root.querySelector<HTMLElement>('#jb-stats');
+		let statusTimer = 0;
+
+		function setStatus(state: 'ok' | 'error' | 'idle', text: string) {
+			if (!dot || !label) return;
+			const colors: Record<string, string> = { ok: 'var(--color-success)', error: 'var(--color-error)', idle: 'var(--color-mute)' };
+			dot.style.backgroundColor = colors[state] || colors.idle;
+			label.textContent = text;
+			label.style.color = state === 'error' ? 'var(--color-error-deep)' : 'var(--color-ink)';
+		}
+
+		function refreshStatus() {
+			const text = view.state.doc.toString();
+			const lines = view.state.doc.lines;
+			const chars = view.state.doc.length;
+			if (statsEl) statsEl.textContent = `${lines} lines · ${chars.toLocaleString()} chars`;
+			if (text.trim() === '') {
+				setStatus('idle', 'Empty');
+				return;
+			}
+			const res = checkJson(text);
+			if (res.ok) setStatus('ok', 'Valid JSON');
+			else setStatus('error', res.message);
+		}
+
+		// ── Editor configuration ─────────────────────────────────────────────
+		const indentComp = new Compartment();
+		const indentStrings: Record<string, string> = { '2': '  ', '4': '    ', tab: '\t' };
+		let indentKey = '2';
+
+		const view = new EditorView({
+			parent: mount,
+			doc: DEFAULT_DOC,
+			extensions: [
+				lineNumbers(),
+				highlightActiveLineGutter(),
+				highlightSpecialChars(),
+				history(),
+				indentOnInput(),
+				bracketMatching(),
+				foldGutter(),
+				highlightActiveLine(),
+				indentComp.of(indentUnit.of(indentStrings[indentKey])),
+				json(),
+				themeComp.of(themeExtensions(mode)),
+				linter(diagnostics, { delay: 350 }),
+				lintGutter(),
+				keymap.of([...defaultKeymap, ...historyKeymap, ...foldKeymap, indentWithTab]),
+				EditorView.contentAttributes.of({ 'aria-label': 'JSON editor', spellcheck: 'false' }),
+				EditorView.updateListener.of((u) => {
+					if (u.docChanged) {
+						clearTimeout(statusTimer);
+						statusTimer = window.setTimeout(refreshStatus, 250);
+					}
+				}),
+				// Format on Ctrl/Cmd+S
+				keymap.of([{ key: 'Mod-s', preventDefault: true, run: () => { doFormat(); return true; } }]),
+			],
+		});
+
+		// ── Actions ────────────────────────────────────────────────────────
+		function getText() {
+			return view.state.doc.toString();
+		}
+		function setText(next: string) {
+			view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: next } });
+			refreshStatus();
+		}
+		function flashInvalid() {
+			refreshStatus();
+			const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+			if (label && !reduce) {
+				label.animate(
+					[{ transform: 'translateX(0)' }, { transform: 'translateX(-3px)' }, { transform: 'translateX(3px)' }, { transform: 'translateX(0)' }],
+					{ duration: 220 }
+				);
+			}
+		}
+		function spaceArg() {
+			return indentKey === 'tab' ? '\t' : parseInt(indentKey, 10);
+		}
+		function doFormat() {
+			const text = getText();
+			if (text.trim() === '') return;
+			try {
+				setText(JSON.stringify(JSON.parse(text), null, spaceArg()));
+			} catch {
+				flashInvalid();
+			}
+		}
+		function doMinify() {
+			const text = getText();
+			if (text.trim() === '') return;
+			try {
+				setText(JSON.stringify(JSON.parse(text)));
+			} catch {
+				flashInvalid();
+			}
+		}
+		async function doRepair() {
+			const text = getText();
+			if (text.trim() === '') return;
+			try {
+				const { jsonrepair } = await import('jsonrepair');
+				const repaired = jsonrepair(text);
+				// Pretty-print the repaired result for a clean payoff.
+				setText(JSON.stringify(JSON.parse(repaired), null, spaceArg()));
+			} catch {
+				flashInvalid();
+			}
+		}
+		async function doCopy() {
+			try {
+				await navigator.clipboard.writeText(getText());
+				setStatus('ok', 'Copied to clipboard');
+				setTimeout(refreshStatus, 1200);
+			} catch {
+				setStatus('error', 'Clipboard unavailable');
+			}
+		}
+		function doDownload() {
+			const blob = new Blob([getText()], { type: 'application/json' });
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = 'data.json';
+			a.click();
+			URL.revokeObjectURL(url);
+		}
+
+		// ── Theme toggle (icon shows the theme you'll switch *to*) ───────────
+		const ICON_SUN =
+			'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>';
+		const ICON_MOON =
+			'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"></path></svg>';
+		const themeBtn = root.querySelector<HTMLButtonElement>('[data-action="theme"]');
+		const themeIcon = themeBtn?.querySelector<HTMLElement>('[data-theme-icon]') ?? null;
+
+		function paintThemeButton() {
+			if (themeIcon) themeIcon.innerHTML = mode === 'dark' ? ICON_SUN : ICON_MOON;
+			if (themeBtn) themeBtn.setAttribute('aria-label', mode === 'dark' ? 'Switch to light editor theme' : 'Switch to dark editor theme');
+			editorEl.classList.toggle('jb-theme-light', mode === 'light');
+		}
+		function applyMode(next: Mode) {
+			mode = next;
+			view.dispatch({ effects: themeComp.reconfigure(themeExtensions(mode)) });
+			try {
+				localStorage.setItem(THEME_KEY, mode);
+			} catch {
+				/* storage blocked — keep the choice in memory for this session */
+			}
+			paintThemeButton();
+		}
+
+		const actions: Record<string, () => void | Promise<void>> = {
+			format: doFormat,
+			minify: doMinify,
+			repair: doRepair,
+			validate: refreshStatus,
+			copy: doCopy,
+			download: doDownload,
+			clear: () => { setText(''); view.focus(); },
+			sample: () => setText(MESSY_DOC),
+			theme: () => applyMode(mode === 'dark' ? 'light' : 'dark'),
+		};
+
+		root.querySelectorAll('[data-action]').forEach((btn) => {
+			const action = btn.getAttribute('data-action');
+			if (!action) return;
+			btn.addEventListener('click', () => {
+				const fn = actions[action];
+				if (fn) fn();
+			});
+		});
+
+		const indentSel = root.querySelector<HTMLSelectElement>('#jb-indent');
+		if (indentSel) {
+			indentSel.addEventListener('change', (e) => {
+				indentKey = (e.target as HTMLSelectElement).value;
+				view.dispatch({ effects: indentComp.reconfigure(indentUnit.of(indentStrings[indentKey])) });
+				// Re-format if the document is currently valid.
+				if (checkJson(getText()).ok && getText().trim() !== '') doFormat();
+			});
+		}
+
+		paintThemeButton();
+		refreshStatus();
+	}
+</script>

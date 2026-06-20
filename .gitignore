@@ -1,0 +1,37 @@
+# build output
+dist/
+
+# generated types
+.astro/
+
+# dependencies
+node_modules/
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# environment variables
+.env
+.env.production
+
+# macOS-specific files
+.DS_Store
+
+# jetbrains setting folder
+.idea/
+
+#claude
+CLAUDE.md
+.claude/settings.local.json
+
+# agent skills: content is regenerated from skills-lock.json via `npx skills`.
+# Commit skills-lock.json (source of truth); ignore the generated content + local links.
+.agents/skills/
+.claude/skills/
+
+BUILD_PROMPT.md
+
+.playwright-mcp

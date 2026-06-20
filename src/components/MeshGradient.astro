@@ -1,0 +1,48 @@
+---
+/**
+ * The brand mesh gradient — cyan → blue → violet → magenta → amber. This is
+ * the ENTIRE decorative system and lives at hero scale only. Never miniaturise
+ * it, never reduce it to a single colour. Purely decorative → aria-hidden.
+ */
+interface Props {
+	class?: string;
+}
+const { class: extra = '' } = Astro.props;
+---
+
+<div class:list={['mesh', extra]} aria-hidden="true"></div>
+
+<style>
+	.mesh {
+		position: absolute;
+		inset: 0;
+		z-index: 0;
+		overflow: hidden;
+		pointer-events: none;
+		/* Fade the atmosphere out toward the bottom so it dissolves into canvas. */
+		-webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 45%, transparent 90%);
+		mask-image: linear-gradient(to bottom, #000 0%, #000 45%, transparent 90%);
+	}
+
+	.mesh::before {
+		content: '';
+		position: absolute;
+		inset: -25% -10% auto -10%;
+		height: 135%;
+		background:
+			radial-gradient(38% 50% at 12% 18%, var(--color-grad-develop-start) 0%, transparent 60%),
+			radial-gradient(40% 52% at 34% 4%, var(--color-grad-develop-end) 0%, transparent 58%),
+			radial-gradient(42% 55% at 56% 14%, var(--color-grad-preview-start) 0%, transparent 60%),
+			radial-gradient(40% 50% at 76% 2%, var(--color-grad-preview-end) 0%, transparent 56%),
+			radial-gradient(46% 58% at 94% 22%, var(--color-grad-ship-end) 0%, transparent 60%),
+			radial-gradient(30% 40% at 88% 40%, var(--color-grad-ship-start) 0%, transparent 55%);
+		filter: blur(64px) saturate(130%);
+		opacity: 0.4;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.mesh::before {
+			filter: blur(64px) saturate(120%);
+		}
+	}
+</style>

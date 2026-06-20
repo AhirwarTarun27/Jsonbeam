@@ -1,0 +1,65 @@
+---
+/**
+ * BaseHead — every <head> tag for SEO: title, description, canonical,
+ * Open Graph, Twitter card, and JSON-LD structured data.
+ */
+import { SITE_NAME, SITE_DESCRIPTION, DEFAULT_OG_IMAGE } from '../consts';
+
+interface Props {
+	title: string;
+	description?: string;
+	image?: string;
+	/** Plain objects serialised into <script type="application/ld+json">. */
+	jsonLd?: Record<string, unknown>[];
+	noindex?: boolean;
+}
+
+const {
+	title,
+	description = SITE_DESCRIPTION,
+	image = DEFAULT_OG_IMAGE,
+	jsonLd = [],
+	noindex = false,
+} = Astro.props;
+
+const canonical = new URL(Astro.url.pathname, Astro.site).href;
+const ogImage = new URL(image, Astro.site).href;
+
+// Escape "</script>" sequences so structured data can't break out of the tag.
+const serialize = (data: Record<string, unknown>) =>
+	JSON.stringify(data).replace(/</g, '\\u003c');
+---
+
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<meta name="generator" content={Astro.generator} />
+
+<title>{title}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonical} />
+{noindex && <meta name="robots" content="noindex, nofollow" />}
+<link rel="sitemap" href="/sitemap-index.xml" />
+
+<!-- Open Graph -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content={SITE_NAME} />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={canonical} />
+<meta property="og:image" content={ogImage} />
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={ogImage} />
+
+<!-- Theme -->
+<meta name="theme-color" content="#ffffff" />
+
+{
+	jsonLd.map((data) => (
+		<script is:inline type="application/ld+json" set:html={serialize(data)} />
+	))
+}
