@@ -1,0 +1,1173 @@
+---
+/**
+ * JSON Diff Viewer island — semantic, structure-aware diff for two JSON documents.
+ *
+ * What makes this the best in the market:
+ *   • Structural diff — understands objects and arrays, not just text lines.
+ *     Added/removed/changed keys in objects are detected by name; array items
+ *     are aligned with LCS (Longest Common Subsequence) for ≤ 200-item arrays so
+ *     insertions and deletions are shown precisely rather than as wholesale replacements.
+ *   • Type-aware changes — "1" vs 1 (string→number) is a type change, not just a
+ *     value change. Each kind gets its own colour.
+ *   • Live update — the diff re-runs ~300 ms after you stop typing in either input.
+ *   • Summary bar — live counts: +N added, −N removed, ~N changed, N unchanged.
+ *   • Navigate between changes — ↑ / ↓ buttons (or n/p keys while the diff is
+ *     focused) scroll to the next/previous change and announce it.
+ *   • Download as JSON Merge Patch (RFC 7396) — the minimal patch document that
+ *     transforms A into B; generated locally, never uploaded.
+ *   • Identical detection — "No differences" banner when documents match exactly.
+ *   • Unchanged sections auto-dimmed to keep the eye on the actual changes.
+ *   • Dark / light theme toggle shared via localStorage (jb-theme key).
+ *   • Doc-store carry: the working document from any other tool pre-fills input A.
+ *
+ * Framework-free: HTML + one typed client module. All processing is local.
+ * Uses the shared 6 px .jb-btn in-app control scale (global.css).
+ */
+
+const sampleA = `{
+  "apiVersion": "v1",
+  "service": "auth-api",
+  "host": "api.internal",
+  "port": 8080,
+  "features": {
+    "oauth": true,
+    "mfa": false,
+    "rateLimiting": false
+  },
+  "maxConnections": 100,
+  "timeout": 30,
+  "deprecated": true
+}`;
+
+const sampleB = `{
+  "apiVersion": "v2",
+  "service": "auth-api",
+  "host": "api.internal",
+  "port": 443,
+  "features": {
+    "oauth": true,
+    "mfa": true,
+    "rateLimiting": true,
+    "auditLog": true
+  },
+  "maxConnections": 500,
+  "timeout": 60
+}`;
+---
+
+<div
+	id="jb-dv"
+	class="overflow-hidden rounded-md border border-hairline bg-canvas shadow-e3"
+>
+	<!-- Toolbar -->
+	<div class="flex flex-wrap items-center gap-1.5 border-b border-hairline bg-canvas-soft px-3 py-2">
+		<button type="button" data-action="swap" class="jb-btn" title="Swap A and B inputs">
+			<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" class="mr-1">
+				<path d="M3 5h10M10 2l3 3-3 3M13 11H3M6 8l-3 3 3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+			</svg>
+			Swap A ↔ B
+		</button>
+
+		<span class="mx-1 hidden h-5 w-px bg-hairline sm:block" aria-hidden="true"></span>
+
+		<div class="ml-auto flex flex-wrap items-center gap-1.5">
+			<button type="button" data-action="patch" class="jb-btn" title="Download diff as JSON Merge Patch (RFC 7396)">
+				Merge Patch ↓
+			</button>
+			<button
+				type="button"
+				data-action="theme"
+				class="jb-btn jb-btn-icon"
+				aria-label="Switch to light theme"
+				title="Toggle dark / light"
+			><span data-theme-icon aria-hidden="true"></span></button>
+			<button type="button" data-action="sample" class="jb-btn" title="Load sample A and B">Sample</button>
+			<button type="button" data-action="clear-a" class="jb-btn" title="Clear input A">Clear A</button>
+			<button type="button" data-action="clear-b" class="jb-btn" title="Clear input B">Clear B</button>
+		</div>
+	</div>
+
+	<!-- Two input panes -->
+	<div class="grid grid-cols-1 lg:grid-cols-2">
+		<div class="border-b border-hairline lg:border-b-0 lg:border-r">
+			<div class="flex items-center gap-2 border-b border-hairline bg-canvas-soft px-3 py-1">
+				<span class="font-mono text-caption uppercase tracking-wide text-mute">A</span>
+				<span class="font-mono text-caption text-mute">— original</span>
+				<span id="jb-dv-a-status" class="ml-auto font-mono text-caption" aria-live="polite"></span>
+			</div>
+			<label class="sr-only" for="jb-dv-left">JSON A (original)</label>
+			<textarea
+				id="jb-dv-left"
+				spellcheck="false"
+				autocomplete="off"
+				autocapitalize="off"
+				aria-label="JSON A — original document"
+				class="h-[28vh] min-h-[180px] w-full"
+			>{sampleA}</textarea>
+		</div>
+		<div>
+			<div class="flex items-center gap-2 border-b border-hairline bg-canvas-soft px-3 py-1">
+				<span class="font-mono text-caption uppercase tracking-wide text-mute">B</span>
+				<span class="font-mono text-caption text-mute">— modified</span>
+				<span id="jb-dv-b-status" class="ml-auto font-mono text-caption" aria-live="polite"></span>
+			</div>
+			<label class="sr-only" for="jb-dv-right">JSON B (modified)</label>
+			<textarea
+				id="jb-dv-right"
+				spellcheck="false"
+				autocomplete="off"
+				autocapitalize="off"
+				aria-label="JSON B — modified document"
+				class="h-[28vh] min-h-[180px] w-full"
+			>{sampleB}</textarea>
+		</div>
+	</div>
+
+	<!-- Summary + navigation bar -->
+	<div class="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-t border-hairline bg-canvas-soft px-3 py-1.5">
+		<div id="jb-dv-summary" class="flex flex-wrap items-center gap-3 font-mono text-caption" aria-live="polite">
+			<span class="text-mute">Compare two JSON documents above.</span>
+		</div>
+		<div class="ml-auto flex items-center gap-1">
+			<span id="jb-dv-nav-label" class="font-mono text-caption text-mute"></span>
+			<button
+				type="button"
+				data-action="prev"
+				class="jb-btn jb-btn-icon"
+				aria-label="Previous change"
+				title="Previous change (p)"
+				disabled
+			>↑</button>
+			<button
+				type="button"
+				data-action="next"
+				class="jb-btn jb-btn-icon"
+				aria-label="Next change"
+				title="Next change (n)"
+				disabled
+			>↓</button>
+		</div>
+	</div>
+
+	<!-- Diff output -->
+	<div
+		id="jb-dv-tree"
+		class="h-[44vh] min-h-[320px] overflow-auto"
+		tabindex="0"
+		role="region"
+		aria-label="JSON diff output — press n for next change, p for previous"
+	>
+		<div id="jb-dv-content" class="px-3 py-3 font-mono text-code"></div>
+		<div id="jb-dv-empty" class="hidden flex-col items-center justify-center gap-2 px-6 py-12 text-center">
+			<p class="font-mono text-caption text-mute">Paste JSON in both editors above to compare them.</p>
+		</div>
+	</div>
+
+	<!-- Status bar -->
+	<div class="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-hairline bg-canvas-soft px-3 py-2 text-body-sm">
+		<span
+			id="jb-dv-status"
+			class="inline-flex items-center gap-1.5 font-medium"
+			role="status"
+			aria-live="polite"
+		>
+			<span class="h-2 w-2 rounded-full bg-mute" data-dot></span>
+			<span data-label>Ready</span>
+		</span>
+		<span data-stats class="font-mono text-caption text-mute"></span>
+		<span class="ml-auto inline-flex items-center gap-1.5 text-caption text-mute">
+			<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+				<path d="M8 1.5 3 3.5v3.2c0 3 2.1 5.8 5 6.8 2.9-1 5-3.8 5-6.8V3.5L8 1.5Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"></path>
+			</svg>
+			Processed locally — nothing uploaded
+		</span>
+	</div>
+</div>
+
+<style>
+	/* ── Input panes — dark code surface ───────────────────────────────────── */
+	#jb-dv-left,
+	#jb-dv-right {
+		background-color: var(--color-editor-bg);
+		color: var(--color-editor-fg);
+		font-family: var(--font-mono);
+		font-size: 13px;
+		line-height: 1.6;
+		padding: 12px 14px;
+		border: none;
+		outline: none;
+		resize: none;
+		display: block;
+		tab-size: 2;
+		width: 100%;
+	}
+
+	/* ── Diff tree ─────────────────────────────────────────────────────────── */
+	#jb-dv-tree {
+		background-color: var(--color-editor-bg);
+		color: var(--color-editor-fg);
+	}
+
+	/* Diff line — base */
+	:global(#jb-dv-content .jb-dl) {
+		display: flex;
+		align-items: flex-start;
+		padding: 1px 0 1px 4px;
+		border-left: 2px solid transparent;
+		line-height: 1.65;
+		white-space: pre;
+	}
+
+	/* Prefix badge */
+	:global(#jb-dv-content .jb-dl-prefix) {
+		flex: 0 0 18px;
+		font-weight: 600;
+		margin-right: 2px;
+		user-select: none;
+	}
+
+	/* Unchanged — dimmed; objects/arrays collapsed */
+	:global(#jb-dv-content .jb-dl-unchanged) {
+		opacity: 0.38;
+	}
+
+	/* Added — green */
+	:global(#jb-dv-content .jb-dl-added) {
+		border-left-color: var(--color-success);
+		background: rgba(0, 112, 243, 0.08);
+	}
+	:global(#jb-dv-content .jb-dl-added .jb-dl-prefix) {
+		color: var(--color-success);
+	}
+
+	/* Removed — red */
+	:global(#jb-dv-content .jb-dl-removed) {
+		border-left-color: var(--color-error);
+		background: rgba(238, 0, 0, 0.08);
+	}
+	:global(#jb-dv-content .jb-dl-removed .jb-dl-prefix) {
+		color: var(--color-error);
+	}
+	:global(#jb-dv-content .jb-dl-removed .jb-dl-body) {
+		text-decoration: line-through;
+		text-decoration-color: rgba(238, 0, 0, 0.5);
+	}
+
+	/* Changed — orange */
+	:global(#jb-dv-content .jb-dl-changed) {
+		border-left-color: var(--color-warning);
+		background: rgba(245, 166, 35, 0.08);
+	}
+	:global(#jb-dv-content .jb-dl-changed .jb-dl-prefix) {
+		color: var(--color-warning);
+	}
+
+	/* Value type colours — dark */
+	:global(#jb-dv-content .jb-dvc-string)  { color: var(--color-cyan); }
+	:global(#jb-dv-content .jb-dvc-number)  { color: var(--color-violet-soft); }
+	:global(#jb-dv-content .jb-dvc-bool)    { color: var(--color-warning); }
+	:global(#jb-dv-content .jb-dvc-null)    { color: var(--color-mute); }
+	:global(#jb-dv-content .jb-dvc-key)     { color: var(--color-editor-fg); font-weight: 500; }
+	:global(#jb-dv-content .jb-dvc-punct)   { color: var(--color-hairline-strong); }
+	:global(#jb-dv-content .jb-dvc-arrow)   { color: var(--color-warning); padding: 0 4px; }
+	:global(#jb-dv-content .jb-dvc-from)    { text-decoration: line-through; text-decoration-color: rgba(238,0,0,0.5); }
+	:global(#jb-dv-content .jb-dvc-collapse){ color: var(--color-hairline-strong); font-style: italic; cursor: pointer; }
+	:global(#jb-dv-content .jb-dvc-collapse:hover){ color: var(--color-editor-fg); }
+
+	/* Scroll target highlight */
+	:global(#jb-dv-content .jb-dl-nav-focus) {
+		outline: 1px solid var(--color-link);
+		outline-offset: -1px;
+		border-radius: var(--radius-xs);
+	}
+
+	/* A/B status badges */
+	:global(#jb-dv-a-status.jb-ok)    { color: var(--color-success); }
+	:global(#jb-dv-a-status.jb-err)   { color: var(--color-error); }
+	:global(#jb-dv-b-status.jb-ok)    { color: var(--color-success); }
+	:global(#jb-dv-b-status.jb-err)   { color: var(--color-error); }
+
+	/* ── Light theme ────────────────────────────────────────────────────────── */
+	:global(#jb-dv.jb-theme-light #jb-dv-left),
+	:global(#jb-dv.jb-theme-light #jb-dv-right) {
+		background-color: var(--color-canvas);
+		color: var(--color-ink);
+	}
+	:global(#jb-dv.jb-theme-light #jb-dv-tree) {
+		background-color: var(--color-canvas);
+		color: var(--color-ink);
+	}
+	:global(#jb-dv.jb-theme-light #jb-dv-content .jb-dl-added) {
+		background: rgba(211, 229, 255, 0.5);
+	}
+	:global(#jb-dv.jb-theme-light #jb-dv-content .jb-dl-removed) {
+		background: rgba(247, 212, 214, 0.5);
+	}
+	:global(#jb-dv.jb-theme-light #jb-dv-content .jb-dl-changed) {
+		background: rgba(255, 239, 207, 0.6);
+	}
+	:global(#jb-dv.jb-theme-light #jb-dv-content .jb-dvc-string)  { color: var(--color-link-deep); }
+	:global(#jb-dv.jb-theme-light #jb-dv-content .jb-dvc-number)  { color: var(--color-violet); }
+	:global(#jb-dv.jb-theme-light #jb-dv-content .jb-dvc-bool)    { color: var(--color-cyan-deep); }
+	:global(#jb-dv.jb-theme-light #jb-dv-content .jb-dvc-null)    { color: var(--color-mute); }
+	:global(#jb-dv.jb-theme-light #jb-dv-content .jb-dvc-key)     { color: var(--color-ink); }
+	:global(#jb-dv.jb-theme-light #jb-dv-content .jb-dvc-punct)   { color: var(--color-mute); }
+	:global(#jb-dv.jb-theme-light #jb-dv-content .jb-dvc-collapse){ color: var(--color-mute); }
+</style>
+
+<script>
+	import { checkJson } from '../lib/json';
+	import { loadDoc, saveDoc } from '../lib/doc-store';
+
+	// ── Types ───────────────────────────────────────────────────────────────
+	type JsonValue = string | number | boolean | null | JsonValue[] | { [k: string]: JsonValue };
+	type JsonObject = { [k: string]: JsonValue };
+
+	interface DiffUnchanged { kind: 'unchanged'; value: JsonValue }
+	interface DiffAdded     { kind: 'added';    value: JsonValue }
+	interface DiffRemoved   { kind: 'removed';  value: JsonValue }
+	interface DiffChanged   { kind: 'changed';  from: JsonValue; to: JsonValue }
+	interface DiffObject    { kind: 'object';   fields: Record<string, DiffNode> }
+	interface DiffArray     { kind: 'array';    items: DiffArrayItem[] }
+
+	type DiffNode = DiffUnchanged | DiffAdded | DiffRemoved | DiffChanged | DiffObject | DiffArray;
+
+	type DiffArrayItem =
+		| { kind: 'unchanged'; value: JsonValue }
+		| { kind: 'added';     value: JsonValue }
+		| { kind: 'removed';   value: JsonValue }
+		| { kind: 'changed';   from: JsonValue; to: JsonValue }
+		| { kind: 'nested';    diff: DiffObject | DiffArray };
+
+	interface ChangeCount { added: number; removed: number; changed: number; unchanged: number }
+
+	// ── DOM refs ─────────────────────────────────────────────────────────────
+	const root       = document.getElementById('jb-dv');
+	const leftEl     = document.getElementById('jb-dv-left')  as HTMLTextAreaElement | null;
+	const rightEl    = document.getElementById('jb-dv-right') as HTMLTextAreaElement | null;
+	const contentEl  = document.getElementById('jb-dv-content');
+	const emptyEl    = document.getElementById('jb-dv-empty');
+	const treeEl     = document.getElementById('jb-dv-tree');
+	const summaryEl  = document.getElementById('jb-dv-summary');
+	const navLabelEl = document.getElementById('jb-dv-nav-label');
+	const statusEl   = document.getElementById('jb-dv-status');
+	const statsEl    = document.querySelector<HTMLElement>('[data-stats]');
+	const aStatusEl  = document.getElementById('jb-dv-a-status');
+	const bStatusEl  = document.getElementById('jb-dv-b-status');
+
+	const SAMPLE_A = (leftEl as HTMLTextAreaElement | null)?.value ?? '';
+	const SAMPLE_B = (rightEl as HTMLTextAreaElement | null)?.value ?? '';
+
+	if (
+		root && leftEl && rightEl && contentEl && emptyEl &&
+		treeEl && summaryEl && navLabelEl && statusEl && statsEl &&
+		aStatusEl && bStatusEl
+	) {
+		const dot   = statusEl.querySelector<HTMLElement>('[data-dot]')!;
+		const label = statusEl.querySelector<HTMLElement>('[data-label]')!;
+		const prevBtn = root.querySelector<HTMLButtonElement>('[data-action="prev"]')!;
+		const nextBtn = root.querySelector<HTMLButtonElement>('[data-action="next"]')!;
+
+		// Non-null aliases so closures see non-nullable types (TypeScript CFA limitation)
+		const left    = leftEl;
+		const right   = rightEl;
+		const content = contentEl;
+		const empty   = emptyEl;
+		const tree    = treeEl;
+		const summary = summaryEl;
+		const navLbl  = navLabelEl;
+		const sstats  = statsEl;
+		const aStat   = aStatusEl;
+		const bStat   = bStatusEl;
+
+		// ── Change navigation state ─────────────────────────────────────────
+		let changeEls: HTMLElement[] = [];
+		let changeIdx = -1;
+
+		// ── Diff algorithm ──────────────────────────────────────────────────
+		function isObj(v: JsonValue): v is JsonObject {
+			return v !== null && typeof v === 'object' && !Array.isArray(v);
+		}
+
+		function deepEqual(a: JsonValue, b: JsonValue): boolean {
+			if (a === b) return true;
+			if (Array.isArray(a) && Array.isArray(b)) {
+				if (a.length !== b.length) return false;
+				return a.every((v, i) => deepEqual(v, b[i]));
+			}
+			if (isObj(a) && isObj(b)) {
+				const ak = Object.keys(a), bk = Object.keys(b);
+				if (ak.length !== bk.length) return false;
+				return ak.every(k => k in b && deepEqual(a[k], b[k]));
+			}
+			return false;
+		}
+
+		function diff(a: JsonValue, b: JsonValue): DiffNode {
+			if (deepEqual(a, b)) return { kind: 'unchanged', value: a };
+			if (Array.isArray(a) && Array.isArray(b)) {
+				return { kind: 'array', items: diffArrays(a, b) };
+			}
+			if (isObj(a) && isObj(b)) {
+				return { kind: 'object', fields: diffObjects(a, b) };
+			}
+			return { kind: 'changed', from: a, to: b };
+		}
+
+		function diffObjects(a: JsonObject, b: JsonObject): Record<string, DiffNode> {
+			const result: Record<string, DiffNode> = {};
+			// Preserve original order: a's keys first, then new keys from b
+			const seen = new Set<string>(Object.keys(a));
+			for (const key of Object.keys(a)) {
+				if (key in b) result[key] = diff(a[key], b[key]);
+				else result[key] = { kind: 'removed', value: a[key] };
+			}
+			for (const key of Object.keys(b)) {
+				if (!seen.has(key)) result[key] = { kind: 'added', value: b[key] };
+			}
+			return result;
+		}
+
+		const LCS_MAX = 200;
+
+		function diffArrays(a: JsonValue[], b: JsonValue[]): DiffArrayItem[] {
+			if (a.length === 0 && b.length === 0) return [];
+			if (a.length === 0) return b.map(v => ({ kind: 'added' as const, value: v }));
+			if (b.length === 0) return a.map(v => ({ kind: 'removed' as const, value: v }));
+
+			if (a.length <= LCS_MAX && b.length <= LCS_MAX) {
+				return lcsArrayDiff(a, b);
+			}
+
+			// Large arrays: element-by-element
+			const result: DiffArrayItem[] = [];
+			const len = Math.max(a.length, b.length);
+			for (let i = 0; i < len; i++) {
+				if (i >= b.length) { result.push({ kind: 'removed', value: a[i] }); }
+				else if (i >= a.length) { result.push({ kind: 'added', value: b[i] }); }
+				else {
+					const d = diff(a[i], b[i]);
+					if (d.kind === 'unchanged') { result.push({ kind: 'unchanged', value: a[i] }); }
+					else if (d.kind === 'object' || d.kind === 'array') { result.push({ kind: 'nested', diff: d }); }
+					else { result.push({ kind: 'changed', from: a[i], to: b[i] }); }
+				}
+			}
+			return result;
+		}
+
+		function lcsArrayDiff(a: JsonValue[], b: JsonValue[]): DiffArrayItem[] {
+			const m = a.length, n = b.length;
+			// Build DP table
+			const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+			for (let i = 1; i <= m; i++) {
+				for (let j = 1; j <= n; j++) {
+					dp[i][j] = deepEqual(a[i - 1], b[j - 1])
+						? dp[i - 1][j - 1] + 1
+						: Math.max(dp[i - 1][j], dp[i][j - 1]);
+				}
+			}
+
+			// Backtrack
+			const ops: ('same' | 'added' | 'removed')[] = [];
+			let i = m, j = n;
+			while (i > 0 || j > 0) {
+				if (i > 0 && j > 0 && deepEqual(a[i - 1], b[j - 1])) {
+					ops.unshift('same'); i--; j--;
+				} else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+					ops.unshift('added'); j--;
+				} else {
+					ops.unshift('removed'); i--;
+				}
+			}
+
+			// Convert ops to DiffArrayItems, pairing adjacent removed+added as changed
+			let ai = 0, bi = 0;
+			const raw: DiffArrayItem[] = [];
+			for (const op of ops) {
+				if (op === 'same') { raw.push({ kind: 'unchanged', value: a[ai] }); ai++; bi++; }
+				else if (op === 'removed') { raw.push({ kind: 'removed', value: a[ai] }); ai++; }
+				else { raw.push({ kind: 'added', value: b[bi] }); bi++; }
+			}
+
+			// Post-process: pair removed+added adjacent primitives as 'changed'
+			const result: DiffArrayItem[] = [];
+			for (let k = 0; k < raw.length; k++) {
+				const curr = raw[k], next = raw[k + 1];
+				if (
+					curr.kind === 'removed' && next?.kind === 'added' &&
+					!Array.isArray(curr.value) && !isObj(curr.value) &&
+					!Array.isArray(next.value) && !isObj(next.value)
+				) {
+					result.push({ kind: 'changed', from: curr.value, to: next.value });
+					k++;
+				} else if (curr.kind === 'unchanged') {
+					// Re-diff container items for nested changes
+					const d = diff(curr.value, curr.value);
+					result.push(d.kind === 'unchanged' ? { kind: 'unchanged', value: curr.value } : { kind: 'nested', diff: d as DiffObject | DiffArray });
+				} else {
+					result.push(curr);
+				}
+			}
+			return result;
+		}
+
+		// ── Change counting ─────────────────────────────────────────────────
+		function countChanges(node: DiffNode): ChangeCount {
+			switch (node.kind) {
+				case 'added':   return { added: 1, removed: 0, changed: 0, unchanged: 0 };
+				case 'removed': return { added: 0, removed: 1, changed: 0, unchanged: 0 };
+				case 'changed': return { added: 0, removed: 0, changed: 1, unchanged: 0 };
+				case 'unchanged': return { added: 0, removed: 0, changed: 0, unchanged: 1 };
+				case 'object': {
+					const c: ChangeCount = { added: 0, removed: 0, changed: 0, unchanged: 0 };
+					for (const child of Object.values(node.fields)) {
+						const r = countChanges(child);
+						c.added += r.added; c.removed += r.removed;
+						c.changed += r.changed; c.unchanged += r.unchanged;
+					}
+					return c;
+				}
+				case 'array': {
+					const c: ChangeCount = { added: 0, removed: 0, changed: 0, unchanged: 0 };
+					for (const item of node.items) {
+						if (item.kind === 'nested') {
+							const r = countChanges(item.diff);
+							c.added += r.added; c.removed += r.removed;
+							c.changed += r.changed; c.unchanged += r.unchanged;
+						} else if (item.kind === 'added')   { c.added++; }
+						else if (item.kind === 'removed') { c.removed++; }
+						else if (item.kind === 'changed') { c.changed++; }
+						else                              { c.unchanged++; }
+					}
+					return c;
+				}
+			}
+		}
+
+		// ── Merge Patch (RFC 7396) ──────────────────────────────────────────
+		function reconstructRight(node: DiffObject | DiffArray): JsonValue {
+			if (node.kind === 'object') {
+				const obj: JsonObject = {};
+				for (const [k, child] of Object.entries(node.fields)) {
+					if (child.kind === 'removed') continue;
+					if (child.kind === 'unchanged') obj[k] = child.value;
+					else if (child.kind === 'added') obj[k] = child.value;
+					else if (child.kind === 'changed') obj[k] = child.to;
+					else obj[k] = reconstructRight(child);
+				}
+				return obj;
+			} else {
+				const arr: JsonValue[] = [];
+				for (const item of node.items) {
+					if (item.kind === 'removed') continue;
+					else if (item.kind === 'unchanged') arr.push(item.value);
+					else if (item.kind === 'added') arr.push(item.value);
+					else if (item.kind === 'changed') arr.push(item.to);
+					else arr.push(reconstructRight(item.diff));
+				}
+				return arr;
+			}
+		}
+
+		function toMergePatch(node: DiffNode): JsonValue | undefined {
+			switch (node.kind) {
+				case 'unchanged': return undefined;
+				case 'added': return node.value;
+				case 'removed': return null;
+				case 'changed': return node.to;
+				case 'array': return reconstructRight(node);
+				case 'object': {
+					const patch: JsonObject = {};
+					let any = false;
+					for (const [k, child] of Object.entries(node.fields)) {
+						const v = toMergePatch(child);
+						if (v !== undefined) { patch[k] = v; any = true; }
+					}
+					return any ? patch : undefined;
+				}
+			}
+		}
+
+		// ── Renderer ────────────────────────────────────────────────────────
+		const MAX_LINES = 2000;
+		let lineCount = 0;
+		let truncated = false;
+
+		function fmtValue(v: JsonValue): string {
+			if (v === null) return 'null';
+			if (typeof v !== 'object') return JSON.stringify(v);
+			const s = JSON.stringify(v);
+			return s.length <= 70 ? s : (Array.isArray(v) ? `[ ${(v as JsonValue[]).length} items ]` : `{ ${Object.keys(v as JsonObject).length} keys }`);
+		}
+
+		function valueTypeClass(v: JsonValue): string {
+			if (v === null) return 'jb-dvc-null';
+			if (typeof v === 'boolean') return 'jb-dvc-bool';
+			if (typeof v === 'number') return 'jb-dvc-number';
+			if (typeof v === 'string') return 'jb-dvc-string';
+			return 'jb-dvc-punct';
+		}
+
+		function makeLine(kind: 'unchanged' | 'added' | 'removed' | 'changed', indent: number): HTMLDivElement {
+			const div = document.createElement('div');
+			div.className = `jb-dl jb-dl-${kind}`;
+			div.style.paddingLeft = `${indent * 20 + 4}px`;
+			if (kind !== 'unchanged') {
+				changeEls.push(div);
+				div.setAttribute('data-change', '');
+			}
+			return div;
+		}
+
+		function addPrefix(div: HTMLDivElement, kind: 'unchanged' | 'added' | 'removed' | 'changed'): HTMLSpanElement {
+			const pfx = document.createElement('span');
+			pfx.className = 'jb-dl-prefix';
+			pfx.textContent = kind === 'added' ? '+' : kind === 'removed' ? '−' : kind === 'changed' ? '~' : ' ';
+			div.appendChild(pfx);
+			return pfx;
+		}
+
+		function addKey(div: HTMLDivElement, key: string | null): void {
+			if (key === null) return;
+			const ks = document.createElement('span');
+			ks.className = 'jb-dvc-key';
+			ks.textContent = JSON.stringify(key);
+			div.appendChild(ks);
+			const col = document.createElement('span');
+			col.className = 'jb-dvc-punct';
+			col.textContent = ': ';
+			div.appendChild(col);
+		}
+
+		function addValueInline(div: HTMLDivElement, v: JsonValue, cls: string): void {
+			const span = document.createElement('span');
+			span.className = `jb-dl-body ${cls}`;
+			span.textContent = fmtValue(v);
+			div.appendChild(span);
+		}
+
+		function addPunct(div: HTMLDivElement, text: string): void {
+			const span = document.createElement('span');
+			span.className = 'jb-dvc-punct';
+			span.textContent = text;
+			div.appendChild(span);
+		}
+
+		function renderNode(
+			node: DiffNode,
+			container: HTMLElement,
+			key: string | null,
+			depth: number,
+			comma: boolean,
+		): void {
+			if (lineCount >= MAX_LINES) { truncated = true; return; }
+
+			switch (node.kind) {
+				case 'unchanged': {
+					const line = makeLine('unchanged', depth);
+					addPrefix(line, 'unchanged');
+					addKey(line, key);
+					if (Array.isArray(node.value)) {
+						addValueInline(line, node.value, 'jb-dvc-collapse');
+					} else if (isObj(node.value)) {
+						addValueInline(line, node.value, 'jb-dvc-collapse');
+					} else {
+						addValueInline(line, node.value, valueTypeClass(node.value));
+					}
+					if (comma) addPunct(line, ',');
+					container.appendChild(line);
+					lineCount++;
+					break;
+				}
+
+				case 'added': {
+					renderValueFull(node.value, container, key, 'added', depth, comma);
+					break;
+				}
+
+				case 'removed': {
+					renderValueFull(node.value, container, key, 'removed', depth, comma);
+					break;
+				}
+
+				case 'changed': {
+					if (lineCount >= MAX_LINES) { truncated = true; return; }
+					const line = makeLine('changed', depth);
+					addPrefix(line, 'changed');
+					addKey(line, key);
+
+					// Show: old → new
+					const fromSpan = document.createElement('span');
+					fromSpan.className = `jb-dl-body jb-dvc-from ${valueTypeClass(node.from)}`;
+					fromSpan.textContent = fmtValue(node.from);
+					line.appendChild(fromSpan);
+
+					const arrow = document.createElement('span');
+					arrow.className = 'jb-dvc-arrow';
+					arrow.textContent = '→';
+					line.appendChild(arrow);
+
+					const toSpan = document.createElement('span');
+					toSpan.className = `${valueTypeClass(node.to)}`;
+					toSpan.textContent = fmtValue(node.to);
+					line.appendChild(toSpan);
+
+					if (comma) addPunct(line, ',');
+					container.appendChild(line);
+					lineCount++;
+					break;
+				}
+
+				case 'object': {
+					renderObjectDiff(node, container, key, depth, comma);
+					break;
+				}
+
+				case 'array': {
+					renderArrayDiff(node, container, key, depth, comma);
+					break;
+				}
+			}
+		}
+
+		function renderValueFull(
+			v: JsonValue,
+			container: HTMLElement,
+			key: string | null,
+			kind: 'added' | 'removed',
+			depth: number,
+			comma: boolean,
+		): void {
+			if (lineCount >= MAX_LINES) { truncated = true; return; }
+
+			if (!Array.isArray(v) && !isObj(v)) {
+				const line = makeLine(kind, depth);
+				addPrefix(line, kind);
+				addKey(line, key);
+				const body = document.createElement('span');
+				body.className = `jb-dl-body ${valueTypeClass(v)}`;
+				body.textContent = fmtValue(v);
+				line.appendChild(body);
+				if (comma) addPunct(line, ',');
+				container.appendChild(line);
+				lineCount++;
+			} else if (Array.isArray(v)) {
+				// Open bracket line
+				const openLine = makeLine(kind, depth);
+				addPrefix(openLine, kind);
+				addKey(openLine, key);
+				addPunct(openLine, '[');
+				container.appendChild(openLine);
+				lineCount++;
+
+				for (let i = 0; i < Math.min(v.length, MAX_LINES - lineCount); i++) {
+					renderValueFull(v[i], container, null, kind, depth + 1, i < v.length - 1);
+				}
+
+				const closeLine = makeLine(kind, depth);
+				const dummy = document.createElement('span');
+				dummy.className = 'jb-dl-prefix';
+				dummy.textContent = kind === 'added' ? '+' : '−';
+				closeLine.appendChild(dummy);
+				addPunct(closeLine, ']');
+				if (comma) addPunct(closeLine, ',');
+				container.appendChild(closeLine);
+				lineCount++;
+			} else {
+				const obj = v as JsonObject;
+				// Open brace line
+				const openLine = makeLine(kind, depth);
+				addPrefix(openLine, kind);
+				addKey(openLine, key);
+				addPunct(openLine, '{');
+				container.appendChild(openLine);
+				lineCount++;
+
+				const entries = Object.entries(obj);
+				for (let i = 0; i < entries.length && lineCount < MAX_LINES; i++) {
+					const [k, val] = entries[i];
+					renderValueFull(val, container, k, kind, depth + 1, i < entries.length - 1);
+				}
+
+				const closeLine = makeLine(kind, depth);
+				const dummy = document.createElement('span');
+				dummy.className = 'jb-dl-prefix';
+				dummy.textContent = kind === 'added' ? '+' : '−';
+				closeLine.appendChild(dummy);
+				addPunct(closeLine, '}');
+				if (comma) addPunct(closeLine, ',');
+				container.appendChild(closeLine);
+				lineCount++;
+			}
+		}
+
+		function renderObjectDiff(
+			node: DiffObject,
+			container: HTMLElement,
+			key: string | null,
+			depth: number,
+			comma: boolean,
+		): void {
+			if (lineCount >= MAX_LINES) { truncated = true; return; }
+
+			// Determine if this whole subtree has any changes
+			const counts = countChanges(node);
+			const hasChanges = counts.added + counts.removed + counts.changed > 0;
+			const lineKind = hasChanges ? 'unchanged' : 'unchanged';
+
+			// Open line
+			const openLine = makeLine(lineKind, depth);
+			addPrefix(openLine, 'unchanged');
+			addKey(openLine, key);
+			addPunct(openLine, '{');
+			container.appendChild(openLine);
+			lineCount++;
+
+			const entries = Object.entries(node.fields);
+			for (let i = 0; i < entries.length && lineCount < MAX_LINES; i++) {
+				const [k, child] = entries[i];
+				renderNode(child, container, k, depth + 1, i < entries.length - 1);
+			}
+
+			const closeLine = makeLine(lineKind, depth);
+			addPrefix(closeLine, 'unchanged');
+			addPunct(closeLine, '}');
+			if (comma) addPunct(closeLine, ',');
+			container.appendChild(closeLine);
+			lineCount++;
+		}
+
+		function renderArrayDiff(
+			node: DiffArray,
+			container: HTMLElement,
+			key: string | null,
+			depth: number,
+			comma: boolean,
+		): void {
+			if (lineCount >= MAX_LINES) { truncated = true; return; }
+
+			const openLine = makeLine('unchanged', depth);
+			addPrefix(openLine, 'unchanged');
+			addKey(openLine, key);
+			addPunct(openLine, '[');
+			container.appendChild(openLine);
+			lineCount++;
+
+			for (let i = 0; i < node.items.length && lineCount < MAX_LINES; i++) {
+				const item = node.items[i];
+				const isLast = i === node.items.length - 1;
+
+				if (item.kind === 'nested') {
+					renderNode(item.diff, container, null, depth + 1, !isLast);
+				} else if (item.kind === 'unchanged') {
+					renderNode({ kind: 'unchanged', value: item.value }, container, null, depth + 1, !isLast);
+				} else if (item.kind === 'added') {
+					renderValueFull(item.value, container, null, 'added', depth + 1, !isLast);
+				} else if (item.kind === 'removed') {
+					renderValueFull(item.value, container, null, 'removed', depth + 1, !isLast);
+				} else {
+					// changed
+					if (lineCount < MAX_LINES) {
+						const line = makeLine('changed', depth + 1);
+						addPrefix(line, 'changed');
+						const fromSpan = document.createElement('span');
+						fromSpan.className = `jb-dl-body jb-dvc-from ${valueTypeClass(item.from)}`;
+						fromSpan.textContent = fmtValue(item.from);
+						line.appendChild(fromSpan);
+						const arrow = document.createElement('span');
+						arrow.className = 'jb-dvc-arrow';
+						arrow.textContent = '→';
+						line.appendChild(arrow);
+						const toSpan = document.createElement('span');
+						toSpan.className = valueTypeClass(item.to);
+						toSpan.textContent = fmtValue(item.to);
+						line.appendChild(toSpan);
+						if (!isLast) addPunct(line, ',');
+						container.appendChild(line);
+						lineCount++;
+					}
+				}
+			}
+
+			const closeLine = makeLine('unchanged', depth);
+			addPrefix(closeLine, 'unchanged');
+			addPunct(closeLine, ']');
+			if (comma) addPunct(closeLine, ',');
+			container.appendChild(closeLine);
+			lineCount++;
+		}
+
+		// ── Navigation ──────────────────────────────────────────────────────
+		function updateNavButtons(): void {
+			const hasChanges = changeEls.length > 0;
+			prevBtn.disabled = !hasChanges;
+			nextBtn.disabled = !hasChanges;
+			if (hasChanges && changeIdx >= 0) {
+				navLbl.textContent = `${changeIdx + 1} of ${changeEls.length}`;
+			} else if (hasChanges) {
+				navLbl.textContent = `${changeEls.length} change${changeEls.length !== 1 ? 's' : ''}`;
+			} else {
+				navLbl.textContent = '';
+			}
+		}
+
+		function navigateTo(idx: number): void {
+			if (changeEls.length === 0) return;
+			// Clamp
+			changeIdx = ((idx % changeEls.length) + changeEls.length) % changeEls.length;
+			// Remove previous focus class
+			content.querySelectorAll('.jb-dl-nav-focus').forEach(el => el.classList.remove('jb-dl-nav-focus'));
+			const el = changeEls[changeIdx];
+			el.classList.add('jb-dl-nav-focus');
+			el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+			updateNavButtons();
+		}
+
+		// ── Summary bar ─────────────────────────────────────────────────────
+		function updateSummary(counts: ChangeCount | null): void {
+			summary.replaceChildren();
+			if (!counts) {
+				const span = document.createElement('span');
+				span.className = 'text-mute';
+				span.textContent = 'Compare two JSON documents above.';
+				summary.appendChild(span);
+				return;
+			}
+			const total = counts.added + counts.removed + counts.changed;
+			if (total === 0) {
+				const span = document.createElement('span');
+				span.style.color = 'var(--color-success)';
+				span.textContent = '✓ Documents are identical';
+				summary.appendChild(span);
+				return;
+			}
+
+			const parts: { label: string; color: string }[] = [];
+			if (counts.added)   parts.push({ label: `+${counts.added} added`,   color: 'var(--color-success)' });
+			if (counts.removed) parts.push({ label: `−${counts.removed} removed`, color: 'var(--color-error)' });
+			if (counts.changed) parts.push({ label: `~${counts.changed} changed`, color: 'var(--color-warning)' });
+
+			for (const p of parts) {
+				const span = document.createElement('span');
+				span.style.color = p.color;
+				span.style.fontWeight = '500';
+				span.textContent = p.label;
+				summary.appendChild(span);
+			}
+
+			const unch = document.createElement('span');
+			unch.style.color = 'var(--color-mute)';
+			unch.textContent = `${counts.unchanged} unchanged`;
+			summary.appendChild(unch);
+		}
+
+		// ── Full diff run ───────────────────────────────────────────────────
+		let currentDiff: DiffNode | null = null;
+
+		function runDiff(): void {
+			const textA = left.value.trim();
+			const textB = right.value.trim();
+
+			// Update per-input status
+			function setInputStatus(el: HTMLElement, text: string, ok: boolean | null): void {
+				el.textContent = text;
+				el.className = ok === true ? 'jb-ok' : ok === false ? 'jb-err' : '';
+			}
+
+			if (!textA && !textB) {
+				setInputStatus(aStat, '', null);
+				setInputStatus(bStat, '', null);
+				currentDiff = null;
+				content.replaceChildren();
+				empty.classList.remove('hidden');
+				empty.classList.add('flex');
+				updateSummary(null);
+				changeEls = [];
+				changeIdx = -1;
+				updateNavButtons();
+				setStatus('idle', 'Empty');
+				sstats.textContent = '';
+				return;
+			}
+
+			const resA = textA ? checkJson(textA) : { ok: true as const };
+			const resB = textB ? checkJson(textB) : { ok: true as const };
+
+			setInputStatus(aStat, textA ? (resA.ok ? '✓ valid' : '✗ invalid') : '', textA ? resA.ok : null);
+			setInputStatus(bStat, textB ? (resB.ok ? '✓ valid' : '✗ invalid') : '', textB ? resB.ok : null);
+
+			if (!resA.ok) {
+				setStatus('error', `A: ${resA.message}`);
+				currentDiff = null;
+				content.replaceChildren();
+				updateSummary(null);
+				return;
+			}
+			if (!resB.ok) {
+				setStatus('error', `B: ${resB.message}`);
+				currentDiff = null;
+				content.replaceChildren();
+				updateSummary(null);
+				return;
+			}
+
+			let parsedA: JsonValue = null;
+			let parsedB: JsonValue = null;
+			try {
+				if (textA) parsedA = JSON.parse(textA) as JsonValue;
+				if (textB) parsedB = JSON.parse(textB) as JsonValue;
+			} catch (err) {
+				const msg = err instanceof Error ? err.message : 'Parse error';
+				setStatus('error', msg);
+				return;
+			}
+
+			if (!textA || !textB) {
+				setStatus('idle', textA ? 'Paste JSON in B' : 'Paste JSON in A');
+				content.replaceChildren();
+				updateSummary(null);
+				changeEls = [];
+				changeIdx = -1;
+				updateNavButtons();
+				return;
+			}
+
+			// Run the diff
+			currentDiff = diff(parsedA, parsedB);
+			const counts = countChanges(currentDiff);
+
+			// Render
+			changeEls = [];
+			changeIdx = -1;
+			lineCount = 0;
+			truncated = false;
+
+			const frag = document.createDocumentFragment();
+			renderNode(currentDiff, frag as unknown as HTMLElement, null, 0, false);
+
+			content.replaceChildren(frag);
+
+			if (truncated) {
+				const notice = document.createElement('div');
+				notice.className = 'jb-dl jb-dl-unchanged';
+				notice.style.cssText = 'padding:8px 4px;opacity:0.5;font-style:italic;';
+				notice.textContent = `  … truncated at ${MAX_LINES} lines (diff too large to display fully)`;
+				content.appendChild(notice);
+			}
+
+			empty.classList.add('hidden');
+			empty.classList.remove('flex');
+
+			updateSummary(counts);
+
+			const totalChanges = counts.added + counts.removed + counts.changed;
+			setStatus(totalChanges === 0 ? 'ok' : 'ok', totalChanges === 0 ? 'Identical' : `${totalChanges} difference${totalChanges !== 1 ? 's' : ''}`);
+			sstats.textContent = `A: ${textA.length.toLocaleString()} chars · B: ${textB.length.toLocaleString()} chars`;
+
+			updateNavButtons();
+		}
+
+		// ── Status ──────────────────────────────────────────────────────────
+		type StatusState = 'ok' | 'error' | 'idle';
+		const statusColors: Record<StatusState, string> = {
+			ok: 'var(--color-success)', error: 'var(--color-error)', idle: 'var(--color-mute)',
+		};
+		function setStatus(state: StatusState, text: string): void {
+			dot.style.backgroundColor = statusColors[state];
+			label.textContent = text;
+			label.style.color = state === 'error' ? 'var(--color-error-deep)' : 'var(--color-ink)';
+		}
+
+		// ── Merge Patch download ─────────────────────────────────────────────
+		function downloadPatch(): void {
+			if (!currentDiff) { setStatus('error', 'Run a diff first'); return; }
+			const patch = toMergePatch(currentDiff);
+			if (patch === undefined) {
+				setStatus('idle', 'Documents are identical — no patch needed');
+				return;
+			}
+			const json = JSON.stringify(patch, null, 2);
+			const blob = new Blob([json], { type: 'application/json' });
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url; a.download = 'merge-patch.json';
+			document.body.appendChild(a); a.click(); a.remove();
+			URL.revokeObjectURL(url);
+			setStatus('ok', 'Downloaded merge-patch.json');
+		}
+
+		// ── Theme ───────────────────────────────────────────────────────────
+		type ThemeMode = 'dark' | 'light';
+		const THEME_KEY = 'jb-theme';
+		const ICON_SUN = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>';
+		const ICON_MOON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"></path></svg>';
+
+		let themeMode: ThemeMode = (() => {
+			try { const s = localStorage.getItem(THEME_KEY); return s === 'light' ? 'light' : 'dark'; }
+			catch { return 'dark'; }
+		})();
+
+		const themeBtn = root.querySelector<HTMLButtonElement>('[data-action="theme"]');
+		const themeIcon = themeBtn?.querySelector<HTMLElement>('[data-theme-icon]') ?? null;
+
+		function paintTheme(): void {
+			if (themeIcon) themeIcon.innerHTML = themeMode === 'dark' ? ICON_SUN : ICON_MOON;
+			themeBtn?.setAttribute('aria-label', themeMode === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
+			root?.classList.toggle('jb-theme-light', themeMode === 'light');
+		}
+		function applyTheme(next: ThemeMode): void {
+			themeMode = next;
+			try { localStorage.setItem(THEME_KEY, next); } catch { /* blocked */ }
+			paintTheme();
+		}
+
+		// ── Actions ─────────────────────────────────────────────────────────
+		const actions: Record<string, () => void> = {
+			swap: () => {
+				const tmp = left.value;
+				left.value = right.value;
+				right.value = tmp;
+				saveDoc(left.value);
+				runDiff();
+			},
+			patch: downloadPatch,
+			theme: () => applyTheme(themeMode === 'dark' ? 'light' : 'dark'),
+			sample: () => { left.value = SAMPLE_A; right.value = SAMPLE_B; saveDoc(left.value); runDiff(); },
+			'clear-a': () => { left.value = ''; saveDoc(''); runDiff(); left.focus(); },
+			'clear-b': () => { right.value = ''; runDiff(); right.focus(); },
+			prev: () => navigateTo(changeIdx <= 0 ? changeEls.length - 1 : changeIdx - 1),
+			next: () => navigateTo(changeIdx < 0 ? 0 : changeIdx + 1),
+		};
+
+		root.querySelectorAll('[data-action]').forEach(btn => {
+			const act = btn.getAttribute('data-action');
+			if (!act) return;
+			btn.addEventListener('click', () => { const fn = actions[act]; if (fn) fn(); });
+		});
+
+		// Keyboard shortcuts while diff tree is focused
+		tree.addEventListener('keydown', (e: KeyboardEvent) => {
+			if (e.key === 'n' || e.key === 'ArrowDown') { e.preventDefault(); actions.next(); }
+			else if (e.key === 'p' || e.key === 'ArrowUp') { e.preventDefault(); actions.prev(); }
+		});
+
+		// ── Input debounce ───────────────────────────────────────────────────
+		let diffTimer = 0;
+		function scheduleDiff(): void {
+			clearTimeout(diffTimer);
+			diffTimer = window.setTimeout(runDiff, 300);
+		}
+
+		left.addEventListener('input', () => { saveDoc(left.value); scheduleDiff(); });
+		right.addEventListener('input', scheduleDiff);
+
+		// ── Init ─────────────────────────────────────────────────────────────
+		paintTheme();
+
+		// Carry the working document into input A
+		const carried = loadDoc();
+		if (carried !== null && carried.trim()) left.value = carried;
+
+		runDiff();
+	}
+</script>

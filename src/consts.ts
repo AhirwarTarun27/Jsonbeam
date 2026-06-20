@@ -54,8 +54,8 @@ export const FOOTER_NAV: NavColumn[] = [
 			{ label: 'JSON Viewer', href: '/json-viewer' },
 			{ label: 'Tree Viewer', href: '/json-tree-viewer' },
 			{ label: 'Graph Viewer', href: '/json-graph-viewer' },
-			{ label: 'Table Viewer', href: '/json-table-viewer', soon: true },
-			{ label: 'JSON Diff', href: '/json-diff', soon: true },
+			{ label: 'Table Viewer', href: '/json-table-viewer' },
+			{ label: 'JSON Diff', href: '/json-diff' },
 		],
 	},
 	{
@@ -115,8 +115,8 @@ export const TOOL_NAV: ToolTabGroup[] = [
 			{ label: 'Viewer', href: '/json-viewer' },
 			{ label: 'Tree', href: '/json-tree-viewer' },
 			{ label: 'Graph', href: '/json-graph-viewer' },
-			{ label: 'Table', href: '/json-table-viewer', soon: true },
-			{ label: 'Diff', href: '/json-diff', soon: true },
+			{ label: 'Table', href: '/json-table-viewer' },
+			{ label: 'Diff', href: '/json-diff' },
 		],
 	},
 	{

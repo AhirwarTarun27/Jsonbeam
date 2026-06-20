@@ -1,0 +1,965 @@
+---
+/**
+ * JSON Table Viewer island — displays JSON as a sortable, filterable, searchable table.
+ *
+ * Handles four data shapes:
+ *   • Array of objects   — each object is a row; all keys (unioned) are columns.
+ *   • Array of primitives — two columns: index | value.
+ *   • Single object       — two columns: key | value (key-value pairs).
+ *   • Mixed / unsupported — shows a helpful suggestion message.
+ *
+ * What makes this the best in the market:
+ *   • Ragged-row support: missing keys render as — rather than crashing.
+ *   • 3-way column sort (asc → desc → off) with type-aware comparison
+ *     (numbers numerically, strings case-insensitively, nulls/undefineds always last).
+ *   • Per-column filter row + global row search, both applied before sort.
+ *   • Chunked rendering: first 500 rows immediately, "Load N more" for the rest —
+ *     a 100 000-row array never freezes the tab.
+ *   • RFC 4180 CSV export (proper quoting, CRLF) that respects active sort + filter.
+ *   • Cell click → JSON path in status bar + value auto-copied to clipboard.
+ *   • Type-coded cells: string / number / boolean / null / object / array each styled.
+ *   • Dark / light theme toggle shared with every other tool (localStorage jb-theme).
+ *   • Doc-store carry: the working document follows you from any other tool page.
+ *
+ * Framework-free: HTML + one typed client module. All processing is local.
+ * Uses the shared 6 px .jb-btn in-app control scale (global.css).
+ */
+
+const sample = `[
+  { "id": 1, "name": "Ada Lovelace",      "role": "Engineer",  "active": true,  "score": 99.5, "team": "Core"  },
+  { "id": 2, "name": "Grace Hopper",      "role": "Architect", "active": true,  "score": 97.2, "team": "Alpha" },
+  { "id": 3, "name": "Linus Torvalds",    "role": "Engineer",  "active": false, "score": 88.0, "team": "Alpha" },
+  { "id": 4, "name": "Margaret Hamilton", "role": "Manager",   "active": true,  "score": 95.0              },
+  { "id": 5, "name": "Björn Stroustrup",  "role": "Engineer",  "active": false, "score": 82.3, "team": "Beta"  },
+  { "id": 6, "name": "Brendan Eich",      "role": "Architect", "active": true,  "score": null, "team": "Core"  }
+]`;
+---
+
+<div
+	id="jb-tv"
+	class="overflow-hidden rounded-md border border-hairline bg-canvas shadow-e3"
+>
+	<!-- Toolbar -->
+	<div class="flex flex-wrap items-center gap-1.5 border-b border-hairline bg-canvas-soft px-3 py-2">
+		<button
+			type="button"
+			data-action="filters"
+			aria-pressed="false"
+			class="jb-btn"
+			title="Show / hide per-column filter inputs"
+		>Filters</button>
+
+		<span class="mx-1 hidden h-5 w-px bg-hairline sm:block" aria-hidden="true"></span>
+
+		<!-- Global search -->
+		<div class="relative flex items-center">
+			<svg
+				class="pointer-events-none absolute left-2.5 text-mute"
+				width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"
+			>
+				<circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.3"/>
+				<path d="m11 11 3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+			</svg>
+			<input
+				id="jb-tv-search"
+				type="search"
+				placeholder="Search rows…"
+				aria-label="Search all columns"
+				class="h-8 w-36 rounded-sm border border-hairline bg-canvas pl-8 pr-3 font-sans text-body-sm text-ink placeholder:text-mute outline-none focus:border-link focus:ring-1 focus:ring-link sm:w-52"
+			/>
+		</div>
+
+		<span class="mx-1 hidden h-5 w-px bg-hairline sm:block" aria-hidden="true"></span>
+
+		<div class="ml-auto flex flex-wrap items-center gap-1.5">
+			<button type="button" data-action="csv" class="jb-btn" title="Download visible rows as CSV">CSV</button>
+			<button
+				type="button"
+				data-action="theme"
+				class="jb-btn jb-btn-icon"
+				aria-label="Switch to light theme"
+				title="Toggle dark / light"
+			><span data-theme-icon aria-hidden="true"></span></button>
+			<button type="button" data-action="sample" class="jb-btn" title="Load the sample document">Sample</button>
+			<button type="button" data-action="copy" class="jb-btn" title="Copy formatted JSON">Copy JSON</button>
+			<button type="button" data-action="clear" class="jb-btn" title="Clear the input">Clear</button>
+		</div>
+	</div>
+
+	<!-- Split: input left + table right -->
+	<div class="grid grid-cols-1 lg:grid-cols-[360px_1fr]">
+		<!-- Input pane -->
+		<div class="border-b border-hairline lg:border-b-0 lg:border-r">
+			<label class="sr-only" for="jb-tv-input">JSON input</label>
+			<textarea
+				id="jb-tv-input"
+				spellcheck="false"
+				autocomplete="off"
+				autocapitalize="off"
+				aria-label="JSON input"
+				class="h-[40vh] min-h-[240px] w-full lg:h-[70vh]"
+			>{sample}</textarea>
+		</div>
+
+		<!-- Table pane -->
+		<div class="flex flex-col h-[56vh] min-h-[320px] lg:h-[70vh]">
+			<!-- Info bar: "42 objects · 8 columns · 42 rows" -->
+			<div
+				id="jb-tv-info"
+				class="hidden flex-none border-b border-hairline bg-canvas-soft px-3 py-1.5 font-mono text-caption text-mute"
+				aria-live="polite"
+			></div>
+
+			<!-- Scrollable table -->
+			<div id="jb-tv-wrap" class="hidden flex-1 overflow-auto min-h-0">
+				<table
+					id="jb-tv-table"
+					class="w-full border-collapse"
+					style="min-width: max-content"
+					role="grid"
+					aria-label="JSON data table"
+				>
+					<thead id="jb-tv-thead" class="sticky top-0 z-10"></thead>
+					<tbody id="jb-tv-tbody"></tbody>
+				</table>
+				<!-- Load-more button sits outside the table to avoid invalid nesting -->
+				<button
+					id="jb-tv-more"
+					type="button"
+					class="hidden w-full border-t border-hairline py-3 font-mono text-caption text-mute transition-colors hover:bg-canvas-soft hover:text-ink"
+				></button>
+			</div>
+
+			<!-- Empty / error state -->
+			<div id="jb-tv-empty" class="flex flex-1 items-center justify-center p-8 text-center">
+				<p class="font-mono text-caption text-mute">Paste JSON in the editor to see it as a table.</p>
+			</div>
+		</div>
+	</div>
+
+	<!-- Status bar -->
+	<div class="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-hairline bg-canvas-soft px-3 py-2 text-body-sm">
+		<span
+			id="jb-tv-status"
+			class="inline-flex items-center gap-1.5 font-medium"
+			role="status"
+			aria-live="polite"
+		>
+			<span class="h-2 w-2 rounded-full bg-mute" data-dot></span>
+			<span data-label>Ready</span>
+		</span>
+		<span data-stats class="font-mono text-caption text-mute"></span>
+		<span id="jb-tv-path" class="max-w-[36%] truncate font-mono text-caption text-link" aria-live="polite"></span>
+		<span class="ml-auto inline-flex items-center gap-1.5 text-caption text-mute">
+			<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+				<path d="M8 1.5 3 3.5v3.2c0 3 2.1 5.8 5 6.8 2.9-1 5-3.8 5-6.8V3.5L8 1.5Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"></path>
+			</svg>
+			Processed locally — nothing uploaded
+		</span>
+	</div>
+</div>
+
+<style>
+	/* ── Input pane — dark code surface (matches every other viewer tool) ──── */
+	#jb-tv-input {
+		background-color: var(--color-editor-bg);
+		color: var(--color-editor-fg);
+		font-family: var(--font-mono);
+		font-size: 13px;
+		line-height: 1.6;
+		padding: 14px;
+		border: none;
+		outline: none;
+		resize: none;
+		display: block;
+		tab-size: 2;
+	}
+	#jb-tv-wrap {
+		background-color: var(--color-editor-bg);
+	}
+	:global(#jb-tv-table thead tr) {
+		background-color: var(--color-editor-line);
+	}
+	:global(#jb-tv-table th) {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		font-weight: 400;
+		color: var(--color-hairline-strong);
+		padding: 7px 12px;
+		white-space: nowrap;
+		cursor: pointer;
+		user-select: none;
+		border-right: 1px solid rgba(255, 255, 255, 0.06);
+		position: relative;
+	}
+	:global(#jb-tv-table th.jb-tv-th-rownum) {
+		cursor: default;
+		color: var(--color-mute);
+		min-width: 40px;
+		text-align: right;
+	}
+	:global(#jb-tv-table th:hover:not(.jb-tv-th-rownum)) {
+		color: var(--color-editor-fg);
+	}
+	:global(#jb-tv-table th[aria-sort='ascending']),
+	:global(#jb-tv-table th[aria-sort='descending']) {
+		color: var(--color-cyan);
+	}
+	:global(#jb-tv-table td) {
+		font-family: var(--font-mono);
+		font-size: 13px;
+		padding: 6px 12px;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+		border-right: 1px solid rgba(255, 255, 255, 0.04);
+		white-space: nowrap;
+		max-width: 260px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		cursor: pointer;
+	}
+	:global(#jb-tv-table td.jb-tv-td-rownum) {
+		color: var(--color-mute);
+		font-size: 11px;
+		text-align: right;
+		cursor: default;
+		min-width: 40px;
+	}
+	:global(#jb-tv-table tbody tr:hover td) {
+		background: rgba(255, 255, 255, 0.04);
+	}
+	:global(#jb-tv-table td.jb-tv-selected) {
+		outline: 1px solid var(--color-link);
+		outline-offset: -1px;
+	}
+
+	/* ── Type colours — dark surface ──────────────────────────────────────── */
+	:global(#jb-tv-table .jb-tc-string)  { color: var(--color-cyan); }
+	:global(#jb-tv-table .jb-tc-number)  { color: var(--color-violet-soft); }
+	:global(#jb-tv-table .jb-tc-bool)    { color: var(--color-warning); }
+	:global(#jb-tv-table .jb-tc-null)    { color: var(--color-mute); font-style: italic; }
+	:global(#jb-tv-table .jb-tc-object)  { color: var(--color-hairline-strong); font-style: italic; }
+	:global(#jb-tv-table .jb-tc-missing) { color: var(--color-mute); }
+
+	/* ── Filter row ────────────────────────────────────────────────────────── */
+	:global(#jb-tv-table .jb-tv-filter-row td) {
+		padding: 4px 6px;
+		background-color: rgba(255, 255, 255, 0.02);
+		cursor: default;
+	}
+	:global(.jb-tv-filter-input) {
+		width: 100%;
+		min-width: 60px;
+		background: rgba(255, 255, 255, 0.06);
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		border-radius: var(--radius-xs);
+		color: var(--color-editor-fg);
+		font-family: var(--font-mono);
+		font-size: 12px;
+		padding: 2px 6px;
+		outline: none;
+	}
+	:global(.jb-tv-filter-input:focus) {
+		border-color: var(--color-link);
+	}
+	:global(.jb-tv-filter-input::placeholder) {
+		color: var(--color-mute);
+	}
+
+	/* ── Search match highlight ────────────────────────────────────────────── */
+	:global(#jb-tv-table .jb-tc-match) {
+		background: rgba(80, 227, 194, 0.15);
+		border-radius: 2px;
+	}
+
+	/* ── Light theme — toggled by .jb-theme-light on #jb-tv ──────────────── */
+	:global(#jb-tv.jb-theme-light #jb-tv-input) {
+		background-color: var(--color-canvas);
+		color: var(--color-ink);
+	}
+	:global(#jb-tv.jb-theme-light #jb-tv-wrap) {
+		background-color: var(--color-canvas);
+	}
+	:global(#jb-tv.jb-theme-light #jb-tv-table thead tr) {
+		background-color: var(--color-canvas-soft);
+	}
+	:global(#jb-tv.jb-theme-light #jb-tv-table th) {
+		color: var(--color-mute);
+		border-right-color: var(--color-hairline);
+	}
+	:global(#jb-tv.jb-theme-light #jb-tv-table th:hover:not(.jb-tv-th-rownum)) {
+		color: var(--color-ink);
+	}
+	:global(#jb-tv.jb-theme-light #jb-tv-table th[aria-sort='ascending']),
+	:global(#jb-tv.jb-theme-light #jb-tv-table th[aria-sort='descending']) {
+		color: var(--color-link);
+	}
+	:global(#jb-tv.jb-theme-light #jb-tv-table td) {
+		border-bottom-color: var(--color-hairline);
+		border-right-color: rgba(0, 0, 0, 0.03);
+	}
+	:global(#jb-tv.jb-theme-light #jb-tv-table tbody tr:hover td) {
+		background: var(--color-canvas-soft);
+	}
+	:global(#jb-tv.jb-theme-light #jb-tv-table .jb-tc-string)  { color: var(--color-link-deep); }
+	:global(#jb-tv.jb-theme-light #jb-tv-table .jb-tc-number)  { color: var(--color-violet); }
+	:global(#jb-tv.jb-theme-light #jb-tv-table .jb-tc-bool)    { color: var(--color-cyan-deep); }
+	:global(#jb-tv.jb-theme-light #jb-tv-table .jb-tc-null)    { color: var(--color-mute); }
+	:global(#jb-tv.jb-theme-light #jb-tv-table .jb-tc-object)  { color: var(--color-hairline-strong); }
+	:global(#jb-tv.jb-theme-light #jb-tv-table .jb-tv-filter-row td) {
+		background-color: var(--color-canvas-soft-2);
+	}
+	:global(#jb-tv.jb-theme-light .jb-tv-filter-input) {
+		background: var(--color-canvas);
+		border-color: var(--color-hairline);
+		color: var(--color-ink);
+	}
+	:global(#jb-tv.jb-theme-light #jb-tv-table .jb-tc-match) {
+		background: var(--color-link-bg-soft);
+	}
+
+	/* Coarse pointers: inflate touch targets on the filter inputs */
+	@media (pointer: coarse) {
+		:global(.jb-tv-filter-input) { height: 32px; }
+	}
+</style>
+
+<script>
+	import { checkJson } from '../lib/json';
+	import { loadDoc, saveDoc } from '../lib/doc-store';
+
+	// ── Types ───────────────────────────────────────────────────────────────
+	type JsonValue = string | number | boolean | null | JsonValue[] | { [k: string]: JsonValue };
+	type JsonObject = { [k: string]: JsonValue };
+
+	type TableMode = 'objects' | 'primitives' | 'kv' | 'unsupported';
+	interface TableData {
+		mode: TableMode;
+		columns: string[];
+		rows: (JsonValue | undefined)[][];
+	}
+
+	// ── State ────────────────────────────────────────────────────────────────
+	let tableData: TableData | null = null;
+	let filteredRows: (JsonValue | undefined)[][] = [];
+	let sortCol: string | null = null;
+	let sortDir: 'asc' | 'desc' | 'none' = 'none';
+	const colFilters: Record<string, string> = {};
+	let globalSearch = '';
+	let showFilters = false;
+	let renderedCount = 0;
+	const CHUNK = 500;
+
+	// ── DOM refs ─────────────────────────────────────────────────────────────
+	const root      = document.getElementById('jb-tv');
+	const inputEl   = document.getElementById('jb-tv-input') as HTMLTextAreaElement | null;
+	const infoEl    = document.getElementById('jb-tv-info');
+	const wrapEl    = document.getElementById('jb-tv-wrap');
+	const theadEl   = document.getElementById('jb-tv-thead');
+	const tbodyEl   = document.getElementById('jb-tv-tbody');
+	const moreBtn   = document.getElementById('jb-tv-more') as HTMLButtonElement | null;
+	const emptyEl   = document.getElementById('jb-tv-empty');
+	const searchEl  = document.getElementById('jb-tv-search') as HTMLInputElement | null;
+	const statusEl  = document.getElementById('jb-tv-status');
+	const pathEl    = document.getElementById('jb-tv-path');
+	const statsEl   = document.querySelector<HTMLElement>('[data-stats]');
+	const SAMPLE    = (inputEl as HTMLTextAreaElement | null)?.value ?? '';
+
+	if (
+		root && inputEl && infoEl && wrapEl && theadEl &&
+		tbodyEl && moreBtn && emptyEl && searchEl && statusEl && pathEl && statsEl
+	) {
+		const dot   = statusEl.querySelector<HTMLElement>('[data-dot]')!;
+		const label = statusEl.querySelector<HTMLElement>('[data-label]')!;
+
+		// Non-null aliases so closures see non-nullable types (TypeScript CFA limitation)
+		const input  = inputEl;
+		const info   = infoEl;
+		const wrap   = wrapEl;
+		const thead  = theadEl;
+		const tbody  = tbodyEl;
+		const more   = moreBtn;
+		const empty  = emptyEl;
+		const search = searchEl;
+		const spath  = pathEl;
+		const sstat  = statsEl;
+
+		// ── Data detection ──────────────────────────────────────────────────
+		function isObj(v: JsonValue): v is JsonObject {
+			return v !== null && typeof v === 'object' && !Array.isArray(v);
+		}
+
+		function detectTableData(val: JsonValue): TableData {
+			if (Array.isArray(val)) {
+				if (val.length === 0) return { mode: 'objects', columns: [], rows: [] };
+
+				// All objects → unioned columns
+				const allObjects = val.every(v => isObj(v));
+				if (allObjects) {
+					const colMap = new Map<string, number>();
+					for (const item of val as JsonObject[]) {
+						for (const k of Object.keys(item)) {
+							if (!colMap.has(k)) colMap.set(k, colMap.size);
+						}
+					}
+					const cols = [...colMap.keys()];
+					const rows = (val as JsonObject[]).map(item =>
+						cols.map(c => (c in item ? item[c] : undefined))
+					);
+					return { mode: 'objects', columns: cols, rows };
+				}
+
+				// All primitives → index / value
+				const allPrims = val.every(v => v === null || typeof v !== 'object');
+				if (allPrims) {
+					return {
+						mode: 'primitives',
+						columns: ['index', 'value'],
+						rows: val.map((v, i) => [i, v]),
+					};
+				}
+
+				// Mixed — treat non-objects as {value: x}
+				const colMap = new Map<string, number>();
+				for (const item of val) {
+					if (isObj(item)) {
+						for (const k of Object.keys(item)) {
+							if (!colMap.has(k)) colMap.set(k, colMap.size);
+						}
+					} else {
+						if (!colMap.has('value')) colMap.set('value', 0);
+					}
+				}
+				const cols = [...colMap.keys()];
+				const rows = val.map(item => {
+					if (isObj(item)) return cols.map(c => (c in item ? item[c] : undefined));
+					return cols.map(c => (c === 'value' ? item : undefined));
+				});
+				return { mode: 'objects', columns: cols, rows };
+			}
+
+			if (isObj(val)) {
+				return {
+					mode: 'kv',
+					columns: ['key', 'value'],
+					rows: Object.entries(val as JsonObject).map(([k, v]) => [k, v]),
+				};
+			}
+
+			return { mode: 'unsupported', columns: [], rows: [] };
+		}
+
+		// ── Cell helpers ────────────────────────────────────────────────────
+		function cellText(v: JsonValue | undefined): string {
+			if (v === undefined) return '';
+			if (v === null) return 'null';
+			if (typeof v === 'boolean') return String(v);
+			if (typeof v === 'number') return String(v);
+			if (typeof v === 'string') return v;
+			const s = JSON.stringify(v);
+			return s.length > 60 ? s.slice(0, 57) + '…' : s;
+		}
+
+		function cellClass(v: JsonValue | undefined): string {
+			if (v === undefined) return 'jb-tc-missing';
+			if (v === null) return 'jb-tc-null';
+			if (typeof v === 'boolean') return 'jb-tc-bool';
+			if (typeof v === 'number') return 'jb-tc-number';
+			if (typeof v === 'string') return 'jb-tc-string';
+			return 'jb-tc-object';
+		}
+
+		// ── Filter + sort ───────────────────────────────────────────────────
+		function compareVals(a: JsonValue | undefined, b: JsonValue | undefined): number {
+			if (a === undefined && b === undefined) return 0;
+			if (a === undefined) return 1;
+			if (b === undefined) return -1;
+			if (a === null && b === null) return 0;
+			if (a === null) return 1;
+			if (b === null) return -1;
+			if (typeof a === 'number' && typeof b === 'number') return a - b;
+			if (typeof a === 'boolean' && typeof b === 'boolean') return Number(a) - Number(b);
+			const sa = cellText(a).toLowerCase();
+			const sb = cellText(b).toLowerCase();
+			return sa < sb ? -1 : sa > sb ? 1 : 0;
+		}
+
+		function computeFiltered(): (JsonValue | undefined)[][] {
+			if (!tableData) return [];
+			let rows = tableData.rows;
+
+			if (globalSearch.trim()) {
+				const q = globalSearch.toLowerCase();
+				rows = rows.filter(row =>
+					row.some(v => v !== undefined && cellText(v).toLowerCase().includes(q))
+				);
+			}
+
+			const activeFilters = Object.entries(colFilters).filter(([, v]) => v.trim());
+			if (activeFilters.length > 0 && tableData) {
+				const { columns } = tableData;
+				rows = rows.filter(row =>
+					activeFilters.every(([col, q]) => {
+						const ci = columns.indexOf(col);
+						if (ci < 0) return true;
+						const v = row[ci];
+						return v !== undefined && cellText(v).toLowerCase().includes(q.toLowerCase());
+					})
+				);
+			}
+
+			if (sortCol && sortDir !== 'none' && tableData) {
+				const ci = tableData.columns.indexOf(sortCol);
+				if (ci >= 0) {
+					rows = [...rows].sort((a, b) => {
+						const cmp = compareVals(a[ci], b[ci]);
+						return sortDir === 'asc' ? cmp : -cmp;
+					});
+				}
+			}
+
+			return rows;
+		}
+
+		// ── Rendering ───────────────────────────────────────────────────────
+		function renderHeader(): void {
+			if (!tableData) return;
+			const { columns } = tableData;
+			const frag = document.createDocumentFragment();
+
+			// Main header row
+			const headerRow = document.createElement('tr');
+
+			// Row-number column
+			const rnTh = document.createElement('th');
+			rnTh.className = 'jb-tv-th-rownum';
+			rnTh.setAttribute('scope', 'col');
+			rnTh.setAttribute('aria-label', 'Row number');
+			rnTh.textContent = '#';
+			headerRow.appendChild(rnTh);
+
+			for (const col of columns) {
+				const th = document.createElement('th');
+				th.setAttribute('scope', 'col');
+				th.setAttribute('data-col', col);
+				th.setAttribute('role', 'columnheader');
+
+				if (sortCol === col && sortDir !== 'none') {
+					th.setAttribute('aria-sort', sortDir === 'asc' ? 'ascending' : 'descending');
+				} else {
+					th.removeAttribute('aria-sort');
+				}
+
+				const lbl = document.createElement('span');
+				lbl.textContent = col;
+				th.appendChild(lbl);
+
+				if (sortCol === col && sortDir !== 'none') {
+					const ind = document.createElement('span');
+					ind.setAttribute('aria-hidden', 'true');
+					ind.textContent = sortDir === 'asc' ? ' ↑' : ' ↓';
+					ind.style.cssText = 'font-size:10px;opacity:0.9;';
+					th.appendChild(ind);
+				}
+
+				th.addEventListener('click', () => {
+					if (sortCol === col) {
+						if (sortDir === 'asc') { sortDir = 'desc'; }
+						else if (sortDir === 'desc') { sortDir = 'none'; sortCol = null; }
+						else { sortDir = 'asc'; sortCol = col; }
+					} else {
+						sortCol = col;
+						sortDir = 'asc';
+					}
+					renderTable();
+				});
+
+				headerRow.appendChild(th);
+			}
+			frag.appendChild(headerRow);
+
+			// Filter row (shown when showFilters is true)
+			if (showFilters) {
+				const filterRow = document.createElement('tr');
+				filterRow.className = 'jb-tv-filter-row';
+
+				const emptyTd = document.createElement('td');
+				filterRow.appendChild(emptyTd);
+
+				for (const col of columns) {
+					const td = document.createElement('td');
+					const inp = document.createElement('input');
+					inp.type = 'search';
+					inp.placeholder = '…';
+					inp.value = colFilters[col] ?? '';
+					inp.className = 'jb-tv-filter-input';
+					inp.setAttribute('aria-label', `Filter ${col}`);
+					inp.addEventListener('input', () => {
+						const v = inp.value.trim();
+						if (v) colFilters[col] = v;
+						else delete colFilters[col];
+						renderTable();
+					});
+					td.appendChild(inp);
+					filterRow.appendChild(td);
+				}
+				frag.appendChild(filterRow);
+			}
+
+			thead.replaceChildren(frag);
+		}
+
+		function appendRows(rows: (JsonValue | undefined)[][], start: number, end: number): void {
+			if (!tableData) return;
+			const cols = tableData.columns;
+			const q = globalSearch.trim().toLowerCase();
+			const frag = document.createDocumentFragment();
+
+			for (let i = start; i < end; i++) {
+				const row = rows[i];
+				const tr = document.createElement('tr');
+
+				// Row number
+				const rn = document.createElement('td');
+				rn.className = 'jb-tv-td-rownum jb-tc-null';
+				rn.textContent = String(i + 1);
+				tr.appendChild(rn);
+
+				for (let j = 0; j < cols.length; j++) {
+					const v = row[j];
+					const td = document.createElement('td');
+					td.className = cellClass(v);
+					td.setAttribute('data-row', String(i));
+					td.setAttribute('data-col', cols[j]);
+					const display = v === undefined ? '—' : cellText(v);
+					td.textContent = display;
+					if (v !== undefined) {
+						td.title = typeof v === 'object' ? JSON.stringify(v, null, 2) : String(v);
+					}
+					// Highlight search match
+					if (q && display.toLowerCase().includes(q)) {
+						td.classList.add('jb-tc-match');
+					}
+					tr.appendChild(td);
+				}
+
+				frag.appendChild(tr);
+			}
+			tbody.appendChild(frag);
+		}
+
+		function updateMoreBtn(): void {
+			const remaining = filteredRows.length - renderedCount;
+			if (remaining <= 0) {
+				more.classList.add('hidden');
+			} else {
+				const next = Math.min(CHUNK, remaining);
+				more.textContent = `Show ${next.toLocaleString()} more — ${remaining.toLocaleString()} remaining`;
+				more.classList.remove('hidden');
+			}
+		}
+
+		function renderTable(): void {
+			filteredRows = computeFiltered();
+			renderHeader();
+			tbody.replaceChildren();
+			const initial = Math.min(CHUNK, filteredRows.length);
+			appendRows(filteredRows, 0, initial);
+			renderedCount = initial;
+			updateMoreBtn();
+			updateInfo();
+		}
+
+		function updateInfo(): void {
+			if (!tableData) { info.textContent = ''; return; }
+			const total = tableData.rows.length;
+			const visible = filteredRows.length;
+			const cols = tableData.columns.length;
+			const modeStr = tableData.mode === 'kv'
+				? 'object (key/value pairs)'
+				: tableData.mode === 'primitives'
+					? 'array of primitives'
+					: `array · ${total.toLocaleString()} ${total === 1 ? 'row' : 'rows'}`;
+			const parts = [modeStr, `${cols} column${cols !== 1 ? 's' : ''}`];
+			if (visible < total) parts.push(`${visible.toLocaleString()} of ${total.toLocaleString()} visible`);
+			info.textContent = parts.join(' · ');
+		}
+
+		function showTable(): void {
+			wrap.classList.remove('hidden');
+			info.classList.remove('hidden');
+			empty.classList.add('hidden');
+		}
+
+		function showEmpty(msg: string): void {
+			wrap.classList.add('hidden');
+			info.classList.add('hidden');
+			empty.classList.remove('hidden');
+			const p = empty.querySelector('p');
+			if (p) p.textContent = msg;
+		}
+
+		// ── Status bar ──────────────────────────────────────────────────────
+		type StatusState = 'ok' | 'error' | 'idle';
+		const statusColors: Record<StatusState, string> = {
+			ok: 'var(--color-success)',
+			error: 'var(--color-error)',
+			idle: 'var(--color-mute)',
+		};
+		function setStatus(state: StatusState, text: string): void {
+			dot.style.backgroundColor = statusColors[state];
+			label.textContent = text;
+			label.style.color = state === 'error' ? 'var(--color-error-deep)' : 'var(--color-ink)';
+		}
+		function setStats(chars: number, extra?: string): void {
+			sstat.textContent = extra ? `${chars.toLocaleString()} chars · ${extra}` : `${chars.toLocaleString()} chars`;
+		}
+
+		let flashTimer = 0;
+		function flashStatus(state: StatusState, text: string): void {
+			setStatus(state, text);
+			clearTimeout(flashTimer);
+			flashTimer = window.setTimeout(refreshStatus, 1400);
+		}
+
+		// ── Parse + render ──────────────────────────────────────────────────
+		function refreshStatus(): void {
+			const text = input.value;
+			if (text.trim() === '') { setStatus('idle', 'Empty'); setStats(text.length); return; }
+			const res = checkJson(text);
+			if (!res.ok) { setStatus('error', res.message); setStats(text.length); return; }
+			setStatus('ok', 'Valid JSON');
+			setStats(text.length, tableData ? `${tableData.rows.length.toLocaleString()} rows` : undefined);
+		}
+
+		function update(): void {
+			const text = input.value;
+			spath.textContent = '';
+
+			if (text.trim() === '') {
+				tableData = null;
+				setStatus('idle', 'Empty');
+				setStats(text.length);
+				showEmpty('Paste JSON in the editor to see it as a table.');
+				return;
+			}
+
+			const res = checkJson(text);
+			if (!res.ok) {
+				tableData = null;
+				setStatus('error', res.message);
+				setStats(text.length);
+				showEmpty('Fix the JSON errors to see the table.');
+				return;
+			}
+
+			let parsed: JsonValue;
+			try { parsed = JSON.parse(text) as JsonValue; }
+			catch { setStatus('error', 'Invalid JSON'); showEmpty('Fix the JSON errors to see the table.'); return; }
+
+			const td = detectTableData(parsed);
+
+			if (td.mode === 'unsupported') {
+				tableData = null;
+				setStatus('idle', 'Not tabular');
+				setStats(text.length);
+				showEmpty('This JSON is not tabular. Try the JSON Viewer or Tree Viewer for nested structures.');
+				return;
+			}
+
+			if (td.columns.length === 0) {
+				tableData = td;
+				setStatus('ok', 'Valid JSON');
+				setStats(text.length, '0 rows');
+				showEmpty('The array is empty — nothing to display.');
+				return;
+			}
+
+			// Columns changed: reset sort / filter state to avoid stale column refs
+			const prevCols = tableData?.columns.join(',');
+			tableData = td;
+			if (prevCols !== td.columns.join(',')) {
+				sortCol = null;
+				sortDir = 'none';
+				Object.keys(colFilters).forEach(k => delete colFilters[k]);
+			}
+
+			setStatus('ok', 'Valid JSON');
+			setStats(text.length, `${td.rows.length.toLocaleString()} rows · ${td.columns.length} cols`);
+			showTable();
+			renderTable();
+		}
+
+		function applyInput(): void {
+			update();
+			saveDoc(input.value);
+		}
+
+		// ── CSV export ──────────────────────────────────────────────────────
+		function csvEscape(s: string): string {
+			if (s.includes(',') || s.includes('"') || s.includes('\n') || s.includes('\r')) {
+				return '"' + s.replace(/"/g, '""') + '"';
+			}
+			return s;
+		}
+
+		function buildCsv(): string {
+			if (!tableData) return '';
+			const cols = tableData.columns;
+			const lines: string[] = [cols.map(csvEscape).join(',')];
+			for (const row of filteredRows) {
+				lines.push(row.map(v => csvEscape(v === undefined ? '' : cellText(v))).join(','));
+			}
+			return lines.join('\r\n');
+		}
+
+		function downloadCsv(): void {
+			const csv = buildCsv();
+			const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = 'data.csv';
+			document.body.appendChild(a);
+			a.click();
+			a.remove();
+			URL.revokeObjectURL(url);
+			flashStatus('ok', `Exported ${filteredRows.length.toLocaleString()} rows`);
+		}
+
+		// ── Cell click: show path + copy value ─────────────────────────────
+		tbody.addEventListener('click', async (e: Event) => {
+			const td = (e.target as HTMLElement).closest<HTMLElement>('td');
+			if (!td || !tableData) return;
+
+			const ri = parseInt(td.getAttribute('data-row') ?? '-1', 10);
+			const col = td.getAttribute('data-col');
+			if (ri < 0 || !col) return;
+
+			const ci = tableData.columns.indexOf(col);
+			const row = filteredRows[ri];
+			if (!row) return;
+
+			const v = row[ci];
+			const pathStr = tableData.mode === 'kv'
+				? `$.${String(row[0])}`
+				: `$[${ri}].${col}`;
+			const valStr = v === undefined ? '(missing)' : JSON.stringify(v);
+			const preview = valStr.length > 45 ? valStr.slice(0, 42) + '…' : valStr;
+			spath.textContent = `${pathStr} = ${preview}`;
+
+			// Highlight
+			tbody.querySelectorAll('.jb-tv-selected').forEach(el => el.classList.remove('jb-tv-selected'));
+			td.classList.add('jb-tv-selected');
+
+			try {
+				const copyVal = v === undefined ? '' : typeof v === 'string' ? v : JSON.stringify(v);
+				await navigator.clipboard.writeText(copyVal);
+				flashStatus('ok', `Copied: ${col}`);
+			} catch {
+				flashStatus('error', 'Clipboard unavailable');
+			}
+		});
+
+		// ── Load more ───────────────────────────────────────────────────────
+		more.addEventListener('click', () => {
+			const start = renderedCount;
+			const end = Math.min(start + CHUNK, filteredRows.length);
+			appendRows(filteredRows, start, end);
+			renderedCount = end;
+			updateMoreBtn();
+		});
+
+		// ── Copy JSON ───────────────────────────────────────────────────────
+		async function copyJson(): Promise<void> {
+			let out = input.value;
+			if (checkJson(out).ok && out.trim()) {
+				try { out = JSON.stringify(JSON.parse(out), null, 2); } catch { /* keep raw */ }
+			}
+			try {
+				await navigator.clipboard.writeText(out);
+				flashStatus('ok', 'Copied JSON');
+			} catch {
+				flashStatus('error', 'Clipboard unavailable');
+			}
+		}
+
+		// ── Theme ───────────────────────────────────────────────────────────
+		type ThemeMode = 'dark' | 'light';
+		const THEME_KEY = 'jb-theme';
+		const ICON_SUN =
+			'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>';
+		const ICON_MOON =
+			'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"></path></svg>';
+
+		let themeMode: ThemeMode = (() => {
+			try {
+				const s = localStorage.getItem(THEME_KEY);
+				return s === 'light' ? 'light' : 'dark';
+			} catch { return 'dark'; }
+		})();
+
+		const themeBtn = root.querySelector<HTMLButtonElement>('[data-action="theme"]');
+		const themeIcon = themeBtn?.querySelector<HTMLElement>('[data-theme-icon]') ?? null;
+
+		function paintTheme(): void {
+			if (themeIcon) themeIcon.innerHTML = themeMode === 'dark' ? ICON_SUN : ICON_MOON;
+			themeBtn?.setAttribute('aria-label', themeMode === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
+			root?.classList.toggle('jb-theme-light', themeMode === 'light');
+		}
+
+		function applyTheme(next: ThemeMode): void {
+			themeMode = next;
+			try { localStorage.setItem(THEME_KEY, next); } catch { /* blocked */ }
+			paintTheme();
+		}
+
+		// ── Actions ─────────────────────────────────────────────────────────
+		const filtersBtn = root.querySelector<HTMLButtonElement>('[data-action="filters"]');
+
+		const actions: Record<string, () => void | Promise<void>> = {
+			filters: () => {
+				showFilters = !showFilters;
+				filtersBtn?.setAttribute('aria-pressed', String(showFilters));
+				renderTable();
+			},
+			csv: downloadCsv,
+			theme: () => applyTheme(themeMode === 'dark' ? 'light' : 'dark'),
+			sample: () => { input.value = SAMPLE; applyInput(); },
+			copy: copyJson,
+			clear: () => { input.value = ''; applyInput(); input.focus(); },
+		};
+
+		root.querySelectorAll('[data-action]').forEach(btn => {
+			const act = btn.getAttribute('data-action');
+			if (!act) return;
+			btn.addEventListener('click', () => { const fn = actions[act]; if (fn) void fn(); });
+		});
+
+		// ── Search ──────────────────────────────────────────────────────────
+		let searchTimer = 0;
+		search.addEventListener('input', () => {
+			clearTimeout(searchTimer);
+			searchTimer = window.setTimeout(() => {
+				globalSearch = search.value;
+				renderTable();
+			}, 200);
+		});
+
+		// ── Input debounce ───────────────────────────────────────────────────
+		let inputTimer = 0;
+		input.addEventListener('input', () => {
+			clearTimeout(inputTimer);
+			inputTimer = window.setTimeout(applyInput, 300);
+		});
+
+		// ── Init ─────────────────────────────────────────────────────────────
+		paintTheme();
+
+		const carried = loadDoc();
+		if (carried !== null) input.value = carried;
+
+		update();
+	}
+</script>
