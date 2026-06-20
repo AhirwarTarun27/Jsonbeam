@@ -205,3 +205,52 @@
   white-space: nowrap;
   border-width: 0;
 }
+
+/* ============================================================================
+   In-app controls — shared by every interactive island (formatter, viewer, …).
+   The 6px radius scale (DESIGN.md in-app controls, NOT the marketing pill).
+   ========================================================================== */
+@layer components {
+  .jb-btn {
+    display: inline-flex;
+    align-items: center;
+    height: 32px;
+    padding: 0 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-hairline);
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-size: var(--text-body-sm);
+    font-weight: 500;
+    line-height: 1;
+    transition: background-color 0.12s ease;
+  }
+  .jb-btn:hover {
+    background: var(--color-canvas-soft-2);
+  }
+  .jb-btn-primary {
+    background: var(--color-ink);
+    color: var(--color-on-primary);
+    border-color: var(--color-ink);
+  }
+  .jb-btn-primary:hover {
+    background: #2a2a2a;
+  }
+  .jb-btn-icon {
+    width: 32px;
+    padding: 0;
+    justify-content: center;
+    color: var(--color-body);
+  }
+}
+
+/* Inflate dense in-app controls to the 44px touch floor on coarse pointers.
+   Unlayered so it holds the accessibility floor over utility heights. */
+@media (pointer: coarse) {
+  .jb-btn {
+    height: 44px;
+  }
+  .jb-btn-icon {
+    width: 44px;
+  }
+}

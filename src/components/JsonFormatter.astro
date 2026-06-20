@@ -65,7 +65,7 @@ const primaryAction: 'format' | 'minify' | 'validate' | 'repair' =
 	</div>
 
 	<!-- Editor -->
-	<div id="jb-editor" class="h-[58vh] min-h-[380px] w-full overflow-hidden"></div>
+	<div id="jb-editor" class="h-[74vh] min-h-[460px] w-full overflow-hidden"></div>
 
 	<!-- Status bar -->
 	<div class="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-hairline bg-canvas-soft px-3 py-2 text-body-sm">
@@ -84,37 +84,9 @@ const primaryAction: 'format' | 'minify' | 'validate' | 'repair' =
 </div>
 
 <style>
-	.jb-btn {
-		display: inline-flex;
-		align-items: center;
-		height: 32px;
-		padding: 0 12px;
-		border-radius: 6px;
-		border: 1px solid var(--color-hairline);
-		background: var(--color-canvas);
-		color: var(--color-ink);
-		font-size: 14px;
-		font-weight: 500;
-		line-height: 1;
-		transition: background-color 0.12s ease;
-	}
-	.jb-btn:hover {
-		background: var(--color-canvas-soft-2);
-	}
-	.jb-btn-primary {
-		background: var(--color-ink);
-		color: var(--color-on-primary);
-		border-color: var(--color-ink);
-	}
-	.jb-btn-primary:hover {
-		background: #2a2a2a;
-	}
-	.jb-btn-icon {
-		width: 32px;
-		padding: 0;
-		justify-content: center;
-		color: var(--color-body);
-	}
+	/* .jb-btn / .jb-btn-primary / .jb-btn-icon now live in global.css (shared
+	   across islands). Only editor-specific styles remain below. */
+
 	/* Dark by default so the mount area matches the editor before hydration. */
 	#jb-editor {
 		background-color: var(--color-editor-bg);
@@ -138,10 +110,9 @@ const primaryAction: 'format' | 'minify' | 'validate' | 'repair' =
 		background-color: var(--color-editor-sel-light);
 	}
 
-	/* Inflate dense in-app controls to the 44px touch floor on coarse pointers. */
+	/* .jb-btn / .jb-btn-icon coarse-pointer inflation is global; only the
+	   formatter's indent <select> needs the 44px floor added here. */
 	@media (pointer: coarse) {
-		.jb-btn { height: 44px; }
-		.jb-btn-icon { width: 44px; }
 		#jb-indent { height: 44px; }
 	}
 </style>

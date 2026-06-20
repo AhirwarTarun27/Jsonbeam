@@ -25,8 +25,11 @@ export interface RelatedTool {
 }
 
 interface Props {
-	/** Which behavior the shared island runs (primary button + Ctrl+S). */
-	variant: ToolVariant;
+	/**
+	 * Which behavior the shared formatter island runs (primary button + Ctrl+S).
+	 * Ignored when the page supplies its own island via the `tool` slot.
+	 */
+	variant?: ToolVariant;
 	/** Route this page lives at, e.g. "/json-validator". */
 	slug: string;
 	/** <title> (≤60 chars, keyword first) and meta title. */
@@ -50,7 +53,7 @@ interface Props {
 }
 
 const {
-	variant,
+	variant = 'format',
 	slug,
 	title,
 	description,
@@ -93,10 +96,11 @@ const jsonLd = [
 		</div>
 	</section>
 
-	<!-- The tool -->
+	<!-- The tool. Pages can supply their own island via the `tool` slot;
+	     otherwise the shared formatter island renders for the given variant. -->
 	<section class="bg-canvas">
 		<div class="container-page py-10">
-			<JsonFormatter variant={variant} />
+			<slot name="tool"><JsonFormatter variant={variant} /></slot>
 		</div>
 	</section>
 
@@ -136,12 +140,12 @@ const jsonLd = [
 
 	<!-- FAQ -->
 	<section class="bg-canvas-soft">
-		<div class="container-page py-20">
-			<div class="max-w-2xl">
+		<div class="container-page grid gap-x-12 gap-y-8 py-20 lg:grid-cols-[1fr_1.7fr]">
+			<div>
 				<p class="font-mono text-caption uppercase tracking-wide text-mute">FAQ</p>
 				<h2 class="mt-3 text-display-md">{faqTitle}</h2>
 			</div>
-			<div class="mt-8 max-w-3xl divide-y divide-hairline border-t border-hairline">
+			<div class="divide-y divide-hairline border-t border-hairline">
 				{
 					faqs.map((faq) => (
 						<details class="group py-5">
@@ -149,7 +153,7 @@ const jsonLd = [
 								{faq.question}
 								<span class="text-mute transition-transform group-open:rotate-45" aria-hidden="true">+</span>
 							</summary>
-							<p class="mt-3 max-w-2xl text-body-md text-body">{faq.answer}</p>
+							<p class="mt-3 text-body-md text-body">{faq.answer}</p>
 						</details>
 					))
 				}

@@ -51,7 +51,7 @@ export const FOOTER_NAV: NavColumn[] = [
 	{
 		title: 'View & explore',
 		links: [
-			{ label: 'JSON Viewer', href: '/json-viewer', soon: true },
+			{ label: 'JSON Viewer', href: '/json-viewer' },
 			{ label: 'Tree Viewer', href: '/json-tree-viewer', soon: true },
 			{ label: 'Graph Viewer', href: '/json-graph-viewer', soon: true },
 			{ label: 'Table Viewer', href: '/json-table-viewer', soon: true },
