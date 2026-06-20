@@ -34,7 +34,7 @@ const { current } = Astro.props;
 		{
 			TOOL_NAV.map((group) => (
 				<li class="flex flex-wrap items-center gap-1">
-					<span class="mr-1 select-none font-mono text-caption uppercase tracking-wide text-mute">
+					<span class="mr-2 select-none border-r border-hairline pr-2 font-mono text-caption font-medium uppercase tracking-wide text-body">
 						{group.title}
 					</span>
 					{group.items.map((item) =>

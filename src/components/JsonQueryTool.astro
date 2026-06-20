@@ -127,7 +127,7 @@
 				autocomplete="off"
 				autocapitalize="off"
 				aria-label="JSON input document"
-				class="h-[36vh] min-h-[260px] w-full"
+				class="h-[62vh] min-h-[360px] w-full"
 			></textarea>
 		</div>
 
@@ -138,7 +138,7 @@
 				<span id="jb-qt-count" class="font-mono text-caption text-mute" aria-live="polite"></span>
 				<span id="jb-qt-eval-ms" class="ml-auto font-mono text-caption text-mute"></span>
 			</div>
-			<div id="jb-qt-result" class="relative h-[36vh] min-h-[260px] overflow-auto" role="region" aria-label="Query result">
+			<div id="jb-qt-result" class="relative h-[62vh] min-h-[360px] overflow-auto" role="region" aria-label="Query result">
 				<div id="jb-qt-out"     class="hidden px-3 py-3 font-mono text-code" aria-live="polite"></div>
 				<div id="jb-qt-empty"   class="hidden flex-col items-center justify-center gap-2 px-6 py-12 text-center">
 					<p class="font-mono text-caption text-mute">Enter a query above and press Run.</p>
@@ -545,6 +545,25 @@
 :global(#jb-qt.jb-theme-light #jb-qt-out .jb-q-k)  { color: var(--color-ink); }
 :global(#jb-qt.jb-theme-light #jb-qt-out .jb-q-p)  { color: var(--color-mute); }
 :global(#jb-qt.jb-theme-light #jb-qt-out .jb-q-sep){ border-top-color: var(--color-hairline); }
+/* ── Text selection in editor panes ─────────────────────────────────────────── */
+/* Dark mode: desaturated-blue tint — visible on the dark editor surface */
+:global(#jb-qt-input::selection) {
+	background-color: var(--color-editor-sel-dark);
+	color: var(--color-editor-fg);
+}
+:global(#jb-qt-out *::selection) {
+	background-color: var(--color-editor-sel-dark);
+	color: var(--color-editor-fg);
+}
+/* Light mode: soft blue tint — visible on the light canvas */
+:global(#jb-qt.jb-theme-light #jb-qt-input::selection) {
+	background-color: var(--color-editor-sel-light);
+	color: var(--color-ink);
+}
+:global(#jb-qt.jb-theme-light #jb-qt-out *::selection) {
+	background-color: var(--color-editor-sel-light);
+	color: var(--color-ink);
+}
 </style>
 
 <script>

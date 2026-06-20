@@ -313,6 +313,19 @@ const sampleB = `{
 	:global(#jb-dv.jb-theme-light #jb-dv-content .jb-dvc-key)     { color: var(--color-ink); }
 	:global(#jb-dv.jb-theme-light #jb-dv-content .jb-dvc-punct)   { color: var(--color-mute); }
 	:global(#jb-dv.jb-theme-light #jb-dv-content .jb-dvc-collapse){ color: var(--color-mute); }
+	/* ── Text selection ─────────────────────────────────────────────────────── */
+	:global(#jb-dv-left::selection),
+	:global(#jb-dv-right::selection),
+	:global(#jb-dv-content *::selection) {
+		background-color: var(--color-editor-sel-dark);
+		color: var(--color-editor-fg);
+	}
+	:global(#jb-dv.jb-theme-light #jb-dv-left::selection),
+	:global(#jb-dv.jb-theme-light #jb-dv-right::selection),
+	:global(#jb-dv.jb-theme-light #jb-dv-content *::selection) {
+		background-color: var(--color-editor-sel-light);
+		color: var(--color-ink);
+	}
 </style>
 
 <script>

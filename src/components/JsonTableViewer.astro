@@ -323,6 +323,26 @@ const sample = `[
 	@media (pointer: coarse) {
 		:global(.jb-tv-filter-input) { height: 32px; }
 	}
+
+	/* ── Text selection ─────────────────────────────────────────────────────── */
+	/* Dark mode: blue-tinted selection visible on the dark editor surface */
+	:global(#jb-tv-input::selection) {
+		background-color: var(--color-editor-sel-dark);
+		color: var(--color-editor-fg);
+	}
+	:global(#jb-tv-table *::selection) {
+		background-color: var(--color-editor-sel-dark);
+		color: var(--color-editor-fg);
+	}
+	/* Light mode: soft-blue selection visible on the light canvas */
+	:global(#jb-tv.jb-theme-light #jb-tv-input::selection) {
+		background-color: var(--color-editor-sel-light);
+		color: var(--color-ink);
+	}
+	:global(#jb-tv.jb-theme-light #jb-tv-table *::selection) {
+		background-color: var(--color-editor-sel-light);
+		color: var(--color-ink);
+	}
 </style>
 
 <script>
