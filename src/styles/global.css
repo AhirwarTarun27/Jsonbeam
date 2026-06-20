@@ -282,6 +282,43 @@
     cursor: default;
   }
 
+  /* Tool-switcher group well — each Format/View/Query/Convert group is a quiet
+     segmented card (lighter bg-canvas + inset hairline) sitting on the rail's
+     bg-canvas-soft, so its tabs read as one unit. Wraps as a whole on narrow
+     rails; chips reflow inside if a single group can't fit one row. */
+  .jb-tab-rail {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 2px;
+    padding: 3px;
+    border-radius: var(--radius-md);
+    background: var(--color-canvas);
+    box-shadow: var(--shadow-e1);
+  }
+  /* Group label bound *inside* the well, divided from its chips by a hairline
+     tick (stretches to the chip row via the well's align-items: stretch). */
+  .jb-tab-rail-label {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 4px;
+    padding: 0 8px 0 4px;
+    border-right: 1px solid var(--color-hairline);
+    font-family: var(--font-mono);
+    font-size: var(--text-caption);
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-mute);
+    white-space: nowrap;
+    user-select: none;
+  }
+  /* Inside the white well, the base canvas hover is invisible — go one step
+     darker so the chip still lifts. Active (ink) is unchanged. */
+  .jb-tab-rail .jb-tab:hover {
+    background: var(--color-canvas-soft-2);
+  }
+
   /* ── Command palette (⌘K) trigger — the quiet affordance in the switcher rail.
      The dialog itself is built + styled lazily below (.jb-cmdk-*). ──────────── */
   .jb-cmdk-trigger {

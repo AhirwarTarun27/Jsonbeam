@@ -6,10 +6,14 @@
  * tool is filled ink + aria-current; not-yet-shipped tools render muted and
  * non-interactive, so the roadmap is visible without being clickable.
  *
- * Layout: the groups wrap across rows (so e.g. VIEW falls to the next line on a
- * narrow rail). The carry note + ⌘K trigger are the last item and float to the
- * right of the *last wrapped row* (ml-auto) — never a dedicated extra row — so
- * the rail stays compact and the editor below keeps maximum screen height.
+ * Layout: each group (Format / View / Query / Convert) is its own segmented
+ * well — a faint bg-canvas card with an inset hairline — so the group reads as
+ * one unit and its label is clearly *bound* to it by a hairline tick divider
+ * (common-region grouping), not floating beside its chips. The wells wrap as
+ * units across rows on a narrow rail. The carry note + ⌘K trigger are the last
+ * item and float to the right of the *last wrapped row* (ml-auto) — never a
+ * dedicated extra row — so the rail stays compact and the editor below keeps
+ * maximum screen height.
  *
  * The "carries across tools" note makes the "paste once" power move discoverable
  * (full reassurance in its tooltip + the island status bar). The ⌘K trigger is
@@ -28,15 +32,13 @@ const { current } = Astro.props;
 
 <nav
 	aria-label="JSON tools"
-	class="mb-3 rounded-md border border-hairline bg-canvas-soft px-2.5 py-2 shadow-e1"
+	class="mb-3 rounded-md border border-hairline bg-canvas-soft px-3 py-2 shadow-e1"
 >
-	<ul class="flex flex-wrap items-center gap-x-3 gap-y-2">
+	<ul class="flex flex-wrap items-center gap-x-2.5 gap-y-2">
 		{
 			TOOL_NAV.map((group) => (
-				<li class="flex flex-wrap items-center gap-1">
-					<span class="mr-2 select-none border-r border-hairline pr-2 font-mono text-caption font-medium uppercase tracking-wide text-body">
-						{group.title}
-					</span>
+				<li class="jb-tab-rail">
+					<span class="jb-tab-rail-label">{group.title}</span>
 					{group.items.map((item) =>
 						item.soon ? (
 							<span class="jb-tab jb-tab-soon" title="Coming soon">
@@ -62,6 +64,7 @@ const { current } = Astro.props;
 			<span
 				class="hidden items-center gap-1.5 whitespace-nowrap text-caption text-mute md:inline-flex"
 				title="Your JSON carries from tool to tool — it never leaves your browser."
+				aria-hidden="true"
 			>
 				<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
 					<path
@@ -72,7 +75,7 @@ const { current } = Astro.props;
 						stroke-linejoin="round"></path>
 					<path d="M13.5 3v10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"></path>
 				</svg>
-				Carries across tools
+				Your JSON carries across tools
 			</span>
 			<span class="sr-only">Your JSON carries across tools and never leaves your browser.</span>
 
