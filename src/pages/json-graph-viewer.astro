@@ -1,0 +1,77 @@
+---
+import ToolPage from '../components/ToolPage.astro';
+import JsonGraphViewer from '../components/JsonGraphViewer.astro';
+import type { FaqItem } from '../lib/jsonld';
+import type { RelatedTool } from '../components/ToolPage.astro';
+
+const steps = [
+	{ title: 'Paste your JSON', body: 'Drop it into the editor on the left. It is parsed entirely in your browser.' },
+	{ title: 'Read the diagram', body: 'Every object and array becomes a card; nested values draw edges to their own cards.' },
+	{ title: 'Pan, zoom & expand', body: 'Drag to pan, scroll to zoom, Fit to frame it all. Click a node to drill deeper.' },
+	{ title: 'Search or export', body: 'Find any key or value, copy a node’s path, or download the graph as PNG or SVG.' },
+];
+
+const whatIs = [
+	'A JSON graph viewer turns your data into a <strong class="font-medium text-ink">node-link diagram</strong> instead of an indented list. Each object and array is a card, and every nested value is an edge to the card it points at — so the <em>shape</em> of the data, how records connect and how deep they nest, is visible at a glance rather than inferred from indentation.',
+	'It is built for real files. Cards build only as you expand them, wide arrays are windowed, and a node budget keeps the canvas bounded — so a large, deeply nested document renders and pans smoothly instead of locking up the tab. Pan, zoom, fit-to-screen, a live minimap, and an instant search that jumps between matches keep you oriented no matter how big the graph gets.',
+	'And it gives away what others charge for. <strong class="font-medium text-ink">PNG and SVG export are free</strong> and rendered locally, the nodes are fully keyboard-navigable, and a live breadcrumb shows the path to whatever you select — ready to copy. Everything runs client-side: nothing you paste is ever uploaded, and it keeps working offline.',
+];
+
+const faqs: FaqItem[] = [
+	{
+		question: 'What is a JSON graph viewer?',
+		answer:
+			'It visualises JSON as a node-link diagram: every object and array becomes a card, and nested values are drawn as edges connecting the cards. Unlike a tree outline, you see the whole structure laid out spatially, which makes the relationships between records easy to follow.',
+	},
+	{
+		question: 'How is it different from the tree and table views?',
+		answer:
+			'The Tree Viewer shows an indented, collapsible outline and the Table Viewer shows arrays of records as rows and columns. The Graph Viewer is spatial — it draws the document as connected cards you pan and zoom around, which is the fastest way to grasp the shape of unfamiliar or deeply nested data.',
+	},
+	{
+		question: 'Can it handle large JSON files without freezing?',
+		answer:
+			'Yes. Child cards are created only for nodes you expand, very wide arrays and objects are windowed with a “show more” control, and the visible graph is capped by a node budget. That means even large, deeply nested documents render and pan smoothly instead of locking up the browser.',
+	},
+	{
+		question: 'Can I export the graph as an image?',
+		answer:
+			'Yes, for free. Use the SVG button for a crisp, infinitely scalable vector, or PNG for a 2× raster image. Both are generated locally in your browser — the graph is never sent to a server to be rendered.',
+	},
+	{
+		question: 'Can I navigate the graph with just the keyboard?',
+		answer:
+			'Yes. Press Tab to move focus into the nodes, then use the arrow keys to move between connected cards, Enter to expand or collapse, and c to copy the focused node’s path. The path also shows live in the breadcrumb above the canvas.',
+	},
+	{
+		question: 'Is the graph viewer private and free?',
+		answer:
+			'Completely. There is no account, no ads, and no upload — your JSON is parsed and drawn entirely in your browser, so it works offline and is safe for sensitive data.',
+	},
+];
+
+const related: RelatedTool[] = [
+	{ name: 'JSON Viewer', href: '/json-viewer', desc: 'The collapsible tree explorer.' },
+	{ name: 'JSON Tree Viewer', href: '/json-tree-viewer', desc: 'Keyboard-first tree navigation.' },
+	{ name: 'JSON Table Viewer', href: '/json-table-viewer', desc: 'Arrays as rows and columns.', soon: true },
+	{ name: 'JSON Formatter', href: '/json-formatter', desc: 'Beautify, minify, validate & repair.' },
+];
+---
+
+<ToolPage
+	slug="/json-graph-viewer"
+	title="JSON Graph Viewer — Visualize JSON as a Diagram"
+	description="Free online JSON graph viewer. See JSON as a pan-and-zoom node diagram, search it, navigate by keyboard, and export PNG or SVG — all private, in your browser."
+	breadcrumbLabel="JSON Graph Viewer"
+	h1="JSON graph viewer — see your data as a diagram."
+	intro="Paste JSON and watch it become a node-link graph you can pan, zoom, and search. Expand cards to drill in, copy any node’s path, and export the whole diagram as PNG or SVG — free. Nothing you paste leaves your browser."
+	howToTitle="Visualize JSON in four steps."
+	steps={steps}
+	whatIsTitle="A diagram built for big, connected JSON."
+	whatIs={whatIs}
+	faqTitle="JSON graph viewer questions."
+	faqs={faqs}
+	related={related}
+>
+	<JsonGraphViewer slot="tool" />
+</ToolPage>

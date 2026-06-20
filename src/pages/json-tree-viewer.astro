@@ -1,0 +1,77 @@
+---
+import ToolPage from '../components/ToolPage.astro';
+import JsonTreeViewer from '../components/JsonTreeViewer.astro';
+import type { FaqItem } from '../lib/jsonld';
+import type { RelatedTool } from '../components/ToolPage.astro';
+
+const steps = [
+	{ title: 'Paste your JSON', body: 'Drop it into the editor on the left. It is parsed entirely in your browser.' },
+	{ title: 'Press Tab into the tree', body: 'Tab focuses the tree. The whole structure becomes one keyboard surface.' },
+	{ title: 'Fly with the arrow keys', body: '↑ ↓ move between nodes, → expands or steps in, ← collapses or steps out.' },
+	{ title: 'Grab the path', body: 'The focused node’s path shows at the top — press Enter or c to copy it.' },
+];
+
+const whatIs = [
+	'A JSON tree viewer turns a flat block of text into a navigable outline. This one is built around the keyboard: there is a single tab stop, and the full <strong class="font-medium text-ink">arrow-key tree pattern</strong> (↑ ↓ → ←, Home, End, Enter) lets you walk a deeply nested document without ever reaching for the mouse.',
+	'The bar above the tree is a live breadcrumb — it always shows the path to the node you are on, like <strong class="font-medium text-ink">$.users[0].name</strong>, with its type and size. Press Enter on a leaf, or <strong class="font-medium text-ink">c</strong> on anything, to copy that path straight to your clipboard. Start typing a key name to jump to it.',
+	'Nodes build only as you expand them, and very wide arrays render in windows, so even megabyte-scale, deeply nested JSON opens and navigates without freezing the tab. Everything runs locally — safe for sensitive payloads, and it keeps working offline.',
+];
+
+const faqs: FaqItem[] = [
+	{
+		question: 'How is this different from the JSON Viewer?',
+		answer:
+			'Both render JSON as a collapsible tree. The Viewer is mouse-first — click to expand, click a key to copy. The Tree Viewer is keyboard-first: it implements the full arrow-key tree pattern with a single tab stop, type-ahead, and a live path breadcrumb, so you can navigate large structures without the mouse.',
+	},
+	{
+		question: 'Which keyboard shortcuts does it support?',
+		answer:
+			'↑ and ↓ move between visible nodes, → expands a node or steps into it, ← collapses it or steps out to the parent, Home and End jump to the first and last node, Enter toggles a node or copies a leaf’s path, and pressing c copies the focused path. Start typing a key name to jump to the next match.',
+	},
+	{
+		question: 'How do I copy the path to a value?',
+		answer:
+			'Focus the node and press Enter (on a leaf) or c (on anything), or click the copy button in the path bar. The path — for example $.users[0].name — is copied to your clipboard, ready to paste into code or a query.',
+	},
+	{
+		question: 'Can it handle large, deeply nested JSON?',
+		answer:
+			'Yes. Child nodes are created only when you expand them, and very wide arrays or objects render in windows of a thousand rows at a time, so navigation stays responsive on large documents instead of rendering everything up front.',
+	},
+	{
+		question: 'Is the tree viewer private and free?',
+		answer:
+			'Yes. It is completely free with no account or ads, and your JSON is parsed entirely in your browser — nothing is ever uploaded. It also works offline once the page has loaded.',
+	},
+	{
+		question: 'Can I edit the JSON here?',
+		answer:
+			'Yes. Edit the text on the left and the tree rebuilds live. For formatting, minifying, or repairing broken JSON, use the JSON Formatter — your document carries over automatically.',
+	},
+];
+
+const related: RelatedTool[] = [
+	{ name: 'JSON Viewer', href: '/json-viewer', desc: 'The mouse-first collapsible tree.' },
+	{ name: 'JSON Graph Viewer', href: '/json-graph-viewer', desc: 'See JSON as a node diagram.' },
+	{ name: 'JSON Formatter', href: '/json-formatter', desc: 'Beautify, minify, validate & repair.' },
+	{ name: 'JSON Diff', href: '/json-diff', desc: 'Compare two documents.', soon: true },
+];
+---
+
+<ToolPage
+	slug="/json-tree-viewer"
+	title="JSON Tree Viewer — Keyboard-First JSON Explorer"
+	description="Free online JSON tree viewer. Navigate nested JSON entirely by keyboard — arrow keys, type-ahead, and a live path breadcrumb. Private and fast in your browser."
+	breadcrumbLabel="JSON Tree Viewer"
+	h1="JSON tree viewer — navigate your data by keyboard."
+	intro="Paste JSON and walk the whole structure with the arrow keys — no mouse required. A live breadcrumb shows the focused node’s path, type, and size; press Enter to copy it. Nothing you paste leaves your browser."
+	howToTitle="Navigate JSON in four steps."
+	steps={steps}
+	whatIsTitle="A tree you drive from the keyboard."
+	whatIs={whatIs}
+	faqTitle="JSON tree viewer questions."
+	faqs={faqs}
+	related={related}
+>
+	<JsonTreeViewer slot="tool" />
+</ToolPage>

@@ -1,0 +1,1663 @@
+---
+/**
+ * The /json-graph-viewer island — a node-link JSON graph explorer.
+ *
+ * The View cluster's one real engine. Where the Viewer/Tree-Viewer render an
+ * indented outline, this lays JSON out as a *diagram*: every object/array is a
+ * record card, every nested value is an edge to a child card. Built to beat the
+ * market leader on the axes that matter and stay inside our contracts:
+ *
+ *   • Framework-free, zero new deps — a hand-rolled SVG renderer + a tidy
+ *     tree layout. No canvas-blob, no React; the whole island is a few KB.
+ *   • Large-file safe — children build lazily only for *expanded* nodes, wide
+ *     parents are windowed, and a global node budget caps the visible graph, so
+ *     a megabyte document never freezes the tab.
+ *   • Free PNG + SVG export (rasterised locally via <canvas>, lazy).
+ *   • Fully keyboard-navigable nodes (focusable SVG groups + arrow-key nav),
+ *     a live path breadcrumb, in-graph search, pan / zoom / fit, a minimap, and
+ *     an LR/TB layout toggle.
+ *
+ * All processing is local — nothing is uploaded. Shares the `jb-theme` key and
+ * the `doc-store` carry with the other tools. In-app controls use the shared
+ * 6px `.jb-btn` scale (global.css).
+ */
+const sample = `{
+  "name": "JSON Beam",
+  "private": true,
+  "version": 2,
+  "modes": ["text", "tree", "table", "graph"],
+  "limits": { "maxFileSizeMB": 100, "workers": 4 },
+  "users": [
+    { "id": 1, "name": "Ada", "admin": true },
+    { "id": 2, "name": "Linus", "admin": false }
+  ],
+  "tags": null
+}`;
+---
+
+<div
+	id="jb-graph-viewer"
+	class="overflow-hidden rounded-md border border-hairline bg-canvas shadow-e3"
+>
+	<!-- Toolbar -->
+	<div class="flex flex-wrap items-center gap-1.5 border-b border-hairline bg-canvas-soft px-3 py-2">
+		<button type="button" data-action="expand" class="jb-btn" title="Expand every node (bounded)">Expand all</button>
+		<button type="button" data-action="collapse" class="jb-btn" title="Collapse to the root">Collapse all</button>
+
+		<span class="mx-1 hidden h-5 w-px bg-hairline sm:block" aria-hidden="true"></span>
+
+		<button type="button" data-action="fit" class="jb-btn" title="Fit the whole graph in view">Fit</button>
+		<div class="inline-flex items-center" role="group" aria-label="Zoom">
+			<button type="button" data-action="zoom-out" class="jb-btn jb-btn-icon" aria-label="Zoom out" title="Zoom out">−</button>
+			<button type="button" data-action="zoom-reset" class="jb-btn" title="Reset zoom to 100%"><span data-zoom>100%</span></button>
+			<button type="button" data-action="zoom-in" class="jb-btn jb-btn-icon" aria-label="Zoom in" title="Zoom in">+</button>
+		</div>
+		<button type="button" data-action="direction" class="jb-btn" title="Toggle layout direction" aria-label="Toggle layout direction">
+			<span data-dir-label>Layout: →</span>
+		</button>
+
+		<span class="mx-1 hidden h-5 w-px bg-hairline sm:block" aria-hidden="true"></span>
+
+		<div class="ml-auto flex flex-wrap items-center gap-1.5">
+			<button type="button" data-action="export-svg" class="jb-btn" title="Download the graph as an SVG">SVG</button>
+			<button type="button" data-action="export-png" class="jb-btn" title="Download the graph as a PNG">PNG</button>
+			<button
+				type="button"
+				data-action="theme"
+				class="jb-btn jb-btn-icon"
+				aria-label="Switch to light theme"
+				title="Toggle dark / light"
+			><span data-theme-icon aria-hidden="true"></span></button>
+			<button type="button" data-action="sample" class="jb-btn" title="Load a sample document">Sample</button>
+			<button type="button" data-action="copy" class="jb-btn" title="Copy formatted JSON">Copy JSON</button>
+			<button type="button" data-action="clear" class="jb-btn" title="Clear the input">Clear</button>
+		</div>
+	</div>
+
+	<!-- Path breadcrumb + in-graph search -->
+	<div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-hairline bg-canvas-soft px-3 py-1.5">
+		<span class="select-none font-mono text-caption uppercase tracking-wide text-mute">Path</span>
+		<code data-path-display class="font-mono text-code text-body" title="Selected node path">$</code>
+		<span data-path-meta class="font-mono text-caption text-mute"></span>
+		<button
+			type="button"
+			data-action="copy-path"
+			class="jb-btn jb-btn-icon"
+			aria-label="Copy selected node path"
+			title="Copy selected path"
+		>
+			<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+				<rect x="5.5" y="5.5" width="8" height="8" rx="1.4" stroke="currentColor" stroke-width="1.3"></rect>
+				<path d="M10.5 5.5V4a1.5 1.5 0 0 0-1.5-1.5H4A1.5 1.5 0 0 0 2.5 4v5A1.5 1.5 0 0 0 4 10.5h1.5" stroke="currentColor" stroke-width="1.3"></path>
+			</svg>
+		</button>
+
+		<div class="ml-auto flex items-center gap-1.5">
+			<label class="sr-only" for="jb-gsearch">Search the graph</label>
+			<div class="flex items-center gap-1.5 rounded-sm border border-hairline bg-canvas px-2" style="height:32px">
+				<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true" class="text-mute">
+					<circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.3"></circle>
+					<path d="m11 11 3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"></path>
+				</svg>
+				<input
+					id="jb-gsearch"
+					type="search"
+					placeholder="Find key or value…"
+					autocomplete="off"
+					spellcheck="false"
+					class="w-32 bg-transparent text-body-sm outline-none sm:w-44"
+				/>
+				<span data-search-count class="font-mono text-caption text-mute" aria-live="polite"></span>
+			</div>
+			<button type="button" data-action="search-prev" class="jb-btn jb-btn-icon" aria-label="Previous match" title="Previous match">↑</button>
+			<button type="button" data-action="search-next" class="jb-btn jb-btn-icon" aria-label="Next match" title="Next match">↓</button>
+		</div>
+	</div>
+
+	<!-- Split: input + graph canvas -->
+	<div class="grid grid-cols-1 lg:grid-cols-[340px_1fr]">
+		<div class="border-b border-hairline lg:border-b-0 lg:border-r">
+			<label class="sr-only" for="jb-ginput">JSON input</label>
+			<textarea
+				id="jb-ginput"
+				spellcheck="false"
+				autocomplete="off"
+				autocapitalize="off"
+				aria-label="JSON input"
+				class="h-[34vh] min-h-[220px] w-full lg:h-[72vh]"
+			>{sample}</textarea>
+		</div>
+		<div id="jb-gstage" class="relative h-[56vh] min-h-[340px] overflow-hidden lg:h-[72vh]">
+			<svg
+				id="jb-gsvg"
+				class="h-full w-full touch-none select-none"
+				role="application"
+				aria-label="JSON graph — drag to pan, scroll to zoom, Tab into the nodes to navigate by keyboard"
+			>
+				<defs>
+					<pattern id="jb-gdots" width="22" height="22" patternUnits="userSpaceOnUse">
+						<circle cx="1.2" cy="1.2" r="1.2" data-dot></circle>
+					</pattern>
+				</defs>
+				<rect id="jb-gbg" x="0" y="0" width="100%" height="100%"></rect>
+				<rect id="jb-gbg-dots" x="0" y="0" width="100%" height="100%" fill="url(#jb-gdots)"></rect>
+				<g id="jb-gviewport">
+					<g id="jb-gedges" aria-hidden="true"></g>
+					<g id="jb-gnodes" role="tree" aria-label="JSON graph nodes — arrow keys to navigate"></g>
+				</g>
+			</svg>
+
+			<!-- Minimap -->
+			<div id="jb-gminimap" class="absolute bottom-3 right-3 hidden overflow-hidden rounded-sm border border-hairline shadow-e2 sm:block" aria-hidden="true">
+				<svg id="jb-gmini" width="168" height="116"><g id="jb-gmini-nodes"></g><rect id="jb-gmini-view"></rect></svg>
+			</div>
+
+			<!-- Empty / error overlay -->
+			<div id="jb-gempty" class="pointer-events-none absolute inset-0 hidden place-items-center px-6 text-center"></div>
+		</div>
+	</div>
+
+	<!-- Status bar -->
+	<div class="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-hairline bg-canvas-soft px-3 py-2 text-body-sm">
+		<span id="jb-gstatus" class="inline-flex items-center gap-1.5 font-medium" role="status" aria-live="polite">
+			<span class="h-2 w-2 rounded-full bg-mute" data-dot-status></span>
+			<span data-label>Ready</span>
+		</span>
+		<span data-stats class="font-mono text-caption text-mute">0 chars</span>
+		<span class="hidden items-center gap-1 font-mono text-caption text-mute md:inline-flex" aria-hidden="true">
+			<kbd class="jb-gkbd">drag</kbd> pan · <kbd class="jb-gkbd">scroll</kbd> zoom · <kbd class="jb-gkbd">Tab</kbd> nodes
+		</span>
+		<span class="ml-auto inline-flex items-center gap-1.5 text-caption text-mute">
+			<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+				<path d="M8 1.5 3 3.5v3.2c0 3 2.1 5.8 5 6.8 2.9-1 5-3.8 5-6.8V3.5L8 1.5Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"></path>
+			</svg>
+			Processed locally — nothing uploaded
+		</span>
+	</div>
+</div>
+
+<style>
+	#jb-ginput {
+		background-color: var(--color-editor-bg);
+		color: var(--color-editor-fg);
+		font-family: var(--font-mono);
+		font-size: 13px;
+		line-height: 1.6;
+		padding: 14px;
+		border: none;
+		outline: none;
+		resize: none;
+		display: block;
+		tab-size: 2;
+	}
+	:global(#jb-ginput::selection) {
+		color: var(--color-on-primary);
+		background-color: var(--color-editor-sel-dark);
+	}
+
+	/* Light theme — flip the input pane to the canvas surface so it matches the
+	   Viewer / Tree-Viewer (shares the `jb-theme` key). The graph canvas itself is
+	   repainted from the JS palette, so only the textarea needs a CSS override. */
+	:global(#jb-graph-viewer.jb-theme-light #jb-ginput) {
+		background-color: var(--color-canvas);
+		color: var(--color-ink);
+	}
+	:global(#jb-graph-viewer.jb-theme-light #jb-ginput::selection) {
+		color: var(--color-ink);
+		background-color: var(--color-editor-sel-light);
+	}
+
+	.jb-gkbd {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 16px;
+		padding: 0 4px;
+		border: 1px solid var(--color-hairline);
+		border-radius: var(--radius-xs);
+		background: var(--color-canvas);
+		font-size: 11px;
+		line-height: 1.4;
+	}
+
+	/* The graph stage. The SVG colours are driven from JS (resolved design tokens)
+	   so PNG/SVG export is faithful without our stylesheet — but interaction
+	   affordances (cursor, focus ring) live here. */
+	#jb-gsvg {
+		cursor: grab;
+		display: block;
+	}
+	#jb-gsvg.is-panning {
+		cursor: grabbing;
+	}
+	:global(#jb-gnodes .jb-gnode) {
+		cursor: pointer;
+	}
+	:global(#jb-gnodes .jb-gnode:focus) {
+		outline: none;
+	}
+	:global(#jb-gnodes .jb-gnode:focus-visible .jb-card) {
+		stroke: var(--color-link);
+		stroke-width: 2;
+	}
+	:global(#jb-gnodes text) {
+		pointer-events: none;
+		white-space: pre;
+	}
+
+	#jb-gmini-view {
+		fill: rgba(80, 227, 194, 0.12);
+		stroke: var(--color-cyan-deep);
+		stroke-width: 1;
+	}
+
+	/* Empty / error overlay text. */
+	:global(#jb-gempty.is-shown) {
+		display: grid;
+	}
+	:global(#jb-gempty .jb-gempty-card) {
+		max-width: 30rem;
+		color: var(--color-mute);
+		font-size: var(--text-body-sm);
+		line-height: 1.6;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		:global(#jb-gviewport) {
+			transition: none !important;
+		}
+	}
+
+	@media (pointer: coarse) {
+		.jb-gkbd {
+			display: none;
+		}
+	}
+</style>
+
+<script>
+	import { checkJson } from '../lib/json';
+	import { loadDoc, saveDoc } from '../lib/doc-store';
+
+	const root = document.getElementById('jb-graph-viewer');
+	const inputEl = document.getElementById('jb-ginput') as HTMLTextAreaElement | null;
+	const svg = document.getElementById('jb-gsvg') as unknown as SVGSVGElement | null;
+	const stage = document.getElementById('jb-gstage');
+
+	if (root && inputEl && svg && stage) {
+		const input = inputEl;
+
+		// ── Types ────────────────────────────────────────────────────────────────
+		type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+		type JsonObject = { [key: string]: JsonValue };
+		type ValueType = 'string' | 'number' | 'boolean' | 'null';
+		type RowKind = 'scalar' | 'object' | 'array' | 'more';
+		type Dir = 'LR' | 'TB';
+		type Mode = 'dark' | 'light';
+
+		interface GRow {
+			kind: RowKind;
+			keyText: string;
+			path: string;
+			valueText?: string;
+			valueType?: ValueType;
+			count?: number;
+			childId?: number;
+			moreCount?: number;
+		}
+		interface GNode {
+			id: number;
+			path: string;
+			kind: 'object' | 'array';
+			rows: GRow[];
+			parentId: number | null;
+			depth: number;
+			expandable: boolean;
+			w: number;
+			h: number;
+			x: number;
+			y: number;
+			main: number;
+			cross: number;
+		}
+		interface GEdge {
+			parentId: number;
+			childId: number;
+		}
+		interface Graph {
+			nodes: GNode[];
+			edges: GEdge[];
+			byPath: Map<string, number>;
+			children: Map<number, number[]>;
+			bounds: { minX: number; minY: number; maxX: number; maxY: number };
+		}
+		interface Pal {
+			bg: string;
+			dot: string;
+			nodeFill: string;
+			nodeStroke: string;
+			fg: string;
+			key: string;
+			index: string;
+			badge: string;
+			str: string;
+			num: string;
+			bool: string;
+			nul: string;
+			edge: string;
+			sel: string;
+			match: string;
+		}
+
+		// ── Constants ──────────────────────────────────────────────────────────────
+		const ROW_H = 22;
+		const PAD_X = 12;
+		const PAD_Y = 8;
+		const FONT_SIZE = 13;
+		const MONO = "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
+		const MIN_W = 92;
+		const MAX_W = 320;
+		const TOGGLE_PAD = 16;
+		const H_GAP = 72;
+		const V_GAP = 18;
+		const INITIAL_WINDOW = 40; // rows shown per node before "+N more"
+		const WINDOW_STEP = 80;
+		const MAX_NODES = 600; // global visible-node budget (the no-freeze valve)
+		const AUTO_DEPTH = 2; // tiers auto-expanded on load
+		const AUTO_BUDGET = 80;
+		const SVG_NS = 'http://www.w3.org/2000/svg';
+
+		// ── State ────────────────────────────────────────────────────────────────
+		const SAMPLE = input.value;
+		const carried = loadDoc();
+		if (carried !== null) input.value = carried;
+
+		let dir: Dir = 'LR';
+		let expanded = new Set<string>();
+		const windows = new Map<string, number>();
+		let tx = 0;
+		let ty = 0;
+		let k = 1;
+		let selectedPath: string | null = null;
+		let selectedId: number | null = null;
+		let searchQuery = '';
+		let matches: number[] = [];
+		let matchIdx = -1;
+		let graph: Graph | null = null;
+		let truncated = false;
+
+		// ── DOM refs ────────────────────────────────────────────────────────────
+		const viewport = document.getElementById('jb-gviewport') as unknown as SVGGElement;
+		const edgesG = document.getElementById('jb-gedges') as unknown as SVGGElement;
+		const nodesG = document.getElementById('jb-gnodes') as unknown as SVGGElement;
+		const bgRect = document.getElementById('jb-gbg') as unknown as SVGRectElement;
+		const dotCircle = svg.querySelector<SVGCircleElement>('#jb-gdots [data-dot]');
+		const empty = document.getElementById('jb-gempty');
+		const miniWrap = document.getElementById('jb-gminimap');
+		const miniNodes = document.getElementById('jb-gmini-nodes') as unknown as SVGGElement;
+		const miniView = document.getElementById('jb-gmini-view') as unknown as SVGRectElement;
+		const pathDisplay = root.querySelector<HTMLElement>('[data-path-display]');
+		const pathMeta = root.querySelector<HTMLElement>('[data-path-meta]');
+		const zoomLabel = root.querySelector<HTMLElement>('[data-zoom]');
+		const dirLabel = root.querySelector<HTMLElement>('[data-dir-label]');
+		const searchInput = document.getElementById('jb-gsearch') as HTMLInputElement | null;
+		const searchCount = root.querySelector<HTMLElement>('[data-search-count]');
+		const dotStatus = root.querySelector<HTMLElement>('[data-dot-status]');
+		const statusLabel = root.querySelector<HTMLElement>('[data-label]');
+		const statsEl = root.querySelector<HTMLElement>('[data-stats]');
+
+		const nodeEls = new Map<number, SVGGElement>();
+		const edgeEls = new Map<number, SVGPathElement>(); // keyed by childId
+
+		// ── Element + measure helpers ──────────────────────────────────────────────
+		function el<K extends keyof SVGElementTagNameMap>(tag: K): SVGElementTagNameMap[K] {
+			return document.createElementNS(SVG_NS, tag);
+		}
+		const measureCanvas = document.createElement('canvas');
+		const mctx = measureCanvas.getContext('2d');
+		function measure(text: string): number {
+			if (!mctx) return text.length * 7.3;
+			mctx.font = `${FONT_SIZE}px ${MONO}`;
+			return mctx.measureText(text).width;
+		}
+		function fitText(text: string, max: number): string {
+			if (max <= 0) return '';
+			if (measure(text) <= max) return text;
+			const ellipsisW = measure('…');
+			let lo = 0;
+			let hi = text.length;
+			while (lo < hi) {
+				const mid = (lo + hi + 1) >> 1;
+				if (measure(text.slice(0, mid)) + ellipsisW <= max) lo = mid;
+				else hi = mid - 1;
+			}
+			return text.slice(0, lo) + '…';
+		}
+
+		// ── JSON helpers ────────────────────────────────────────────────────────────
+		const IDENT = /^[A-Za-z_$][\w$]*$/;
+		function isObject(v: JsonValue): v is JsonObject {
+			return typeof v === 'object' && v !== null && !Array.isArray(v);
+		}
+		function isArray(v: JsonValue): v is JsonValue[] {
+			return Array.isArray(v);
+		}
+		function isComposite(v: JsonValue): v is JsonObject | JsonValue[] {
+			return typeof v === 'object' && v !== null;
+		}
+		function childPath(parent: string, key: string | number): string {
+			if (typeof key === 'number') return `${parent}[${key}]`;
+			return IDENT.test(key) ? `${parent}.${key}` : `${parent}[${JSON.stringify(key)}]`;
+		}
+		function entriesOf(value: JsonObject | JsonValue[]): [string | number, JsonValue][] {
+			return isArray(value)
+				? value.map((v, i) => [i, v] as [number, JsonValue])
+				: Object.entries(value);
+		}
+		function sizeOf(value: JsonObject | JsonValue[]): number {
+			return isArray(value) ? value.length : Object.keys(value).length;
+		}
+		function typeOf(v: string | number | boolean | null): ValueType {
+			if (v === null) return 'null';
+			if (typeof v === 'string') return 'string';
+			if (typeof v === 'number') return 'number';
+			return 'boolean';
+		}
+		// ── Build the visible graph from the parsed value + expansion state ──────────
+		function computeAuto(rootValue: JsonValue): Set<string> {
+			const set = new Set<string>();
+			let count = 0;
+			function walk(v: JsonValue, path: string, depth: number): void {
+				if (!isComposite(v)) return;
+				count++;
+				if (count > AUTO_BUDGET) return;
+				if (depth < AUTO_DEPTH) {
+					set.add(path);
+					for (const [key, child] of entriesOf(v)) {
+						if (isComposite(child)) walk(child, childPath(path, key), depth + 1);
+					}
+				}
+			}
+			walk(rootValue, '$', 0);
+			set.add('$');
+			return set;
+		}
+
+		function buildGraph(rootValue: JsonValue): Graph {
+			const nodes: GNode[] = [];
+			const values: (JsonObject | JsonValue[])[] = [];
+			const edges: GEdge[] = [];
+			const byPath = new Map<string, number>();
+			const children = new Map<number, number[]>();
+			truncated = false;
+
+			function addNode(
+				value: JsonObject | JsonValue[],
+				path: string,
+				parentId: number | null,
+				depth: number,
+			): number {
+				const id = nodes.length;
+				nodes.push({
+					id,
+					path,
+					kind: isArray(value) ? 'array' : 'object',
+					rows: [],
+					parentId,
+					depth,
+					expandable: false,
+					w: 0,
+					h: 0,
+					x: 0,
+					y: 0,
+					main: 0,
+					cross: 0,
+				});
+				values.push(value);
+				byPath.set(path, id);
+				children.set(id, []);
+				return id;
+			}
+
+			// A scalar root still gets a one-row node so the page renders something.
+			if (!isComposite(rootValue)) {
+				const id = nodes.length;
+				nodes.push({
+					id,
+					path: '$',
+					kind: 'object',
+					rows: [
+						{
+							kind: 'scalar',
+							keyText: '$',
+							path: '$',
+							valueText: JSON.stringify(rootValue),
+							valueType: typeOf(rootValue),
+						},
+					],
+					parentId: null,
+					depth: 0,
+					expandable: false,
+					w: 0,
+					h: 0,
+					x: 0,
+					y: 0,
+					main: 0,
+					cross: 0,
+				});
+				byPath.set('$', id);
+				children.set(id, []);
+				return { nodes, edges, byPath, children, bounds: { minX: 0, minY: 0, maxX: 0, maxY: 0 } };
+			}
+
+			const rootId = addNode(rootValue, '$', null, 0);
+			const queue: number[] = [rootId];
+			while (queue.length) {
+				const id = queue.shift() as number;
+				const node = nodes[id];
+				const value = values[id];
+				const entries = entriesOf(value);
+				const win = windows.get(node.path) ?? INITIAL_WINDOW;
+				const shown = Math.min(entries.length, win);
+				const isExpanded = expanded.has(node.path);
+
+				for (let i = 0; i < shown; i++) {
+					const [key, child] = entries[i];
+					const path = childPath(node.path, key);
+					const keyText = String(key);
+					if (isComposite(child)) {
+						node.expandable = true;
+						const row: GRow = {
+							kind: isArray(child) ? 'array' : 'object',
+							keyText,
+							path,
+							count: sizeOf(child),
+						};
+						if (isExpanded) {
+							if (nodes.length < MAX_NODES) {
+								const childId = addNode(child, path, id, node.depth + 1);
+								row.childId = childId;
+								edges.push({ parentId: id, childId });
+								children.get(id)?.push(childId);
+								queue.push(childId);
+							} else {
+								truncated = true;
+							}
+						}
+						node.rows.push(row);
+					} else {
+						node.rows.push({
+							kind: 'scalar',
+							keyText,
+							path,
+							valueText: JSON.stringify(child),
+							valueType: typeOf(child),
+						});
+					}
+				}
+				if (entries.length > shown) {
+					node.rows.push({ kind: 'more', keyText: '', path: node.path, moreCount: entries.length - shown });
+				}
+			}
+
+			sizeNodes(nodes);
+			layout(nodes, children);
+			const bounds = boundsOf(nodes);
+			return { nodes, edges, byPath, children, bounds };
+		}
+
+		function rowText(row: GRow): string {
+			if (row.kind === 'scalar') return `${row.keyText}: ${row.valueText ?? ''}`;
+			if (row.kind === 'more') return `+ ${row.moreCount} more`;
+			const badge = row.kind === 'array' ? `[${row.count}]` : `{${row.count}}`;
+			return `${row.keyText} ${badge}`;
+		}
+
+		function sizeNodes(nodes: GNode[]): void {
+			for (const node of nodes) {
+				let maxw = MIN_W - 2 * PAD_X;
+				for (const row of node.rows) maxw = Math.max(maxw, measure(rowText(row)));
+				const extra = node.expandable ? TOGGLE_PAD : 0;
+				node.w = Math.min(Math.max(maxw + 2 * PAD_X + extra, MIN_W), MAX_W);
+				node.h = 2 * PAD_Y + node.rows.length * ROW_H;
+			}
+		}
+
+		// ── Tidy tree layout (per-depth columns + sibling packing) ──────────────────
+		function layout(nodes: GNode[], children: Map<number, number[]>): void {
+			if (nodes.length === 0) return;
+			const mainSize = (n: GNode) => (dir === 'LR' ? n.w : n.h);
+			const crossSize = (n: GNode) => (dir === 'LR' ? n.h : n.w);
+
+			// Column offset along the main axis, by depth.
+			const maxMain: number[] = [];
+			for (const n of nodes) maxMain[n.depth] = Math.max(maxMain[n.depth] ?? 0, mainSize(n));
+			const colMain: number[] = [0];
+			for (let d = 1; d < maxMain.length; d++) {
+				colMain[d] = colMain[d - 1] + (maxMain[d - 1] ?? 0) + H_GAP;
+			}
+			for (const n of nodes) n.main = colMain[n.depth] ?? 0;
+
+			// Cross-axis packing: leaves stack; parents centre on their children.
+			let cursor = 0;
+			const place = (id: number): void => {
+				const node = nodes[id];
+				const kids = children.get(id) ?? [];
+				if (kids.length === 0) {
+					node.cross = cursor;
+					cursor += crossSize(node) + V_GAP;
+					return;
+				}
+				for (const c of kids) place(c);
+				const first = nodes[kids[0]];
+				const last = nodes[kids[kids.length - 1]];
+				node.cross = (first.cross + last.cross + crossSize(last) - crossSize(node)) / 2;
+			};
+			place(0);
+
+			// Guarantee no overlap within a column (tall parents can drift up).
+			const byDepth = new Map<number, GNode[]>();
+			for (const n of nodes) {
+				const arr = byDepth.get(n.depth) ?? [];
+				arr.push(n);
+				byDepth.set(n.depth, arr);
+			}
+			for (const arr of byDepth.values()) {
+				arr.sort((a, b) => a.cross - b.cross);
+				let floor = -Infinity;
+				for (const n of arr) {
+					if (n.cross < floor) n.cross = floor;
+					floor = n.cross + crossSize(n) + V_GAP;
+				}
+			}
+
+			for (const n of nodes) {
+				n.x = dir === 'LR' ? n.main : n.cross;
+				n.y = dir === 'LR' ? n.cross : n.main;
+			}
+		}
+
+		function boundsOf(nodes: GNode[]): { minX: number; minY: number; maxX: number; maxY: number } {
+			if (nodes.length === 0) return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+			let minX = Infinity;
+			let minY = Infinity;
+			let maxX = -Infinity;
+			let maxY = -Infinity;
+			for (const n of nodes) {
+				minX = Math.min(minX, n.x);
+				minY = Math.min(minY, n.y);
+				maxX = Math.max(maxX, n.x + n.w);
+				maxY = Math.max(maxY, n.y + n.h);
+			}
+			return { minX, minY, maxX, maxY };
+		}
+
+		// ── Palette (resolved design tokens — keeps export faithful) ────────────────
+		function resolve(name: string): string {
+			return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#000';
+		}
+		function makePal(m: Mode): Pal {
+			if (m === 'dark') {
+				return {
+					bg: resolve('--color-editor-bg'),
+					dot: 'rgba(255,255,255,0.06)',
+					nodeFill: 'rgba(255,255,255,0.04)',
+					nodeStroke: 'rgba(255,255,255,0.14)',
+					fg: resolve('--color-editor-fg'),
+					key: resolve('--color-editor-fg'),
+					index: resolve('--color-hairline-strong'),
+					badge: resolve('--color-hairline-strong'),
+					str: resolve('--color-cyan'),
+					num: resolve('--color-violet-soft'),
+					bool: resolve('--color-warning'),
+					nul: resolve('--color-warning'),
+					edge: 'rgba(255,255,255,0.24)',
+					sel: resolve('--color-cyan'),
+					match: resolve('--color-warning'),
+				};
+			}
+			return {
+				bg: resolve('--color-canvas-soft-2'),
+				dot: 'rgba(0,0,0,0.07)',
+				nodeFill: resolve('--color-canvas'),
+				nodeStroke: resolve('--color-hairline'),
+				fg: resolve('--color-ink'),
+				key: resolve('--color-ink'),
+				index: resolve('--color-mute'),
+				badge: resolve('--color-mute'),
+				str: resolve('--color-link-deep'),
+				num: resolve('--color-violet'),
+				bool: resolve('--color-cyan-deep'),
+				nul: resolve('--color-cyan-deep'),
+				edge: resolve('--color-hairline-strong'),
+				sel: resolve('--color-cyan-deep'),
+				match: resolve('--color-warning-deep'),
+			};
+		}
+		let pal: Pal = makePal('dark');
+		function colorFor(t?: ValueType): string {
+			switch (t) {
+				case 'string':
+					return pal.str;
+				case 'number':
+					return pal.num;
+				case 'boolean':
+					return pal.bool;
+				case 'null':
+					return pal.nul;
+				default:
+					return pal.fg;
+			}
+		}
+
+		// ── Render ──────────────────────────────────────────────────────────────────
+		function tspan(text: string, fill: string): SVGTSpanElement {
+			const t = el('tspan');
+			t.setAttribute('fill', fill);
+			t.textContent = text;
+			return t;
+		}
+
+		function renderNode(node: GNode): SVGGElement {
+			const g = el('g');
+			g.setAttribute('class', 'jb-gnode');
+			g.setAttribute('data-id', String(node.id));
+			g.setAttribute('transform', `translate(${node.x},${node.y})`);
+			g.setAttribute('tabindex', node.id === selectedId ? '0' : '-1');
+			g.setAttribute('role', 'treeitem');
+			g.setAttribute('aria-label', `${node.kind} ${node.path}`);
+			if (node.expandable) g.setAttribute('aria-expanded', String(expanded.has(node.path)));
+
+			const rect = el('rect');
+			rect.setAttribute('class', 'jb-card');
+			rect.setAttribute('width', String(node.w));
+			rect.setAttribute('height', String(node.h));
+			rect.setAttribute('rx', '8');
+			rect.setAttribute('fill', pal.nodeFill);
+			rect.setAttribute('stroke', node.id === selectedId ? pal.sel : pal.nodeStroke);
+			rect.setAttribute('stroke-width', node.id === selectedId ? '2' : '1');
+			g.appendChild(rect);
+
+			const budget = node.w - 2 * PAD_X - (node.expandable ? TOGGLE_PAD : 0);
+			node.rows.forEach((row, i) => {
+				const ry = PAD_Y + i * ROW_H;
+				const hit = el('rect');
+				hit.setAttribute('x', '0');
+				hit.setAttribute('y', String(ry));
+				hit.setAttribute('width', String(node.w));
+				hit.setAttribute('height', String(ROW_H));
+				hit.setAttribute('fill', 'transparent');
+				if (row.kind === 'more') hit.setAttribute('data-window', '');
+				else hit.setAttribute('data-path', row.path);
+				g.appendChild(hit);
+
+				const text = el('text');
+				text.setAttribute('x', String(PAD_X));
+				text.setAttribute('y', String(ry + ROW_H / 2));
+				text.setAttribute('dominant-baseline', 'central');
+				text.setAttribute('font-family', MONO);
+				text.setAttribute('font-size', String(FONT_SIZE));
+				const keyColor = node.kind === 'array' ? pal.index : pal.key;
+
+				if (row.kind === 'scalar') {
+					const keyLabel = `${row.keyText}: `;
+					const kw = measure(keyLabel);
+					if (kw > budget) {
+						text.appendChild(tspan(fitText(row.keyText, budget), keyColor));
+					} else {
+						text.appendChild(tspan(keyLabel, keyColor));
+						text.appendChild(tspan(fitText(row.valueText ?? '', budget - kw), colorFor(row.valueType)));
+					}
+				} else if (row.kind === 'more') {
+					text.appendChild(tspan(fitText(`+ ${row.moreCount} more`, budget), pal.badge));
+				} else {
+					const badge = row.kind === 'array' ? ` [${row.count}]` : ` {${row.count}}`;
+					const keyLabel = `${row.keyText}`;
+					const kw = measure(keyLabel + badge);
+					if (kw > budget) {
+						text.appendChild(tspan(fitText(keyLabel, budget - measure(badge)), keyColor));
+					} else {
+						text.appendChild(tspan(keyLabel, keyColor));
+					}
+					text.appendChild(tspan(badge, pal.badge));
+				}
+				g.appendChild(text);
+			});
+
+			if (node.expandable) {
+				const open = expanded.has(node.path);
+				const cx = dir === 'LR' ? node.w : node.w / 2;
+				const cy = dir === 'LR' ? node.h / 2 : node.h;
+				const toggle = el('g');
+				toggle.setAttribute('data-toggle', '');
+				toggle.setAttribute('transform', `translate(${cx},${cy})`);
+				const circle = el('circle');
+				circle.setAttribute('r', '7.5');
+				circle.setAttribute('fill', pal.bg);
+				circle.setAttribute('stroke', pal.nodeStroke);
+				toggle.appendChild(circle);
+				const hLine = el('line');
+				hLine.setAttribute('x1', '-3.5');
+				hLine.setAttribute('y1', '0');
+				hLine.setAttribute('x2', '3.5');
+				hLine.setAttribute('y2', '0');
+				hLine.setAttribute('stroke', pal.fg);
+				hLine.setAttribute('stroke-width', '1.5');
+				hLine.setAttribute('stroke-linecap', 'round');
+				toggle.appendChild(hLine);
+				if (!open) {
+					const vLine = el('line');
+					vLine.setAttribute('x1', '0');
+					vLine.setAttribute('y1', '-3.5');
+					vLine.setAttribute('x2', '0');
+					vLine.setAttribute('y2', '3.5');
+					vLine.setAttribute('stroke', pal.fg);
+					vLine.setAttribute('stroke-width', '1.5');
+					vLine.setAttribute('stroke-linecap', 'round');
+					toggle.appendChild(vLine);
+				}
+				g.appendChild(toggle);
+			}
+			return g;
+		}
+
+		function edgePath(parent: GNode, child: GNode): string {
+			if (dir === 'LR') {
+				const x1 = parent.x + parent.w;
+				const y1 = parent.y + parent.h / 2;
+				const x2 = child.x;
+				const y2 = child.y + child.h / 2;
+				const dx = Math.max(24, (x2 - x1) / 2);
+				return `M${x1},${y1} C${x1 + dx},${y1} ${x2 - dx},${y2} ${x2},${y2}`;
+			}
+			const x1 = parent.x + parent.w / 2;
+			const y1 = parent.y + parent.h;
+			const x2 = child.x + child.w / 2;
+			const y2 = child.y;
+			const dy = Math.max(24, (y2 - y1) / 2);
+			return `M${x1},${y1} C${x1},${y1 + dy} ${x2},${y2 - dy} ${x2},${y2}`;
+		}
+
+		function draw(g: Graph): void {
+			bgRect.setAttribute('fill', pal.bg);
+			if (dotCircle) dotCircle.setAttribute('fill', pal.dot);
+
+			edgesG.replaceChildren();
+			nodesG.replaceChildren();
+			nodeEls.clear();
+			edgeEls.clear();
+
+			const edgeFrag = document.createDocumentFragment();
+			for (const e of g.edges) {
+				const path = el('path');
+				path.setAttribute('d', edgePath(g.nodes[e.parentId], g.nodes[e.childId]));
+				path.setAttribute('fill', 'none');
+				path.setAttribute('stroke', pal.edge);
+				path.setAttribute('stroke-width', '1.5');
+				edgeEls.set(e.childId, path);
+				edgeFrag.appendChild(path);
+			}
+			edgesG.appendChild(edgeFrag);
+
+			const nodeFrag = document.createDocumentFragment();
+			for (const node of g.nodes) {
+				const gEl = renderNode(node);
+				nodeEls.set(node.id, gEl);
+				nodeFrag.appendChild(gEl);
+			}
+			nodesG.appendChild(nodeFrag);
+		}
+
+		// ── Viewport transform ──────────────────────────────────────────────────────
+		function applyTransform(): void {
+			viewport.setAttribute('transform', `translate(${tx},${ty}) scale(${k})`);
+			if (zoomLabel) zoomLabel.textContent = `${Math.round(k * 100)}%`;
+			updateMiniViewport();
+		}
+		function paneSize(): { w: number; h: number } {
+			const r = svg!.getBoundingClientRect();
+			return { w: r.width, h: r.height };
+		}
+		function fit(): void {
+			if (!graph || graph.nodes.length === 0) return;
+			const { minX, minY, maxX, maxY } = graph.bounds;
+			const { w, h } = paneSize();
+			const cw = Math.max(maxX - minX, 1);
+			const ch = Math.max(maxY - minY, 1);
+			const margin = 48;
+			k = Math.min((w - margin) / cw, (h - margin) / ch, 1.2);
+			k = Math.max(k, 0.08);
+			tx = (w - cw * k) / 2 - minX * k;
+			ty = (h - ch * k) / 2 - minY * k;
+			applyTransform();
+		}
+		function zoomAt(factor: number, cx: number, cy: number): void {
+			const nk = Math.min(Math.max(k * factor, 0.08), 3);
+			const wx = (cx - tx) / k;
+			const wy = (cy - ty) / k;
+			k = nk;
+			tx = cx - wx * k;
+			ty = cy - wy * k;
+			applyTransform();
+		}
+		function centerOn(node: GNode): void {
+			const { w, h } = paneSize();
+			tx = w / 2 - (node.x + node.w / 2) * k;
+			ty = h / 2 - (node.y + node.h / 2) * k;
+			applyTransform();
+		}
+
+		// ── Minimap ────────────────────────────────────────────────────────────────
+		function drawMinimap(g: Graph): void {
+			if (!miniWrap) return;
+			miniNodes.replaceChildren();
+			if (g.nodes.length === 0) {
+				miniWrap.classList.add('hidden');
+				return;
+			}
+			miniWrap.classList.remove('hidden');
+			const MW = 168;
+			const MH = 116;
+			const { minX, minY, maxX, maxY } = g.bounds;
+			const s = Math.min((MW - 8) / Math.max(maxX - minX, 1), (MH - 8) / Math.max(maxY - minY, 1));
+			const ox = 4 - minX * s;
+			const oy = 4 - minY * s;
+			const frag = document.createDocumentFragment();
+			for (const n of g.nodes) {
+				const r = el('rect');
+				r.setAttribute('x', String(ox + n.x * s));
+				r.setAttribute('y', String(oy + n.y * s));
+				r.setAttribute('width', String(Math.max(n.w * s, 1)));
+				r.setAttribute('height', String(Math.max(n.h * s, 1)));
+				r.setAttribute('rx', '1');
+				r.setAttribute('fill', pal.nodeStroke);
+				frag.appendChild(r);
+			}
+			miniNodes.appendChild(frag);
+			const miniBg = miniWrap.querySelector('svg');
+			if (miniBg) miniBg.style.background = pal.bg;
+			miniScale = s;
+			miniOx = ox;
+			miniOy = oy;
+			updateMiniViewport();
+		}
+		let miniScale = 1;
+		let miniOx = 0;
+		let miniOy = 0;
+		function updateMiniViewport(): void {
+			if (!graph || graph.nodes.length === 0) return;
+			const { w, h } = paneSize();
+			// World rect currently visible: [-tx/k, (-tx+w)/k] × ...
+			const vx = -tx / k;
+			const vy = -ty / k;
+			miniView.setAttribute('x', String(miniOx + vx * miniScale));
+			miniView.setAttribute('y', String(miniOy + vy * miniScale));
+			miniView.setAttribute('width', String(Math.max((w / k) * miniScale, 2)));
+			miniView.setAttribute('height', String(Math.max((h / k) * miniScale, 2)));
+		}
+
+		// ── Selection + breadcrumb + ancestor highlight ─────────────────────────────
+		function updateBreadcrumb(node: GNode | null): void {
+			if (!pathDisplay || !pathMeta) return;
+			pathDisplay.textContent = node?.path ?? '$';
+			pathMeta.textContent = node ? `· ${node.kind}` : '';
+		}
+		function clearSelectionStyle(): void {
+			if (!graph) return;
+			for (const e of edgeEls.values()) {
+				e.setAttribute('stroke', pal.edge);
+				e.setAttribute('stroke-width', '1.5');
+			}
+		}
+		function applySelection(id: number, focus: boolean, center: boolean): void {
+			if (!graph) return;
+			const node = graph.nodes[id];
+			if (!node) return;
+			// Reset previous.
+			if (selectedId !== null && selectedId !== id) {
+				const prev = nodeEls.get(selectedId);
+				prev?.setAttribute('tabindex', '-1');
+				const prevRect = prev?.querySelector('.jb-card');
+				if (prevRect) {
+					prevRect.setAttribute('stroke', pal.nodeStroke);
+					prevRect.setAttribute('stroke-width', '1');
+				}
+			}
+			selectedId = id;
+			selectedPath = node.path;
+			const gEl = nodeEls.get(id);
+			gEl?.setAttribute('tabindex', '0');
+			const rect = gEl?.querySelector('.jb-card');
+			if (rect) {
+				rect.setAttribute('stroke', pal.sel);
+				rect.setAttribute('stroke-width', '2');
+			}
+			if (focus) gEl?.focus({ preventScroll: true });
+
+			// Highlight the edges from root down to this node.
+			clearSelectionStyle();
+			let cur: number | null = id;
+			while (cur !== null) {
+				const edge = edgeEls.get(cur);
+				if (edge) {
+					edge.setAttribute('stroke', pal.sel);
+					edge.setAttribute('stroke-width', '2');
+				}
+				cur = graph.nodes[cur].parentId;
+			}
+			updateBreadcrumb(node);
+			if (center) centerOn(node);
+		}
+		function reselectAfterRender(): void {
+			if (selectedPath === null || !graph) {
+				updateBreadcrumb(null);
+				return;
+			}
+			const id = graph.byPath.get(selectedPath);
+			if (id === undefined) {
+				selectedId = null;
+				selectedPath = null;
+				updateBreadcrumb(null);
+				return;
+			}
+			selectedId = null; // force re-apply onto fresh elements
+			applySelection(id, false, false);
+		}
+
+		// ── Render orchestration ─────────────────────────────────────────────────────
+		function render(refit: boolean): void {
+			const parsed = currentParsed;
+			if (parsed === undefined) return;
+			graph = buildGraph(parsed);
+			draw(graph);
+			drawMinimap(graph);
+			if (refit) fit();
+			else applyTransform();
+			reselectAfterRender();
+			applySearch(false);
+			updateTruncationNote();
+		}
+
+		// ── Expand / collapse ────────────────────────────────────────────────────────
+		function toggleNode(id: number): void {
+			if (!graph) return;
+			const node = graph.nodes[id];
+			if (!node || !node.expandable) return;
+			if (expanded.has(node.path)) expanded.delete(node.path);
+			else expanded.add(node.path);
+			selectedPath = node.path; // keep selection on the toggled node
+			render(false);
+		}
+		function growWindow(path: string): void {
+			windows.set(path, (windows.get(path) ?? INITIAL_WINDOW) + WINDOW_STEP);
+			render(false);
+		}
+		function expandAll(): void {
+			if (currentParsed === undefined) return;
+			// Add every composite path, bounded by the node budget at build time.
+			expanded = collectAllPaths(currentParsed);
+			render(true);
+		}
+		function collectAllPaths(rootValue: JsonValue): Set<string> {
+			const set = new Set<string>(['$']);
+			let count = 0;
+			function walk(v: JsonValue, path: string): void {
+				if (!isComposite(v)) return;
+				count++;
+				if (count > MAX_NODES) return;
+				set.add(path);
+				for (const [key, child] of entriesOf(v)) {
+					if (isComposite(child)) walk(child, childPath(path, key));
+				}
+			}
+			walk(rootValue, '$');
+			return set;
+		}
+		function collapseAll(): void {
+			expanded = new Set<string>(['$']);
+			selectedPath = '$';
+			render(true);
+		}
+
+		// ── Search ────────────────────────────────────────────────────────────────────
+		function applySearch(jump: boolean): void {
+			if (!graph) return;
+			matches = [];
+			const q = searchQuery.trim().toLowerCase();
+			for (const node of graph.nodes) {
+				if (node.id === selectedId) continue; // keep its select stroke
+				const gEl = nodeEls.get(node.id);
+				const rect = gEl?.querySelector('.jb-card');
+				if (!rect) continue;
+				rect.setAttribute('stroke', pal.nodeStroke);
+				rect.setAttribute('stroke-width', '1');
+			}
+			if (q === '') {
+				if (searchCount) searchCount.textContent = '';
+				matchIdx = -1;
+				return;
+			}
+			for (const node of graph.nodes) {
+				const hit = node.path.toLowerCase().includes(q) || node.rows.some(
+					(r) =>
+						r.keyText.toLowerCase().includes(q) ||
+						(r.valueText ?? '').toLowerCase().includes(q),
+				);
+				if (hit) {
+					matches.push(node.id);
+					if (node.id !== selectedId) {
+						const rect = nodeEls.get(node.id)?.querySelector('.jb-card');
+						if (rect) {
+							rect.setAttribute('stroke', pal.match);
+							rect.setAttribute('stroke-width', '2');
+						}
+					}
+				}
+			}
+			if (searchCount) {
+				searchCount.textContent = matches.length === 0 ? 'no match' : `${matchIdx + 1 || 1}/${matches.length}`;
+			}
+			if (jump && matches.length) {
+				matchIdx = 0;
+				gotoMatch();
+			}
+		}
+		function gotoMatch(): void {
+			if (!graph || matches.length === 0) return;
+			const id = matches[matchIdx];
+			applySelection(id, true, true);
+			applySearch(false); // refresh match strokes against new selection
+			if (searchCount) searchCount.textContent = `${matchIdx + 1}/${matches.length}`;
+		}
+		function stepMatch(delta: number): void {
+			if (matches.length === 0) return;
+			matchIdx = (matchIdx + delta + matches.length) % matches.length;
+			gotoMatch();
+		}
+
+		// ── Keyboard navigation across nodes ────────────────────────────────────────
+		function siblingsOf(id: number): number[] {
+			if (!graph) return [];
+			const node = graph.nodes[id];
+			if (node.parentId === null) return [0];
+			return graph.children.get(node.parentId) ?? [];
+		}
+		function navTo(id: number): void {
+			applySelection(id, true, true);
+		}
+		nodesG.addEventListener('keydown', (e: KeyboardEvent) => {
+			if (!graph || selectedId === null) return;
+			const node = graph.nodes[selectedId];
+			if (!node) return;
+			switch (e.key) {
+				case 'ArrowRight': {
+					e.preventDefault();
+					if (node.expandable && !expanded.has(node.path)) {
+						toggleNode(selectedId);
+						nodeEls.get(selectedId)?.focus({ preventScroll: true });
+					} else {
+						const kids = graph.children.get(selectedId) ?? [];
+						if (kids.length) navTo(kids[0]);
+					}
+					break;
+				}
+				case 'ArrowLeft': {
+					e.preventDefault();
+					if (node.expandable && expanded.has(node.path)) {
+						toggleNode(selectedId);
+						nodeEls.get(selectedId)?.focus({ preventScroll: true });
+					} else if (node.parentId !== null) {
+						navTo(node.parentId);
+					}
+					break;
+				}
+				case 'ArrowDown': {
+					e.preventDefault();
+					const sibs = siblingsOf(selectedId);
+					const i = sibs.indexOf(selectedId);
+					if (i >= 0 && i < sibs.length - 1) navTo(sibs[i + 1]);
+					break;
+				}
+				case 'ArrowUp': {
+					e.preventDefault();
+					const sibs = siblingsOf(selectedId);
+					const i = sibs.indexOf(selectedId);
+					if (i > 0) navTo(sibs[i - 1]);
+					break;
+				}
+				case 'Home': {
+					e.preventDefault();
+					navTo(0);
+					break;
+				}
+				case 'Enter':
+				case ' ': {
+					e.preventDefault();
+					if (node.expandable) {
+						toggleNode(selectedId);
+						nodeEls.get(selectedId)?.focus({ preventScroll: true });
+					}
+					break;
+				}
+				case 'c':
+				case 'C': {
+					if (e.metaKey || e.ctrlKey) return;
+					e.preventDefault();
+					void copyPath(node.path);
+					break;
+				}
+			}
+		});
+
+		// ── Pointer interactions: click (select/toggle/copy) + pan + zoom ───────────
+		nodesG.addEventListener('click', (e) => {
+			const target = e.target as Element;
+			const gEl = target.closest('[data-id]');
+			if (!gEl) return;
+			const id = Number(gEl.getAttribute('data-id'));
+			if (target.closest('[data-toggle]')) {
+				toggleNode(id);
+				return;
+			}
+			applySelection(id, true, false);
+			if (target.closest('[data-window]')) {
+				const node = graph?.nodes[id];
+				if (node) growWindow(node.path);
+				return;
+			}
+			const pathEl = target.closest('[data-path]');
+			if (pathEl) void copyPath(pathEl.getAttribute('data-path') ?? '');
+		});
+		nodesG.addEventListener('dblclick', (e) => {
+			const gEl = (e.target as Element).closest('[data-id]');
+			if (gEl) toggleNode(Number(gEl.getAttribute('data-id')));
+		});
+
+		let panning = false;
+		let panStart = { x: 0, y: 0, tx: 0, ty: 0 };
+		svg.addEventListener('pointerdown', (e: PointerEvent) => {
+			if ((e.target as Element).closest('[data-id]')) return; // node handles its own
+			panning = true;
+			panStart = { x: e.clientX, y: e.clientY, tx, ty };
+			svg.classList.add('is-panning');
+			svg.setPointerCapture(e.pointerId);
+		});
+		svg.addEventListener('pointermove', (e: PointerEvent) => {
+			if (!panning) return;
+			tx = panStart.tx + (e.clientX - panStart.x);
+			ty = panStart.ty + (e.clientY - panStart.y);
+			applyTransform();
+		});
+		function endPan(e: PointerEvent): void {
+			if (!panning) return;
+			panning = false;
+			svg!.classList.remove('is-panning');
+			try {
+				svg!.releasePointerCapture(e.pointerId);
+			} catch {
+				/* pointer already released */
+			}
+		}
+		svg.addEventListener('pointerup', endPan);
+		svg.addEventListener('pointercancel', endPan);
+		svg.addEventListener(
+			'wheel',
+			(e: WheelEvent) => {
+				e.preventDefault();
+				const r = svg!.getBoundingClientRect();
+				const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+				zoomAt(factor, e.clientX - r.left, e.clientY - r.top);
+			},
+			{ passive: false },
+		);
+
+		// Click the minimap to recentre there.
+		if (miniWrap) {
+			const mini = miniWrap.querySelector('svg');
+			mini?.addEventListener('click', (e) => {
+				if (!graph) return;
+				const r = (mini as SVGSVGElement).getBoundingClientRect();
+				const wx = (e.clientX - r.left - miniOx) / miniScale;
+				const wy = (e.clientY - r.top - miniOy) / miniScale;
+				const { w, h } = paneSize();
+				tx = w / 2 - wx * k;
+				ty = h / 2 - wy * k;
+				applyTransform();
+			});
+		}
+
+		// ── Export (lazy; no dependency — native canvas) ────────────────────────────
+		function serializeGraph(): { svg: string; w: number; h: number } | null {
+			if (!graph || graph.nodes.length === 0) return null;
+			const { minX, minY, maxX, maxY } = graph.bounds;
+			const m = 24;
+			const w = Math.ceil(maxX - minX + m * 2);
+			const h = Math.ceil(maxY - minY + m * 2);
+			const clone = viewport.cloneNode(true) as SVGGElement;
+			clone.setAttribute('transform', `translate(${m - minX},${m - minY})`);
+			clone.querySelectorAll('[tabindex]').forEach((n) => n.removeAttribute('tabindex'));
+			const out = `<svg xmlns="${SVG_NS}" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">` +
+				`<rect width="${w}" height="${h}" fill="${pal.bg}"/>` +
+				clone.outerHTML +
+				`</svg>`;
+			return { svg: out, w, h };
+		}
+		function downloadBlob(blob: Blob, name: string): void {
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = name;
+			a.click();
+			setTimeout(() => URL.revokeObjectURL(url), 1000);
+		}
+		function exportSvg(): void {
+			const s = serializeGraph();
+			if (!s) {
+				flashStatus('error', 'Nothing to export');
+				return;
+			}
+			downloadBlob(new Blob([s.svg], { type: 'image/svg+xml' }), 'jsonbeam-graph.svg');
+			flashStatus('ok', 'Exported SVG');
+		}
+		function exportPng(): void {
+			const s = serializeGraph();
+			if (!s) {
+				flashStatus('error', 'Nothing to export');
+				return;
+			}
+			const scale = 2;
+			const img = new Image();
+			const blobUrl = URL.createObjectURL(new Blob([s.svg], { type: 'image/svg+xml' }));
+			img.onload = () => {
+				const canvas = document.createElement('canvas');
+				canvas.width = s.w * scale;
+				canvas.height = s.h * scale;
+				const ctx = canvas.getContext('2d');
+				if (!ctx) {
+					flashStatus('error', 'Canvas unavailable');
+					URL.revokeObjectURL(blobUrl);
+					return;
+				}
+				ctx.scale(scale, scale);
+				ctx.drawImage(img, 0, 0);
+				URL.revokeObjectURL(blobUrl);
+				canvas.toBlob((blob) => {
+					if (blob) {
+						downloadBlob(blob, 'jsonbeam-graph.png');
+						flashStatus('ok', 'Exported PNG');
+					} else {
+						flashStatus('error', 'PNG export failed');
+					}
+				}, 'image/png');
+			};
+			img.onerror = () => {
+				URL.revokeObjectURL(blobUrl);
+				flashStatus('error', 'PNG export failed');
+			};
+			img.src = blobUrl;
+		}
+
+		// ── Status + overlay ──────────────────────────────────────────────────────────
+		function setStatus(state: 'ok' | 'error' | 'idle', text: string): void {
+			if (!dotStatus || !statusLabel) return;
+			const colors: Record<string, string> = {
+				ok: 'var(--color-success)',
+				error: 'var(--color-error)',
+				idle: 'var(--color-mute)',
+			};
+			dotStatus.style.backgroundColor = colors[state] ?? colors.idle;
+			statusLabel.textContent = text;
+			statusLabel.style.color = state === 'error' ? 'var(--color-error-deep)' : 'var(--color-ink)';
+		}
+		function setStats(chars: number, summary: string | null): void {
+			if (!statsEl) return;
+			const parts = [`${chars.toLocaleString()} chars`];
+			if (summary) parts.unshift(summary);
+			if (graph && graph.nodes.length) parts.push(`${graph.nodes.length.toLocaleString()} nodes`);
+			statsEl.textContent = parts.join(' · ');
+		}
+		function topSummary(value: JsonValue): string {
+			if (isArray(value)) {
+				const n = value.length;
+				return `${n} ${n === 1 ? 'item' : 'items'}`;
+			}
+			if (isObject(value)) {
+				const n = Object.keys(value).length;
+				return `${n} ${n === 1 ? 'key' : 'keys'}`;
+			}
+			return 'scalar';
+		}
+		function showOverlay(html: string): void {
+			if (!empty) return;
+			empty.innerHTML = `<p class="jb-gempty-card">${html}</p>`;
+			empty.classList.add('is-shown');
+		}
+		function hideOverlay(): void {
+			empty?.classList.remove('is-shown');
+		}
+		function updateTruncationNote(): void {
+			if (truncated && graph) {
+				setStatus('ok', `Showing ${graph.nodes.length} nodes — collapse branches to explore more`);
+			}
+		}
+		let flashTimer = 0;
+		function flashStatus(state: 'ok' | 'error', text: string): void {
+			setStatus(state, text);
+			clearTimeout(flashTimer);
+			flashTimer = window.setTimeout(refreshStatus, 1400);
+		}
+		function refreshStatus(): void {
+			const text = input.value;
+			if (text.trim() === '') {
+				setStatus('idle', 'Empty');
+				return;
+			}
+			const res = checkJson(text);
+			setStatus(res.ok ? 'ok' : 'error', res.ok ? 'Valid JSON' : res.message);
+		}
+
+		// ── Parse + apply ────────────────────────────────────────────────────────────
+		let currentParsed: JsonValue | undefined;
+		function update(refit: boolean): void {
+			const text = input.value;
+			if (text.trim() === '') {
+				currentParsed = undefined;
+				graph = null;
+				nodesG.replaceChildren();
+				edgesG.replaceChildren();
+				if (miniWrap) miniWrap.classList.add('hidden');
+				setStatus('idle', 'Empty');
+				setStats(text.length, null);
+				showOverlay('Paste JSON in the editor to see it as a graph.');
+				return;
+			}
+			const res = checkJson(text);
+			if (!res.ok) {
+				currentParsed = undefined;
+				graph = null;
+				nodesG.replaceChildren();
+				edgesG.replaceChildren();
+				if (miniWrap) miniWrap.classList.add('hidden');
+				setStatus('error', res.message);
+				setStats(text.length, null);
+				showOverlay('Fix the JSON errors to see the graph.');
+				return;
+			}
+			try {
+				currentParsed = JSON.parse(text) as JsonValue;
+			} catch {
+				setStatus('error', 'Invalid JSON');
+				showOverlay('Fix the JSON errors to see the graph.');
+				return;
+			}
+			hideOverlay();
+			setStatus('ok', 'Valid JSON');
+			if (refit) {
+				expanded = computeAuto(currentParsed);
+				windows.clear();
+				selectedPath = null;
+				selectedId = null;
+			}
+			render(refit);
+			setStats(text.length, topSummary(currentParsed));
+			updateTruncationNote();
+		}
+		function applyInput(): void {
+			update(true);
+			saveDoc(input.value);
+		}
+
+		async function copyJson(): Promise<void> {
+			let out = input.value;
+			const res = checkJson(out);
+			if (res.ok) {
+				try {
+					out = JSON.stringify(JSON.parse(input.value), null, 2);
+				} catch {
+					/* keep raw */
+				}
+			}
+			try {
+				await navigator.clipboard.writeText(out);
+				flashStatus('ok', 'Copied JSON');
+			} catch {
+				flashStatus('error', 'Clipboard unavailable');
+			}
+		}
+		async function copyPath(path: string): Promise<void> {
+			if (!path) return;
+			try {
+				await navigator.clipboard.writeText(path);
+				flashStatus('ok', `Copied path: ${path}`);
+			} catch {
+				flashStatus('error', 'Clipboard unavailable');
+			}
+		}
+
+		// ── Theme — shares the `jb-theme` key with the other tools ───────────────────
+		const THEME_KEY = 'jb-theme';
+		const ICON_SUN =
+			'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>';
+		const ICON_MOON =
+			'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"></path></svg>';
+		function readMode(): Mode {
+			try {
+				const stored = localStorage.getItem(THEME_KEY);
+				if (stored === 'light' || stored === 'dark') return stored;
+			} catch {
+				/* storage blocked */
+			}
+			return 'dark';
+		}
+		let mode: Mode = readMode();
+		const themeBtn = root.querySelector<HTMLButtonElement>('[data-action="theme"]');
+		const themeIcon = themeBtn?.querySelector<HTMLElement>('[data-theme-icon]') ?? null;
+		function paintTheme(): void {
+			pal = makePal(mode);
+			if (themeIcon) themeIcon.innerHTML = mode === 'dark' ? ICON_SUN : ICON_MOON;
+			themeBtn?.setAttribute('aria-label', mode === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
+			root?.classList.toggle('jb-theme-light', mode === 'light');
+		}
+		function applyMode(next: Mode): void {
+			mode = next;
+			try {
+				localStorage.setItem(THEME_KEY, mode);
+			} catch {
+				/* storage blocked */
+			}
+			paintTheme();
+			if (graph) {
+				draw(graph);
+				drawMinimap(graph);
+				applyTransform();
+				reselectAfterRender();
+				applySearch(false);
+			}
+		}
+
+		function toggleDir(): void {
+			dir = dir === 'LR' ? 'TB' : 'LR';
+			if (dirLabel) dirLabel.textContent = dir === 'LR' ? 'Layout: →' : 'Layout: ↓';
+			render(true);
+		}
+
+		// ── Wire actions ────────────────────────────────────────────────────────────
+		const actions: Record<string, () => void | Promise<void>> = {
+			expand: expandAll,
+			collapse: collapseAll,
+			fit,
+			'zoom-in': () => {
+				const { w, h } = paneSize();
+				zoomAt(1.2, w / 2, h / 2);
+			},
+			'zoom-out': () => {
+				const { w, h } = paneSize();
+				zoomAt(1 / 1.2, w / 2, h / 2);
+			},
+			'zoom-reset': () => {
+				const { w, h } = paneSize();
+				zoomAt(1 / k, w / 2, h / 2);
+			},
+			direction: toggleDir,
+			'export-svg': exportSvg,
+			'export-png': exportPng,
+			theme: () => applyMode(mode === 'dark' ? 'light' : 'dark'),
+			'copy-path': () => copyPath(selectedPath ?? '$'),
+			'search-prev': () => stepMatch(-1),
+			'search-next': () => stepMatch(1),
+			sample: () => {
+				input.value = SAMPLE;
+				applyInput();
+			},
+			copy: copyJson,
+			clear: () => {
+				input.value = '';
+				applyInput();
+				input.focus();
+			},
+		};
+		root.querySelectorAll('[data-action]').forEach((btn) => {
+			const action = btn.getAttribute('data-action');
+			if (!action) return;
+			btn.addEventListener('click', () => {
+				const fn = actions[action];
+				if (fn) void fn();
+			});
+		});
+
+		let searchTimer = 0;
+		searchInput?.addEventListener('input', () => {
+			searchQuery = searchInput.value;
+			clearTimeout(searchTimer);
+			searchTimer = window.setTimeout(() => {
+				matchIdx = -1;
+				applySearch(true);
+			}, 200);
+		});
+		searchInput?.addEventListener('keydown', (e) => {
+			if (e.key === 'Enter') {
+				e.preventDefault();
+				stepMatch(e.shiftKey ? -1 : 1);
+			}
+		});
+
+		let inputTimer = 0;
+		input.addEventListener('input', () => {
+			clearTimeout(inputTimer);
+			inputTimer = window.setTimeout(applyInput, 320);
+		});
+
+		// Keep the minimap viewport box honest when the pane resizes.
+		if ('ResizeObserver' in window) {
+			let rafId = 0;
+			const ro = new ResizeObserver(() => {
+				cancelAnimationFrame(rafId);
+				rafId = requestAnimationFrame(updateMiniViewport);
+			});
+			ro.observe(stage);
+		}
+
+		paintTheme();
+		update(true);
+	}
+</script>
