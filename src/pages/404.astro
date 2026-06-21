@@ -1,0 +1,29 @@
+---
+/**
+ * 404 route. Astro builds this to `dist/404.html`, which static hosts serve
+ * automatically for any unmatched URL. On-brand recovery screen via ErrorPage.
+ */
+import ErrorPage from '../components/ErrorPage.astro';
+
+// Hand-coloured JSON for the mockup. Built as a string so literal braces don't
+// collide with Astro's expression syntax; rendered via set:html. `"uploaded":
+// null` keeps the privacy promise visible even on the error screen.
+const snippet = [
+	'<span class="p">{</span>',
+	'  <span class="k">"error"</span><span class="p">:</span> <span class="n">404</span><span class="p">,</span>',
+	'  <span class="k">"message"</span><span class="p">:</span> <span class="s">"Page not found"</span><span class="p">,</span>',
+	'  <span class="k">"uploaded"</span><span class="p">:</span> <span class="n">null</span><span class="p">,</span>',
+	'  <span class="k">"suggestion"</span><span class="p">:</span> <span class="s">"/json-formatter"</span>',
+	'<span class="p">}</span>',
+].join('\n');
+---
+
+<ErrorPage
+	code={404}
+	title="404 — Page Not Found | JSON Beam"
+	description="That page could not be found. Head back to the JSON Beam tools — format, validate, repair, view, and convert JSON privately in your browser."
+	h1="This page didn’t parse."
+	intro="The URL you followed moved, was renamed, or never existed. No harm done — every JSON tool is still one click away, and nothing you do here ever leaves your browser."
+	fileName="404.json"
+	snippet={snippet}
+/>

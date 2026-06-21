@@ -79,10 +79,18 @@ export const FOOTER_NAV: NavColumn[] = [
 		title: 'Project',
 		links: [
 			{ label: 'Editor', href: '/editor', soon: true },
-			{ label: 'Blog', href: '/blog', soon: true },
-			{ label: 'Privacy', href: '/privacy', soon: true },
 			{ label: 'Open source', href: '/open-source', soon: true },
 			{ label: 'Changelog', href: '/changelog', soon: true },
+		],
+	},
+	{
+		title: 'Company',
+		links: [
+			{ label: 'About', href: '/about' },
+			{ label: 'Contact', href: '/contact' },
+			{ label: 'Blog', href: '/blog', soon: true },
+			{ label: 'Privacy Policy', href: '/privacy' },
+			{ label: 'Terms & Conditions', href: '/terms' },
 		],
 	},
 ];

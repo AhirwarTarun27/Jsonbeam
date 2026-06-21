@@ -1,0 +1,104 @@
+---
+import ContentPage from '../components/ContentPage.astro';
+import type { FaqItem } from '../lib/jsonld';
+
+const faqs: FaqItem[] = [
+	{
+		question: 'Is JSON Beam really free?',
+		answer:
+			'Yes. The core tools are free to use with no account, no signup, and no usage limits. There are no file-size caps, watermarks, or upsells.',
+	},
+	{
+		question: 'How can it be private if it runs in a browser?',
+		answer:
+			'Because the JSON never leaves the browser. Every tool processes your data locally with client-side JavaScript — nothing is uploaded to a server. You can confirm it by working fully offline.',
+	},
+	{
+		question: 'Is JSON Beam open source?',
+		answer:
+			'Open-sourcing the core is on the roadmap, so the privacy claims become verifiable rather than just stated. A public repository, an embeddable widget, browser and editor extensions, and a CLI are all planned.',
+	},
+];
+---
+
+<ContentPage
+	slug="/about"
+	title="About JSON Beam — Private, Fast JSON Tools"
+	description="About JSON Beam — why we built a 100% client-side JSON workbench that's private by design, fast on huge files, and free forever. No upload, no signup."
+	breadcrumbLabel="About"
+	h1="About JSON Beam."
+	intro="JSON Beam is a fast, private, in-browser JSON workbench. We built it because the tools developers reach for every day shouldn't make them upload their data to a stranger's server."
+	schemaType="AboutPage"
+	faqs={faqs}
+>
+	<h2>Why JSON Beam exists</h2>
+	<p>
+		Developers paste JSON into online formatters dozens of times a day — API responses,
+		config files, log lines, payloads with access tokens and customer data inside them. Most of
+		those tools quietly send that data to a server to do the work. JSON Beam started from a
+		simple objection: <strong>none of that needs to leave your browser</strong>. Modern browsers
+		are more than capable of formatting, validating, and transforming JSON locally — so that
+		is exactly what we do.
+	</p>
+	<p>
+		The result is a workbench you can trust with sensitive data by design, not by promise: there
+		is no upload step to opt out of, because there is no upload step at all.
+	</p>
+
+	<h2>What it does</h2>
+	<p>
+		JSON Beam brings the whole JSON workflow into one private, fast surface. You can
+		<a href="/json-formatter">format and beautify</a>, <a href="/json-minifier">minify</a>,
+		<a href="/json-validator">validate</a> with exact error positions, and
+		<a href="/json-repair">repair</a> broken input in a single click. Beyond cleanup, you can
+		<a href="/json-viewer">explore data as a collapsible tree</a>,
+		<a href="/json-visualizer">visualize it as a node graph</a>,
+		<a href="/json-diff">compare two documents semantically</a>, and convert JSON to formats like
+		<a href="/json-to-csv">CSV</a> and <a href="/json-to-yaml">YAML</a> or generate
+		<a href="/json-to-typescript">TypeScript</a> and <a href="/json-to-go">Go</a> types.
+	</p>
+
+	<h2>What we stand for</h2>
+	<ul>
+		<li>
+			<strong>Private by design.</strong> Every byte is processed in your browser. Nothing is
+			uploaded, logged, or sent anywhere — ever. Read the
+			<a href="/privacy">privacy policy</a>.
+		</li>
+		<li>
+			<strong>No ceiling.</strong> The tools are engineered to stay smooth on files into the
+			tens of megabytes, where typical online formatters freeze.
+		</li>
+		<li>
+			<strong>Instant.</strong> Sub-second load, usable before the page finishes painting. No
+			heavy frameworks shipped to your device for a task this focused.
+		</li>
+		<li>
+			<strong>Free forever.</strong> No signup, no upload, no usage limits — just a dependable
+			toolkit you can reach for every day.
+		</li>
+	</ul>
+	<p>
+		JSON Beam is an independent project — built and maintained by an individual developer,
+		not a registered company. That independence is the point: it keeps the tools focused on the
+		people who use them rather than on investors or growth metrics.
+	</p>
+
+	<h2>Where it’s going</h2>
+	<p>
+		The formatter and its companion tools are live today. Next is a full unified editor —
+		text, tree, table, and graph views over one shared document, with edits round-tripping
+		losslessly between them, powered by a web-worker engine for large files. After that:
+		open-sourcing the core, an embeddable widget, browser and editor extensions, and a
+		<code>npx jsonbeam</code> CLI. The direction is constant even as the surface grows:
+		fast, private, and free.
+	</p>
+
+	<h2>Who it’s for</h2>
+	<p>
+		Backend and frontend engineers debugging API responses, data engineers reshaping exports,
+		QA testers comparing payloads, and anyone who has ever pasted a tangled blob of JSON and just
+		wanted to <em>read</em> it. If that’s you, <a href="/json-formatter">open the formatter</a>
+		and start — there is nothing to install and nothing to sign up for.
+	</p>
+</ContentPage>

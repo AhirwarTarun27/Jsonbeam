@@ -1,0 +1,142 @@
+---
+import ContentPage from '../components/ContentPage.astro';
+import type { FaqItem } from '../lib/jsonld';
+
+const faqs: FaqItem[] = [
+	{
+		question: 'Do you store or upload my JSON?',
+		answer:
+			'No. Every JSON document you paste, type, or open is processed entirely in your browser using client-side JavaScript. It is never uploaded, transmitted, logged, or stored on any server. You can verify this in your browser dev-tools network tab, or by using the tools fully offline.',
+	},
+	{
+		question: 'Do you use cookies or trackers?',
+		answer:
+			'We do not use tracking or advertising cookies, and we do not run third-party analytics that profile you. The site stores only small preferences (such as your theme choice) in your browser’s local storage, which never leaves your device.',
+	},
+	{
+		question: 'Can I use JSON Beam offline?',
+		answer:
+			'Yes. Because all processing happens client-side, the tools keep working with no network connection once the page has loaded. Working offline is the strongest guarantee that your data stays with you.',
+	},
+	{
+		question: 'Will you ever add analytics or ads?',
+		answer:
+			'We may add privacy-respecting, aggregate analytics or non-tracking ads in future to keep the tools free. If we do, we will update this policy first — and the content you process will still never be transmitted, sold, or shared.',
+	},
+];
+---
+
+<ContentPage
+	slug="/privacy"
+	title="Privacy Policy — JSON Beam"
+	description="JSON Beam's privacy policy: your JSON is processed entirely in your browser and never uploaded, logged, or shared. Read exactly how we handle data."
+	breadcrumbLabel="Privacy Policy"
+	h1="Privacy policy."
+	intro="Privacy is not a feature we added — it is how JSON Beam is built. Everything runs in your browser, so the data you work with never leaves your device."
+	lastUpdated="June 22, 2026"
+	faqs={faqs}
+>
+	<h2>The short version</h2>
+	<p>
+		JSON Beam is a <strong>100% client-side</strong> JSON workbench. The JSON you paste,
+		type, or open is processed entirely inside your own browser and is
+		<strong>never uploaded, logged, transmitted, sold, or shared</strong>. We do not run a
+		server that receives your data, we do not require an account, and we do not use tracking
+		cookies. This page explains, in plain language, exactly what that means.
+	</p>
+
+	<h2>1. The data you process stays on your device</h2>
+	<p>
+		Formatting, validating, repairing, querying, comparing, visualizing, and converting all
+		happen locally, on your machine, using JavaScript that runs in your browser. When you
+		<a href="/json-formatter">format JSON</a>, <a href="/json-validator">validate it</a>, or
+		<a href="/json-diff">compare two documents</a>, that content is never sent anywhere. There
+		is no upload step, no API call carrying your payload, and no copy kept on our side —
+		because there is no “our side” in the loop. This is why you can safely work with
+		API keys, customer records, access tokens, and proprietary configuration files.
+	</p>
+
+	<h2>2. Information stored locally in your browser</h2>
+	<p>
+		To remember your preferences between visits, we store a small amount of data in your
+		browser’s <code>localStorage</code> — for example, whether you prefer the light or
+		dark editor theme (the <code>jb-theme</code> key). This data:
+	</p>
+	<ul>
+		<li>lives only in your browser on your device;</li>
+		<li>is never transmitted to us or any third party;</li>
+		<li>can be cleared at any time by clearing your site data in your browser.</li>
+	</ul>
+
+	<h2>3. Information collected automatically</h2>
+	<p>
+		Like virtually every website, the static files that make up JSON Beam are delivered by a
+		hosting and content-delivery provider. When your browser requests those files, the provider
+		may automatically process standard technical request metadata — such as your IP
+		address, browser type, and the time of the request — to deliver the page, keep the
+		service secure, and prevent abuse. This is ordinary web-server information, it is not linked
+		to the JSON you process, and it never includes the content of your documents.
+	</p>
+
+	<h2>4. Cookies and tracking</h2>
+	<p>
+		We do not use advertising cookies or cross-site tracking, and we do not build profiles of
+		our users. We currently do not run third-party analytics. If we ever introduce analytics, we
+		will favor privacy-respecting, aggregate measurement and disclose it here before turning it
+		on.
+	</p>
+
+	<h2>5. Third-party services</h2>
+	<p>
+		Our only essential third party is the hosting/CDN provider that serves the site’s static
+		files, as described above. We self-host our fonts, so no external font network requests are
+		made. We do not embed third-party trackers or share data with advertisers. Should this
+		change — for example, if we add optional, non-tracking ads to keep the tools free —
+		we will update this policy, and the content you process will remain on your device.
+	</p>
+	<p>
+		If — and only if — you choose to send us a message through our
+		<a href="/contact">contact form</a>, that message is delivered to us by email through
+		Web3Forms, a third-party form-to-email provider. Web3Forms processes the details you enter
+		(such as your name, email address, and message) solely to deliver them to us. We receive only
+		what you type, and only when you press Send; we use it to reply to you, and we do not sell or
+		share it. Using the form is entirely optional — it exists only so you can reach us
+		without our having to publish an email address.
+	</p>
+
+	<h2>6. Data security</h2>
+	<p>
+		The most effective security measure is architectural: because your data never leaves your
+		browser, there is no central store of user JSON to breach, leak, or subpoena. The site is
+		served over HTTPS so the application files reach you intact and untampered.
+	</p>
+
+	<h2>7. Children’s privacy</h2>
+	<p>
+		JSON Beam is a general-purpose developer tool and is not directed at children. We do not
+		knowingly collect personal information from anyone, including children under 13.
+	</p>
+
+	<h2>8. Your rights</h2>
+	<p>
+		Because we do not collect or store personal data about you, there is no profile to access,
+		correct, export, or delete on our servers. You remain in full control of the JSON you work
+		with and of the preferences stored in your own browser, which you can clear at any time. If
+		you have a question about your rights under a law such as the GDPR or CCPA, contact us using
+		the details below.
+	</p>
+
+	<h2>9. Changes to this policy</h2>
+	<p>
+		We may update this policy as the product evolves — for instance, if we add new features
+		or services. When we do, we will revise the “Last updated” date at the top of this
+		page. Material changes will be made clear. Our core commitment will not change: the content
+		you process stays private to you.
+	</p>
+
+	<h2>10. Contact us</h2>
+	<p>
+		If you have any questions about this privacy policy or how JSON Beam handles data, send us a
+		message through the <a href="/contact">contact page</a>.
+	</p>
+</ContentPage>

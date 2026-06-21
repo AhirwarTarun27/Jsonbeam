@@ -1,0 +1,164 @@
+---
+import ContentPage from '../components/ContentPage.astro';
+import { SITE_URL } from '../consts';
+import type { FaqItem } from '../lib/jsonld';
+
+/**
+ * Contact form delivery is handled by Web3Forms (https://web3forms.com) — a
+ * form-to-email service that lets a fully static, backend-free site receive
+ * messages by email. The form below is plain HTML (zero JS): it POSTs straight
+ * to Web3Forms, which emails the submission to the address tied to the key and
+ * then redirects the visitor to /contact/thanks.
+ *
+ * ── TO ACTIVATE ──────────────────────────────────────────────────────────────
+ * 1. Go to https://web3forms.com, enter the email you want messages sent to,
+ *    and copy the Access Key they email you.
+ * 2. Add it to .env as PUBLIC_WEB3FORMS_ACCESS_KEY=your_key_here
+ * The key is PUBLIC by design (it is an alias, not a secret) — your real email
+ * address is never exposed on the page. The .env file stays out of version
+ * control (see .gitignore).
+ */
+const WEB3FORMS_ACCESS_KEY = import.meta.env.PUBLIC_WEB3FORMS_ACCESS_KEY || '';
+
+const faqs: FaqItem[] = [
+	{
+		question: 'How do I report a bug?',
+		answer:
+			'Use the form on this page — describe the problem, the steps to reproduce it, and your browser and operating system. If you can, include a small sample of the JSON that triggers it. That detail gets the fastest fix.',
+	},
+	{
+		question: 'Where does my message go?',
+		answer:
+			'Straight to our email inbox. The form is delivered by Web3Forms, a form-to-email service, so we never have to publish our address. Only what you type is sent, and only when you press Send — the JSON tools themselves never transmit anything anywhere.',
+	},
+	{
+		question: 'How quickly will you respond?',
+		answer:
+			'We read every message and aim to reply within a few business days. JSON Beam is a focused, independent project, so please be patient — clear, specific messages get the fastest answers.',
+	},
+];
+---
+
+<ContentPage
+	slug="/contact"
+	title="Contact Us — JSON Beam"
+	description="Get in touch with JSON Beam. Send us a message with questions, feedback, bug reports, or ideas about our free, private, in-browser JSON tools."
+	breadcrumbLabel="Contact"
+	h1="Contact us."
+	intro="Questions, feedback, a bug to report, or an idea to share? Send us a message below — we'd love to hear from you."
+	schemaType="ContactPage"
+	faqs={faqs}
+>
+	<h2>Send us a message</h2>
+	<p>
+		Fill in the form and your message comes straight to us. There’s no contact form trickery and
+		nothing to sign up for — just tell us what’s on your mind.
+	</p>
+
+	<form
+		action="https://api.web3forms.com/submit"
+		method="POST"
+		class="mt-6 space-y-5"
+	>
+		<input type="hidden" name="access_key" value={WEB3FORMS_ACCESS_KEY} />
+		<input type="hidden" name="redirect" value={`${SITE_URL}/contact/thanks`} />
+		<input type="hidden" name="from_name" value="JSON Beam contact form" />
+
+		<!-- Honeypot: bots fill this hidden field; real users never see it. -->
+		<input
+			type="checkbox"
+			name="botcheck"
+			class="hidden"
+			style="display:none"
+			tabindex="-1"
+			autocomplete="off"
+			aria-hidden="true"
+		/>
+
+		<div class="grid gap-5 sm:grid-cols-2">
+			<div>
+				<label for="cf-name" class="block text-body-sm font-medium text-ink">Name</label>
+				<input
+					id="cf-name"
+					name="name"
+					type="text"
+					required
+					autocomplete="name"
+					placeholder="Your name"
+					class="mt-1.5 w-full rounded-sm border border-hairline bg-canvas px-3.5 py-2.5 text-body-md text-ink placeholder:text-mute"
+				/>
+			</div>
+			<div>
+				<label for="cf-email" class="block text-body-sm font-medium text-ink">Email</label>
+				<input
+					id="cf-email"
+					name="email"
+					type="email"
+					required
+					autocomplete="email"
+					placeholder="you@example.com"
+					class="mt-1.5 w-full rounded-sm border border-hairline bg-canvas px-3.5 py-2.5 text-body-md text-ink placeholder:text-mute"
+				/>
+			</div>
+		</div>
+
+		<div>
+			<label for="cf-subject" class="block text-body-sm font-medium text-ink">Subject</label>
+			<input
+				id="cf-subject"
+				name="subject"
+				type="text"
+				required
+				placeholder="What’s this about?"
+				class="mt-1.5 w-full rounded-sm border border-hairline bg-canvas px-3.5 py-2.5 text-body-md text-ink placeholder:text-mute"
+			/>
+		</div>
+
+		<div>
+			<label for="cf-message" class="block text-body-sm font-medium text-ink">Message</label>
+			<textarea
+				id="cf-message"
+				name="message"
+				required
+				rows="6"
+				placeholder="Tell us what’s on your mind…"
+				class="mt-1.5 w-full resize-y rounded-sm border border-hairline bg-canvas px-3.5 py-2.5 text-body-md text-ink placeholder:text-mute"
+			></textarea>
+		</div>
+
+		<div class="flex flex-wrap items-center gap-4">
+			<button
+				type="submit"
+				class="inline-flex h-11 items-center rounded-sm bg-ink px-5 text-body-sm font-medium text-on-primary transition-colors hover:bg-ink/85"
+			>
+				Send message
+			</button>
+			<span class="inline-flex items-center gap-2 text-body-sm text-mute">
+				<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+					<path
+						d="M8 1.5 3 3.5v3.2c0 3 2.1 5.8 5 6.8 2.9-1 5-3.8 5-6.8V3.5L8 1.5Z"
+						stroke="currentColor"
+						stroke-width="1.3"
+						stroke-linejoin="round"></path>
+				</svg>
+				Delivered to us by email — the JSON tools never send anything.
+			</span>
+		</div>
+	</form>
+
+	<hr />
+
+	<h2>Other ways to reach us</h2>
+	<p>
+		Found a security issue? We appreciate responsible disclosure — use the form above with
+		“Security” as the subject and please give us reasonable time to investigate and fix it
+		before sharing it publicly. For privacy or data questions, you can read the
+		<a href="/privacy">privacy policy</a> first; the short version is that your JSON never leaves
+		your browser. For the rules of use, see the <a href="/terms">terms &amp; conditions</a>.
+	</p>
+	<p>
+		Many questions are already answered on the site. If you’re stuck on a specific tool, the
+		<a href="/json-formatter">formatter</a>, <a href="/json-validator">validator</a>, and other
+		tool pages each carry a short FAQ.
+	</p>
+</ContentPage>

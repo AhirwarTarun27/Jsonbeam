@@ -50,6 +50,26 @@ export function softwareApplication(opts: {
 	};
 }
 
+/**
+ * Generic content page — privacy, terms, about, contact. `type` narrows the
+ * schema.org class (AboutPage / ContactPage) where a specific one exists.
+ */
+export function webPage(opts: {
+	type?: 'WebPage' | 'AboutPage' | 'ContactPage';
+	name: string;
+	description: string;
+	url: string;
+}): Json {
+	return {
+		'@context': 'https://schema.org',
+		'@type': opts.type ?? 'WebPage',
+		name: opts.name,
+		description: opts.description,
+		url: opts.url,
+		isPartOf: { '@type': 'WebSite', name: SITE_NAME, url: SITE_URL },
+	};
+}
+
 /** FAQPage — mirrors the visible FAQ on the page. */
 export function faqPage(items: FaqItem[]): Json {
 	return {

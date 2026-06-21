@@ -1,0 +1,29 @@
+---
+/**
+ * 500 route. In static output Astro builds this to `dist/500.html`; hosts can
+ * be configured to serve it for unexpected server errors. On-brand recovery
+ * screen via ErrorPage — reassures that local-only processing kept data safe.
+ */
+import ErrorPage from '../components/ErrorPage.astro';
+
+// Hand-coloured JSON for the mockup (see 404.astro). `"yourData": "safe in your
+// browser"` reinforces that a server error never touched the user's JSON.
+const snippet = [
+	'<span class="p">{</span>',
+	'  <span class="k">"error"</span><span class="p">:</span> <span class="n">500</span><span class="p">,</span>',
+	'  <span class="k">"message"</span><span class="p">:</span> <span class="s">"Something went wrong"</span><span class="p">,</span>',
+	'  <span class="k">"uploaded"</span><span class="p">:</span> <span class="n">null</span><span class="p">,</span>',
+	'  <span class="k">"yourData"</span><span class="p">:</span> <span class="s">"safe in your browser"</span>',
+	'<span class="p">}</span>',
+].join('\n');
+---
+
+<ErrorPage
+	code={500}
+	title="500 — Server Error | JSON Beam"
+	description="Something went wrong on our end. Your data was never involved — JSON Beam runs entirely in your browser. Try again, or head back to the tools."
+	h1="Something went wrong."
+	intro="An unexpected error broke this page. Your JSON was never part of it — everything runs locally, so nothing was uploaded or lost. Try again in a moment, or jump back into the tools."
+	fileName="500.json"
+	snippet={snippet}
+/>

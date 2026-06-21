@@ -7,7 +7,17 @@ import sitemap from '@astrojs/sitemap';
 export default defineConfig({
 	site: 'https://jsonbeam.com',
 	output: 'static',
-	integrations: [sitemap()],
+	integrations: [
+		sitemap({
+			// Keep noindex utility pages (the contact thank-you screen) and the
+			// error routes out of the sitemap so it never advertises a URL we ask
+			// crawlers to skip.
+			filter: (page) =>
+				!page.includes('/contact/thanks') &&
+				!page.includes('/404') &&
+				!page.includes('/500'),
+		}),
+	],
 	vite: {
 		plugins: [tailwindcss()],
 		optimizeDeps: {

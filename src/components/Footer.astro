@@ -11,7 +11,7 @@ const year = new Date().getFullYear();
 
 <footer class="border-t border-hairline bg-canvas">
 	<div class="container-page py-16">
-		<div class="grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-5">
+		<div class="grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-3 lg:grid-cols-6">
 			<!-- Brand column -->
 			<div class="col-span-2 md:col-span-1">
 				<a href="/" class="flex items-center gap-2.5" aria-label={`${SITE_NAME} home`}>
@@ -59,11 +59,16 @@ const year = new Date().getFullYear();
 		</div>
 
 		<!-- Bottom bar -->
-		<div
-			class="mt-12 flex flex-col gap-3 border-t border-hairline pt-6 text-body-sm text-mute sm:flex-row sm:items-center sm:justify-between"
-		>
-			<p>© {year} {SITE_NAME}. Free &amp; open.</p>
-			<p class="flex items-center gap-2">
+		<div class="mt-12 flex flex-col gap-5 border-t border-hairline pt-6 text-body-sm text-mute">
+			<nav aria-label="Legal" class="flex flex-wrap gap-x-5 gap-y-2">
+				<a href="/about" class="transition-colors hover:text-ink">About</a>
+				<a href="/contact" class="transition-colors hover:text-ink">Contact</a>
+				<a href="/privacy" class="transition-colors hover:text-ink">Privacy Policy</a>
+				<a href="/terms" class="transition-colors hover:text-ink">Terms &amp; Conditions</a>
+			</nav>
+			<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+				<p>© {year} {SITE_NAME}. Free &amp; open.</p>
+				<p class="flex items-center gap-2">
 				<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
 					<path
 						d="M8 1.5 3 3.5v3.2c0 3 2.1 5.8 5 6.8 2.9-1 5-3.8 5-6.8V3.5L8 1.5Z"
@@ -74,6 +79,7 @@ const year = new Date().getFullYear();
 				</svg>
 				Private by design — nothing you paste leaves your browser.
 			</p>
+			</div>
 		</div>
 	</div>
 </footer>
