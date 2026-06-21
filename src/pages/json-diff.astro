@@ -19,9 +19,9 @@ const whatIs = [
 
 const faqs: FaqItem[] = [
 	{
-		question: 'How is JSON Beam\'s diff different from a text diff?',
+		question: 'How do I compare two JSON files?',
 		answer:
-			'A text diff compares line by line without understanding what the lines mean. JSON Beam\'s diff is structural: it understands that an object has named keys and an array has ordered items, so it matches keys by name and uses LCS to align array items. This means a key added in the middle of an object does not make every other key look changed, and a single array insertion is shown as one line rather than a cascade.',
+			'Paste the original JSON on the left and the changed version on the right — JSON Beam highlights every added, removed, and changed value instantly. The comparison is structural, not line-by-line: it matches object keys by name and uses LCS to align array items, so a key added in the middle of an object does not make every other key look changed, and a single array insertion shows as one line rather than a cascade. Both documents are compared entirely in your browser.',
 	},
 	{
 		question: 'What does the LCS algorithm do for arrays?',
@@ -51,7 +51,7 @@ const faqs: FaqItem[] = [
 	{
 		question: 'Is the diff tool private and free?',
 		answer:
-			'Completely. There is no account, no ads, and your JSON is never uploaded — both documents are diffed entirely in your browser. It also works offline once the page has loaded.',
+			'Completely. There is no account, and your JSON is never uploaded — both documents are diffed entirely in your browser. It also works offline once the page has loaded.',
 	},
 ];
 

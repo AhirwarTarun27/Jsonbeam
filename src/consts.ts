@@ -7,15 +7,20 @@ export const SITE_TAGLINE = 'The professional JSON workbench';
 export const SITE_DESCRIPTION =
 	'Format, validate, repair, and convert JSON in your browser. 100% client-side, private, and fast enough for huge files. Free, no account, no upload.';
 
-/** Default Open Graph image (static for Phase 1; per-page dynamic OG is Phase 2). */
-export const DEFAULT_OG_IMAGE = '/og-default.svg';
+/**
+ * Default Open Graph image — a 1200×630 PNG (raster, because social platforms
+ * do not render SVG OG images). Per-page dynamic OG is Phase 2.
+ */
+export const DEFAULT_OG_IMAGE = '/og-default.png';
+export const DEFAULT_OG_IMAGE_ALT =
+	'JSON Beam — the fast, private, in-browser JSON formatter, validator, and viewer.';
 
 /** Brand promises — reused across hero, footer, and structured data. */
 export const BRAND_PROMISES = [
 	'Private by design — 100% client-side, nothing uploaded.',
 	'No ceiling — handles huge files without freezing the tab.',
 	'Instant — sub-second load, usable before the page finishes painting.',
-	'Free forever — no ads, no signup, no dark patterns.',
+	'Free forever — no signup, no upload, no limits.',
 ] as const;
 
 /**
@@ -42,6 +47,7 @@ export const FOOTER_NAV: NavColumn[] = [
 		title: 'Format & validate',
 		links: [
 			{ label: 'JSON Formatter', href: '/json-formatter' },
+			{ label: 'JSON Editor', href: '/json-editor' },
 			{ label: 'JSON Beautifier', href: '/json-beautifier' },
 			{ label: 'JSON Minifier', href: '/json-minifier' },
 			{ label: 'JSON Validator', href: '/json-validator' },
@@ -52,6 +58,7 @@ export const FOOTER_NAV: NavColumn[] = [
 		title: 'View & explore',
 		links: [
 			{ label: 'JSON Viewer', href: '/json-viewer' },
+			{ label: 'JSON Visualizer', href: '/json-visualizer' },
 			{ label: 'Tree Viewer', href: '/json-tree-viewer' },
 			{ label: 'Graph Viewer', href: '/json-graph-viewer' },
 			{ label: 'Table Viewer', href: '/json-table-viewer' },
@@ -103,6 +110,7 @@ export const TOOL_NAV: ToolTabGroup[] = [
 		title: 'Format',
 		items: [
 			{ label: 'Format', href: '/json-formatter' },
+			{ label: 'Editor', href: '/json-editor' },
 			{ label: 'Beautify', href: '/json-beautifier' },
 			{ label: 'Minify', href: '/json-minifier' },
 			{ label: 'Validate', href: '/json-validator' },
@@ -113,6 +121,7 @@ export const TOOL_NAV: ToolTabGroup[] = [
 		title: 'View',
 		items: [
 			{ label: 'Viewer', href: '/json-viewer' },
+			{ label: 'Visualizer', href: '/json-visualizer' },
 			{ label: 'Tree', href: '/json-tree-viewer' },
 			{ label: 'Graph', href: '/json-graph-viewer' },
 			{ label: 'Table', href: '/json-table-viewer' },

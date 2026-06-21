@@ -18,6 +18,11 @@ const whatIs = [
 
 const faqs: FaqItem[] = [
 	{
+		question: 'How do I check if my JSON is valid?',
+		answer:
+			'Paste or type your JSON into the editor — it is validated live as you type. If the document parses, it is valid JSON; if not, the exact spot where parsing fails is underlined with the reason and position. There is no button to press, and nothing is uploaded — validation runs entirely in your browser.',
+	},
+	{
 		question: 'What makes JSON invalid?',
 		answer:
 			'The most common causes are trailing commas, single quotes instead of double quotes, comments, unquoted keys, and unbalanced braces or brackets. Any one of these makes the entire document fail to parse.',
@@ -40,7 +45,7 @@ const faqs: FaqItem[] = [
 	{
 		question: 'Is this JSON validator free and private?',
 		answer:
-			'Yes. It is completely free with no account or ads, and it runs entirely in your browser. Your JSON is never uploaded to a server, so it is safe to validate sensitive data.',
+			'Yes. It is completely free with no account or signup, and it runs entirely in your browser. Your JSON is never uploaded to a server, so it is safe to validate sensitive data.',
 	},
 	{
 		question: 'Does it work offline?',
@@ -51,8 +56,8 @@ const faqs: FaqItem[] = [
 
 const related: RelatedTool[] = [
 	{ name: 'JSON Formatter', href: '/json-formatter', desc: 'Beautify, minify, validate & repair.' },
+	{ name: 'JSON Editor', href: '/json-editor', desc: 'Edit with live validation.' },
 	{ name: 'JSON Repair', href: '/json-repair', desc: 'Auto-fix broken JSON.' },
-	{ name: 'JSON Minifier', href: '/json-minifier', desc: 'Strip whitespace for the wire.' },
 	{ name: 'JSON Viewer', href: '/json-viewer', desc: 'Explore structure as a tree.' },
 ];
 ---

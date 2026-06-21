@@ -5,7 +5,9 @@ import MeshGradient from '../components/MeshGradient.astro';
 import { SITE_NAME, SITE_URL, SITE_DESCRIPTION } from '../consts';
 import { webSite, softwareApplication, faqPage, type FaqItem } from '../lib/jsonld';
 
-const title = `${SITE_NAME} — The fast, private JSON workbench`;
+const title = `${SITE_NAME} — Free Online JSON Formatter, Viewer & Validator`;
+const description =
+	'Free online JSON formatter, viewer, validator & converter. Beautify, minify, repair, diff & visualize JSON in your browser — private, no upload, no signup.';
 
 const promises = [
 	{
@@ -25,15 +27,18 @@ const promises = [
 	},
 	{
 		title: 'Free forever',
-		body: 'No ads. No signup. No dark patterns. The core is open source — verifiable, not just promised.',
+		body: 'No signup. No upload. The core is open source — verifiable, not just promised.',
 		icon: 'heart',
 	},
 ];
 
 const tools = [
 	{ name: 'JSON Formatter', href: '/json-formatter', desc: 'Beautify, minify, repair, and validate — the anchor tool.', live: true },
-	{ name: 'JSON Viewer', href: '/json-viewer', desc: 'Explore JSON as a collapsible, color-coded tree. Copy any path.', live: true },
+	{ name: 'JSON Editor', href: '/json-editor', desc: 'A fast, syntax-highlighted editor with live validation.', live: true },
 	{ name: 'JSON Validator', href: '/json-validator', desc: 'Pinpoint syntax errors with line-anchored messages.', live: true },
+	{ name: 'JSON Viewer', href: '/json-viewer', desc: 'Explore JSON as a collapsible, color-coded tree. Copy any path.', live: true },
+	{ name: 'JSON Visualizer', href: '/json-visualizer', desc: 'See JSON as a pan-and-zoom node graph.', live: true },
+	{ name: 'JSON Diff', href: '/json-diff', desc: 'Compare two documents with a semantic, structure-aware diff.', live: true },
 	{ name: 'JSON Repair', href: '/json-repair', desc: 'Fix trailing commas, single quotes, comments, unquoted keys.', live: true },
 	{ name: 'JSON Minifier', href: '/json-minifier', desc: 'Strip whitespace down to the smallest possible payload.', live: true },
 	{ name: 'JSON → CSV / YAML / TS / Go', href: '/json-to-csv', desc: 'Convert to CSV & YAML, or generate TypeScript and Go types.', live: true },
@@ -48,7 +53,7 @@ const faqs: FaqItem[] = [
 	{
 		question: 'Does JSON Beam cost anything?',
 		answer:
-			'No. The core tools are free forever, with no ads, no account, and no usage limits. The project is built to be open source so the privacy claims are verifiable rather than just stated.',
+			'No. The core tools are free forever, with no account and no usage limits. The project is built to be open source so the privacy claims are verifiable rather than just stated.',
 	},
 	{
 		question: 'How large a file can it handle?',
@@ -81,7 +86,7 @@ const jsonLd = [
 ];
 ---
 
-<Layout title={title} jsonLd={jsonLd}>
+<Layout title={title} description={description} jsonLd={jsonLd}>
 	<!-- ── Hero ─────────────────────────────────────────────────────────── -->
 	<section class="relative overflow-hidden">
 		<MeshGradient />
@@ -242,6 +247,95 @@ const jsonLd = [
 						),
 					)
 				}
+			</div>
+		</div>
+	</section>
+
+	<!-- ── SEO content (long-form, 0-JS) ────────────────────────────────── -->
+	<section class="bg-canvas">
+		<div class="container-page py-24">
+			<div class="max-w-2xl">
+				<p class="font-mono text-caption uppercase tracking-wide text-mute">Why developers choose JSON Beam</p>
+				<h2 class="mt-3 text-display-lg">The free online JSON formatter, viewer, and validator — in one place.</h2>
+			</div>
+
+			<div class="mt-10 max-w-3xl space-y-10 text-body-md text-body">
+				<p>
+					JSON Beam is a fast, free <a href="/json-formatter" class="font-medium text-link hover:text-link-deep">online JSON formatter</a>
+					built for the data you actually work with. Paste raw, minified, or broken JSON and the formatter instantly
+					pretty-prints it with the indentation you prefer — two spaces, four spaces, or tabs — turning a dense,
+					unreadable blob into clean, scannable structure. It works equally well as a
+					<a href="/json-beautifier" class="font-medium text-link hover:text-link-deep">JSON beautifier</a> and pretty
+					printer, and when you need to ship instead of read, the
+					<a href="/json-minifier" class="font-medium text-link hover:text-link-deep">JSON minifier</a> strips every byte
+					of whitespace for the smallest possible payload. There is nothing to install and nothing to configure: open the
+					page and format JSON online in a single click. Whether you are cleaning up an API response, a tangled
+					<code class="font-mono text-body-sm text-ink">package.json</code>, or a single line copied from a log, you get
+					clean, valid output in seconds.
+				</p>
+
+				<div>
+					<h3 class="text-display-sm text-ink">Validate, repair, and edit in one surface</h3>
+					<p class="mt-3">
+						A good formatter does more than indent. The built-in
+						<a href="/json-validator" class="font-medium text-link hover:text-link-deep">JSON validator</a> checks your
+						document against the JSON specification and underlines the exact position and reason it fails to parse, so
+						you stop hunting for the stray comma or missing bracket. When the input is genuinely broken,
+						<a href="/json-repair" class="font-medium text-link hover:text-link-deep">JSON repair</a> automatically fixes
+						the most common mistakes — trailing commas, single quotes, comments, and unquoted keys — then re-formats the
+						clean result. For hands-on work, the full
+						<a href="/json-editor" class="font-medium text-link hover:text-link-deep">JSON editor</a> combines syntax
+						highlighting, live validation, formatting, and repair in one keyboard-friendly workspace — an online JSON
+						editor that feels like your code editor, not a web form.
+					</p>
+				</div>
+
+				<div>
+					<h3 class="text-display-sm text-ink">View and visualize JSON your way</h3>
+					<p class="mt-3">
+						Big or unfamiliar payloads are far easier to read visually. The
+						<a href="/json-viewer" class="font-medium text-link hover:text-link-deep">JSON viewer</a> renders your data
+						as a collapsible, color-coded tree where every key shows its child count and any path can be copied with a
+						click — a genuinely useful online JSON viewer for exploring API responses. For structure at a glance, the
+						<a href="/json-visualizer" class="font-medium text-link hover:text-link-deep">JSON visualizer</a> draws the
+						same document as a pan-and-zoom node graph, and the
+						<a href="/json-table-viewer" class="font-medium text-link hover:text-link-deep">table viewer</a> presents
+						arrays of objects as sortable, filterable rows and columns. Whichever view you pick, your edits round-trip
+						losslessly across all of them.
+					</p>
+				</div>
+
+				<div>
+					<h3 class="text-display-sm text-ink">Compare, convert, and reshape</h3>
+					<p class="mt-3">
+						When two responses should match but don't, the
+						<a href="/json-diff" class="font-medium text-link hover:text-link-deep">JSON diff</a> performs a
+						structure-aware, semantic comparison and highlights exactly what was added, removed, or changed — far
+						clearer than a plain text diff. Moving data between systems is just as quick: the
+						<a href="/json-to-csv" class="font-medium text-link hover:text-link-deep">JSON to CSV converter</a> flattens
+						nested objects into spreadsheet-ready rows, and you can also
+						<a href="/json-to-yaml" class="font-medium text-link hover:text-link-deep">convert JSON to YAML</a> or
+						generate <a href="/json-to-typescript" class="font-medium text-link hover:text-link-deep">TypeScript</a> and
+						<a href="/json-to-go" class="font-medium text-link hover:text-link-deep">Go</a> types from a sample document.
+						Whether you are turning text into JSON, reshaping an export, or fixing JSON copied from a log, the right tool
+						is one click away. Pasting loosely-formatted text or a stringified, single-quoted blob? Repair rewrites that
+						almost-JSON into a valid document, so converting a string or a JavaScript object literal into clean JSON is
+						effortless.
+					</p>
+				</div>
+
+				<div>
+					<h3 class="text-display-sm text-ink">Private, fast, and free forever</h3>
+					<p class="mt-3">
+						Most importantly, every one of these tools runs entirely in your browser. Whether you paste an API key, a
+						customer record, or a proprietary config file, your data is never uploaded, logged, or sent anywhere — you
+						can even disconnect from the internet and keep working. JSON Beam is engineered to stay smooth on files into
+						the tens of megabytes, where typical online formatters freeze, and it is completely free with no
+						account and no usage limits. There are no file-size caps, no watermarks, and no upsells — just a fast,
+						dependable JSON toolkit you can reach for every day. If you have been looking for the best free JSON formatter
+						and viewer that respects your privacy, this is it.
+					</p>
+				</div>
 			</div>
 		</div>
 	</section>
