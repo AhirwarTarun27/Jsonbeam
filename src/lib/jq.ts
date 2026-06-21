@@ -43,6 +43,55 @@ class JqEmpty extends Error { constructor() { super('$__empty__'); } }
 
 function err(msg: string): never { throw new JqError(msg); }
 
+// ─── Regex safety ───────────────────────────────────────────────────────────────
+//
+// jq runs on the main thread (no worker yet), so a user-supplied pattern with
+// catastrophic backtracking — e.g. `(a+)+$` against a long non-matching string —
+// would freeze the tab. JS regexes can't be interrupted once started, so we
+// reject the textbook ReDoS shape up front: a repetition applied to a group that
+// itself contains a repetition (star height > 1). This is a conservative,
+// best-effort guard, not a proof of safety; it catches the common footguns
+// (nested `*`/`+`/`{n,}`) while leaving ordinary patterns untouched.
+function reDoSRisk(src: string): boolean {
+	const stack: { quant: boolean }[] = [];
+	let lastClosedQuant = false; // did the group that just closed contain a quantifier?
+	let justClosed = false;      // was the previous token a `)`?
+	for (let i = 0; i < src.length; i++) {
+		const c = src[i]!;
+		if (c === '\\') { i++; justClosed = false; continue; }
+		if (c === '[') { // skip character class — its contents are atoms
+			i++;
+			while (i < src.length && src[i] !== ']') { if (src[i] === '\\') i++; i++; }
+			justClosed = false;
+			continue;
+		}
+		if (c === '(') { stack.push({ quant: false }); justClosed = false; continue; }
+		if (c === ')') { lastClosedQuant = stack.pop()?.quant ?? false; justClosed = true; continue; }
+		if (c === '*' || c === '+' || c === '{') {
+			if (stack.length) stack[stack.length - 1]!.quant = true;
+			// A quantifier applied to a group that already had one → nested → risk.
+			if (justClosed && lastClosedQuant) return true;
+			if (c === '{') { while (i < src.length && src[i] !== '}') i++; }
+			justClosed = false;
+			continue;
+		}
+		justClosed = false;
+	}
+	return false;
+}
+
+/** Compile a user regex, rejecting catastrophic patterns and surfacing a jq-style error. */
+function compileRegex(src: string, flags = ''): RegExp {
+	if (reDoSRisk(src)) {
+		err(`${JSON.stringify(src)} is not a valid regex: rejected — nested quantifiers can cause catastrophic backtracking`);
+	}
+	try {
+		return new RegExp(src, flags);
+	} catch (e) {
+		err(`${JSON.stringify(src)} is not a valid regex: ${(e as Error).message}`);
+	}
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type JV = unknown;
@@ -345,8 +394,9 @@ function parse(src: string): AST {
 			consume();
 			while (!is('rparen')) {
 				if (params.length > 0) expect('semi');
-				// param can be $var or just name (filter arg)
-				if (is('dollar')) { consume(); params.push('$' + String(consume().v)); }
+				// param can be $var or just name (filter arg). The tokenizer carries
+				// the variable name in the dollar token's value — read it directly.
+				if (is('dollar')) { params.push('$' + String(consume().v)); }
 				else params.push(String(expect('ident').v));
 			}
 			expect('rparen');
@@ -362,8 +412,8 @@ function parse(src: string): AST {
 		// label $x | ...
 		if (isIdent('label')) {
 			consume();
-			expect('dollar');
-			const name = String(consume().v);
+			// Store the label name WITH its `$` so it matches the `break` node below.
+			const name = '$' + String(expect('dollar').v);
 			expect('pipe');
 			const body = parsePipe();
 			return { t: 'label', n: name, b: body };
@@ -412,9 +462,9 @@ function parse(src: string): AST {
 	}
 
 	function parsePattern(): string {
-		// For now: only $ident patterns (not destructuring)
-		expect('dollar');
-		return '$' + String(consume().v);
+		// For now: only $ident patterns (not destructuring). The tokenizer already
+		// carries the variable name in the dollar token's value.
+		return '$' + String(expect('dollar').v);
 	}
 
 	function parseControl(): AST {
@@ -561,8 +611,11 @@ function parse(src: string): AST {
 			}
 			// field access via dot after primary: e.field
 			if (is('dot')) {
-				consume();
-				if (is('ident') || is('string')) {
+				const dotTok = consume();
+				// `.ident` (no space) is a field; `. ident` (space before a keyword
+				// like `as`/`end`/`and`) is bare-dot + keyword. jq disambiguates by
+				// adjacency — the field name must be flush against the dot.
+				if ((is('ident') && peek().pos === dotTok.pos) || is('string')) {
 					const n = String(consume().v);
 					const opt = is('quest') ? (consume(), true) : false;
 					e = { t: 'pipe', l: e, r: { t: 'field', n, opt } };
@@ -607,8 +660,10 @@ function parse(src: string): AST {
 
 		// identity/recursive/field access starting with dot
 		if (is('dot')) {
-			consume();
-			if (is('ident') || is('string')) {
+			const dotTok = consume();
+			// `.ident` (flush) is a field; `. ident` (a space before a keyword such
+			// as `as`/`end`/`and`) is the identity filter followed by that keyword.
+			if ((is('ident') && peek().pos === dotTok.pos) || is('string')) {
 				const n = String(consume().v);
 				const opt = is('quest') ? (consume(), true) : false;
 				return { t: 'field', n, opt };
@@ -648,7 +703,6 @@ function parse(src: string): AST {
 		}
 
 		if (is('dollar')) {
-			consume();
 			return { t: 'var', n: '$' + String(consume().v) };
 		}
 
@@ -691,7 +745,6 @@ function parse(src: string): AST {
 					const v = parseAlt();
 					fs.push({ k: kExpr, v, computed: true });
 				} else if (is('dollar')) {
-					consume();
 					const n = '$' + String(consume().v);
 					fs.push({ k: n.slice(1), v: { t: 'var', n }, computed: false });
 				} else if (is('ident') || is('string') || is('number')) {
@@ -714,8 +767,9 @@ function parse(src: string): AST {
 
 		if (is('ident')) {
 			const name = String(tok.v);
-			if (name === 'break') { consume(); expect('dollar'); return { t: 'break', n: '$' + String(consume().v) }; }
-			if (name === 'not') { consume(); return { t: 'not', e: parsePrimary() }; }
+			if (name === 'break') { consume(); return { t: 'break', n: '$' + String(expect('dollar').v) }; }
+			// `not` is a 0-arg filter in jq (`. | not`), not a prefix operator —
+			// fall through to the call path so bare `not` resolves to the builtin.
 			if (name === 'path') { consume(); expect('lparen'); const e = parseExpr(); expect('rparen'); return { t: 'path', e }; }
 			if (name === 'getpath') { consume(); expect('lparen'); const p = parseExpr(); expect('rparen'); return { t: 'getpath', p }; }
 			if (name === 'setpath') { consume(); expect('lparen'); const p = parseExpr(); expect('semi'); const v = parseExpr(); expect('rparen'); return { t: 'setpath', p, v }; }
@@ -751,6 +805,15 @@ function typeOf(v: JV): string {
 	if (v === null) return 'null';
 	if (Array.isArray(v)) return 'array';
 	return typeof v === 'object' ? 'object' : typeof v;
+}
+
+/**
+ * jq truthiness: every value is true except `null` and `false`. (So `0`, `""`,
+ * `[]`, and `{}` are all truthy — unlike JavaScript.) Used by `if`, `and`, `or`,
+ * `not`, and `select`.
+ */
+function jqTruthy(v: JV): boolean {
+	return v !== null && v !== false;
 }
 
 function isObj(v: JV): v is Record<string, JV> {
@@ -914,9 +977,10 @@ function delPath(obj: JV, path: Path): JV {
 }
 
 function* collectPaths(node: JV, curPath: Path, filter: ((v: JV) => boolean) | null): Iterable<Path> {
-	const isLeaf = node === null || typeof node !== 'object';
+	// `paths` (filter === null) yields EVERY path to a non-root node; with a
+	// filter (`leaf_paths`, `paths(f)`) it yields only paths whose node matches.
 	if (curPath.length > 0 && (filter === null || filter(node))) {
-		if (filter !== null || isLeaf) yield [...curPath];
+		yield [...curPath];
 	}
 	if (Array.isArray(node)) {
 		for (let i = 0; i < node.length; i++) yield* collectPaths(node[i]!, [...curPath, i], filter);
@@ -956,19 +1020,23 @@ function applyFormat(fmt: string, v: JV): string {
 function makeEnv(): Env {
 	const fns = new Map<string, FnDef>();
 
-	function reg(name: string, fn: (args: AST[], input: JV, env: Env) => Iterable<JV>) {
-		fns.set(name, { kind: 'builtin', fn });
+	// Builtins are keyed by `name/arity` (e.g. `range/1`, `range/3`) so that
+	// multi-arity functions all coexist and dispatch correctly — jq overloads on
+	// arity. `reg` takes a fully-qualified key; reg0/reg1/reg2 derive it from the
+	// argument count.
+	function reg(key: string, fn: (args: AST[], input: JV, env: Env) => Iterable<JV>) {
+		fns.set(key, { kind: 'builtin', fn });
 	}
 
 	// Helpers for 0/1/2 arg builtins
 	function reg0(n: string, fn: (v: JV) => Iterable<JV>) {
-		reg(n, (_args, v, _env) => fn(v));
+		reg(`${n}/0`, (_args, v, _env) => fn(v));
 	}
 	function reg1(n: string, fn: (v: JV, arg: AST, env: Env) => Iterable<JV>) {
-		reg(n, ([a]: AST[], v, env) => fn(v, a!, env));
+		reg(`${n}/1`, ([a]: AST[], v, env) => fn(v, a!, env));
 	}
 	function reg2(n: string, fn: (v: JV, a: AST, b: AST, env: Env) => Iterable<JV>) {
-		reg(n, ([a, b]: AST[], v, env) => fn(v, a!, b!, env));
+		reg(`${n}/2`, ([a, b]: AST[], v, env) => fn(v, a!, b!, env));
 	}
 
 	// ── Basic ─────────────────────────────────────────────────────────────────
@@ -992,7 +1060,7 @@ function makeEnv(): Env {
 	reg0('isnan', function*(v) { yield isNaN(v as number); });
 	reg0('isnormal', function*(v) { yield isFinite(v as number) && !isNaN(v as number) && v !== 0; });
 	reg0('isfinite', function*(v) { yield isFinite(v as number) && !isNaN(v as number); });
-	reg0('not', function*(v) { yield !v; });
+	reg0('not', function*(v) { yield !jqTruthy(v); });
 	reg0('keys', function*(v) {
 		if (Array.isArray(v)) yield Array.from({length: (v as JV[]).length}, (_,i) => i);
 		else if (isObj(v)) yield Object.keys(v).sort();
@@ -1141,7 +1209,8 @@ function makeEnv(): Env {
 	});
 	reg0('env', function*() { yield {}; }); // browser: no env
 	reg0('builtins', function*() {
-		yield [...fns.keys()].sort().map(n => n + '/0');
+		// Keys are already `name/arity`.
+		yield [...fns.keys()].sort();
 	});
 	reg0('paths', function*(v) {
 		for (const p of collectPaths(v, [], null)) yield p;
@@ -1196,8 +1265,15 @@ function makeEnv(): Env {
 	reg0('max_by', function*() { err('max_by requires an argument'); });
 	reg0('del', function*() { err('del requires an argument'); });
 	reg0('limit', function*() { err('limit requires two arguments'); });
-	reg0('first', function*() { err('first requires an argument'); });
-	reg0('last', function*() { err('last requires an argument'); });
+	reg0('first', function*(v) {
+		if (!Array.isArray(v)) err(`Cannot index ${typeOf(v)} with number`);
+		yield (v as JV[]).length > 0 ? (v as JV[])[0] : null;
+	});
+	reg0('last', function*(v) {
+		if (!Array.isArray(v)) err(`Cannot index ${typeOf(v)} with number`);
+		const arr = v as JV[];
+		yield arr.length > 0 ? arr[arr.length - 1] : null;
+	});
 	reg0('nth', function*() { err('nth requires arguments'); });
 	reg0('any', function*(v) {
 		if (!Array.isArray(v)) err('any requires an array');
@@ -1277,7 +1353,7 @@ function makeEnv(): Env {
 	});
 	reg1('select', function*(v, arg, env) {
 		const cond = firstOf(evalNode(arg, v, env));
-		if (cond) yield v;
+		if (jqTruthy(cond)) yield v;
 	});
 	reg1('map', function*(v, arg, env) {
 		if (!Array.isArray(v)) err('map requires an array');
@@ -1400,11 +1476,16 @@ function makeEnv(): Env {
 	reg1('flatten', function*(v, arg, env) {
 		if (!Array.isArray(v)) err('flatten requires an array');
 		const depth = Number(firstOf(evalNode(arg, v, env)));
-		function flat(x: JV, d: number): JV[] {
-			if (!Array.isArray(x) || d <= 0) return [x];
-			return (x as JV[]).flatMap(e => flat(e, d - 1));
+		// Flatten the input array's nested arrays by up to `depth` levels.
+		function flat(arr: JV[], d: number): JV[] {
+			const out: JV[] = [];
+			for (const e of arr) {
+				if (Array.isArray(e) && d > 0) out.push(...flat(e as JV[], d - 1));
+				else out.push(e);
+			}
+			return out;
 		}
-		yield flat(v, depth);
+		yield flat(v as JV[], depth);
 	});
 	reg1('indices', function*(v, arg, env) {
 		const sub = firstOf(evalNode(arg, v, env));
@@ -1486,12 +1567,12 @@ function makeEnv(): Env {
 	reg1('test', function*(v, arg, env) {
 		if (typeof v !== 'string') err('test requires a string');
 		const re = firstOf(evalNode(arg, v, env)) as string;
-		yield new RegExp(re).test(v as string);
+		yield compileRegex(re).test(v as string);
 	});
 	reg1('match', function*(v, arg, env) {
 		if (typeof v !== 'string') err('match requires a string');
 		const re = firstOf(evalNode(arg, v, env)) as string;
-		const m = (v as string).match(new RegExp(re));
+		const m = (v as string).match(compileRegex(re));
 		if (!m) yield null;
 		else yield {
 			offset: m.index ?? 0,
@@ -1503,14 +1584,14 @@ function makeEnv(): Env {
 	reg1('capture', function*(v, arg, env) {
 		if (typeof v !== 'string') err('capture requires a string');
 		const re = firstOf(evalNode(arg, v, env)) as string;
-		const m = (v as string).match(new RegExp(re));
+		const m = (v as string).match(compileRegex(re));
 		if (!m || !m.groups) yield {};
 		else yield m.groups as Record<string, string>;
 	});
 	reg1('scan', function*(v, arg, env) {
 		if (typeof v !== 'string') err('scan requires a string');
 		const re = firstOf(evalNode(arg, v, env)) as string;
-		const regex = new RegExp(re, 'g');
+		const regex = compileRegex(re, 'g');
 		let m: RegExpExecArray | null;
 		while ((m = regex.exec(v as string)) !== null) {
 			if (m.length > 1) yield m.slice(1);
@@ -1520,11 +1601,22 @@ function makeEnv(): Env {
 	reg1('splits', function*(v, arg, env) {
 		if (typeof v !== 'string') err('splits requires a string');
 		const re = firstOf(evalNode(arg, v, env)) as string;
-		yield* (v as string).split(new RegExp(re));
+		yield* (v as string).split(compileRegex(re));
 	});
 	reg1('pow', function*(v, arg, env) {
 		const exp = firstOf(evalNode(arg, v, env)) as number;
 		yield Math.pow(v as number, exp);
+	});
+	// jq's standard pow is two-arg: pow(x; y) == x ** y, independent of input.
+	reg2('pow', function*(v, xArg, yArg, env) {
+		const x = firstOf(evalNode(xArg, v, env)) as number;
+		const y = firstOf(evalNode(yArg, v, env)) as number;
+		yield Math.pow(x, y);
+	});
+	// repeat(f): emit f against the original input forever (bounded by an
+	// enclosing limit() or the engine's output cap).
+	reg1('repeat', function*(v, arg, env) {
+		for (;;) yield* evalNode(arg, v, env);
 	});
 	reg1('remainder', function*(v, arg, env) {
 		const b = firstOf(evalNode(arg, v, env)) as number;
@@ -1589,12 +1681,11 @@ function makeEnv(): Env {
 		yield last;
 	});
 	reg1('nth', function*(v, arg, env) {
-		const n = firstOf(evalNode(arg, v, env)) as number;
-		let count = 0;
-		for (const x of evalNode({ t: 'id' }, v, env)) {
-			if (count++ === n) { yield x; return; }
-		}
-		err('nth: not enough values');
+		// nth(n) ≡ .[n] — index into the input array.
+		const n = Number(firstOf(evalNode(arg, v, env)));
+		if (!Array.isArray(v)) err(`Cannot index ${typeOf(v)} with number`);
+		const arr = v as JV[];
+		yield arr[n] ?? null;
 	});
 	reg1('limit', function*() { err('limit requires two arguments (limit(n; gen))'); });
 	reg1('until', function*(_v, _arg, _env) {
@@ -1603,9 +1694,9 @@ function makeEnv(): Env {
 	reg1('while', function*() { err('while requires two arguments (while(cond; update))'); });
 	reg1('sub', function*() { err('sub requires two arguments'); });
 	reg1('gsub', function*() { err('gsub requires two arguments'); });
-	reg1('test', function*() { err('test with flags requires two arguments'); });
-	reg1('match', function*() { err('match with flags requires two arguments'); });
-	reg1('scan', function*() { err('scan with flags requires two arguments'); });
+	// test/1, match/1, scan/1 are the real single-pattern builtins (registered
+	// above); their two-argument "with flags" forms are registered below. No
+	// stub here — that would shadow the real /1 implementations.
 
 	// 2-arg builtins
 	reg2('limit', function*(v, nArg, genArg, env) {
@@ -1674,25 +1765,25 @@ function makeEnv(): Env {
 		if (typeof v !== 'string') err('sub requires a string');
 		const re = String(firstOf(evalNode(reArg, v, env)));
 		const repl = String(firstOf(evalNode(replArg, v, env)));
-		yield (v as string).replace(new RegExp(re), repl);
+		yield (v as string).replace(compileRegex(re), repl);
 	});
 	reg2('gsub', function*(v, reArg, replArg, env) {
 		if (typeof v !== 'string') err('gsub requires a string');
 		const re = String(firstOf(evalNode(reArg, v, env)));
 		const repl = String(firstOf(evalNode(replArg, v, env)));
-		yield (v as string).replace(new RegExp(re, 'g'), repl);
+		yield (v as string).replace(compileRegex(re, 'g'), repl);
 	});
 	reg2('test', function*(v, reArg, flagsArg, env) {
 		if (typeof v !== 'string') err('test requires a string');
 		const re = String(firstOf(evalNode(reArg, v, env)));
 		const flags = String(firstOf(evalNode(flagsArg, v, env)));
-		yield new RegExp(re, flags).test(v as string);
+		yield compileRegex(re, flags).test(v as string);
 	});
 	reg2('match', function*(v, reArg, flagsArg, env) {
 		if (typeof v !== 'string') err('match requires a string');
 		const re = String(firstOf(evalNode(reArg, v, env)));
 		const flags = String(firstOf(evalNode(flagsArg, v, env)));
-		const m = (v as string).match(new RegExp(re, flags));
+		const m = (v as string).match(compileRegex(re, flags));
 		yield m ? { offset: m.index ?? 0, length: m[0]!.length, string: m[0], captures: [] } : null;
 	});
 
@@ -1758,6 +1849,13 @@ function* evalPathExpr(ast: AST, v: JV, env: Env, base: Path): Iterable<Path> {
 				const mid = getPath(v, p);
 				yield* evalPathExpr(ast.r, mid, env, p);
 			}
+			break;
+		}
+		case 'comma': {
+			// A comma in a path expression is the union of both sides' paths, so
+			// `del(.a, .c)` and `(.a, .b) |= f` reach every targeted path.
+			yield* evalPathExpr(ast.l, v, env, base);
+			yield* evalPathExpr(ast.r, v, env, base);
 			break;
 		}
 		case 'idx': {
@@ -1906,8 +2004,8 @@ function* evalNode(ast: AST, v: JV, env: Env): Iterable<JV> {
 		case 'gt': yield jqCompare(firstOf(evalNode(ast.l, v, env)), firstOf(evalNode(ast.r, v, env))) > 0; break;
 		case 'ge': yield jqCompare(firstOf(evalNode(ast.l, v, env)), firstOf(evalNode(ast.r, v, env))) >= 0; break;
 
-		case 'and': yield !!(firstOf(evalNode(ast.l, v, env))) && !!(firstOf(evalNode(ast.r, v, env))); break;
-		case 'or': yield !!(firstOf(evalNode(ast.l, v, env))) || !!(firstOf(evalNode(ast.r, v, env))); break;
+		case 'and': yield jqTruthy(firstOf(evalNode(ast.l, v, env))) && jqTruthy(firstOf(evalNode(ast.r, v, env))); break;
+		case 'or': yield jqTruthy(firstOf(evalNode(ast.l, v, env))) || jqTruthy(firstOf(evalNode(ast.r, v, env))); break;
 		case 'not': yield !firstOf(evalNode(ast.e, v, env)); break;
 		case 'neg': yield -(firstOf(evalNode(ast.e, v, env)) as number); break;
 
@@ -1938,8 +2036,11 @@ function* evalNode(ast: AST, v: JV, env: Env): Iterable<JV> {
 		}
 
 		case 'call': {
-			const fn = env.fns.get(ast.n) ?? env.fns.get(`${ast.n}/${ast.args.length}`);
-			if (!fn) err(`undefined function: ${ast.n}/${ast.args.length}`);
+			const arity = ast.args.length;
+			// Resolve by exact `name/arity` (jq overloads on arity); fall back to a
+			// bare-name binding for safety, then a clear "not defined" error.
+			const fn = env.fns.get(`${ast.n}/${arity}`) ?? env.fns.get(ast.n);
+			if (!fn) err(`${ast.n}/${arity} is not defined`);
 			if (fn.kind === 'builtin') {
 				yield* fn.fn(ast.args, v, env);
 			} else {
@@ -1952,14 +2053,14 @@ function* evalNode(ast: AST, v: JV, env: Env): Iterable<JV> {
 						const val = firstOf(evalNode(ast.args[i] ?? { t: 'id' }, v, env));
 						callEnv = extendEnv(callEnv, param, val);
 					} else {
-						// filter param — capture as a lambda
+						// filter param — capture as a 0-arity lambda, keyed `name/0`.
 						const argAst = ast.args[i] ?? { t: 'id' };
 						const capturedEnv = env;
 						const filterFn: BuiltinFn = {
 							kind: 'builtin',
 							fn: (_, input, __) => evalNode(argAst, input, capturedEnv),
 						};
-						callEnv = extendEnvFn(callEnv, param, filterFn);
+						callEnv = extendEnvFn(callEnv, `${param}/0`, filterFn);
 					}
 				}
 				yield* evalNode(fn.body, v, callEnv);
@@ -1969,8 +2070,9 @@ function* evalNode(ast: AST, v: JV, env: Env): Iterable<JV> {
 
 		case 'if': {
 			const cond = firstOf(evalNode(ast.c, v, env));
-			if (cond) yield* evalNode(ast.th, v, env);
+			if (jqTruthy(cond)) yield* evalNode(ast.th, v, env);
 			else if (ast.el) yield* evalNode(ast.el, v, env);
+			else yield v; // `if C then T end` ≡ `if C then T else . end`
 			break;
 		}
 
@@ -2065,13 +2167,14 @@ function* evalNode(ast: AST, v: JV, env: Env): Iterable<JV> {
 		}
 
 		case 'assign': {
-			// .path = value — collect path, set it
+			// .path = value — set every targeted path (RHS evaluated against the
+			// original input), so multi-path LHS like `(.a, .b) = 0` set both.
+			const val = firstOf(evalNode(ast.r, v, env));
+			let result = v;
 			for (const p of evalPathExpr(ast.l, v, env, [])) {
-				const val = firstOf(evalNode(ast.r, v, env));
-				yield setPath(v, p, val);
-				return;
+				result = setPath(result, p, val);
 			}
-			yield v;
+			yield result;
 			break;
 		}
 
@@ -2137,8 +2240,11 @@ function* evalNode(ast: AST, v: JV, env: Env): Iterable<JV> {
 		}
 
 		case 'def': {
+			// Key user functions by `name/arity` too, so overloads and arity-correct
+			// dispatch work the same as for builtins.
+			const key = `${ast.n}/${ast.ps.length}`;
 			const userFn: UserFn = { kind: 'user', params: ast.ps, body: ast.b, env };
-			const newEnv = extendEnvFn(env, ast.n, userFn);
+			const newEnv = extendEnvFn(env, key, userFn);
 			// Also update the closure to be self-referential (for recursion)
 			userFn.env = newEnv;
 			yield* evalNode(ast.rest, v, newEnv);

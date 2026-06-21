@@ -260,52 +260,52 @@ const sample = `{
 	/* ── Light theme — flip both panes to the canvas surface + light palette.
 	   Toggled by .jb-theme-light on the #jb-tree-viewer root (shares the
 	   `jb-theme` key with the formatter & viewer). ──────────────────────────── */
-	:global(#jb-tree-viewer.jb-theme-light #jb-kinput),
-	:global(#jb-tree-viewer.jb-theme-light #jb-ktree) {
+	:global(html.jb-theme-light #jb-tree-viewer #jb-kinput),
+	:global(html.jb-theme-light #jb-tree-viewer #jb-ktree) {
 		background-color: var(--color-canvas);
 		color: var(--color-ink);
 	}
-	:global(#jb-tree-viewer.jb-theme-light #jb-kinput::selection),
-	:global(#jb-tree-viewer.jb-theme-light #jb-ktree ::selection) {
+	:global(html.jb-theme-light #jb-tree-viewer #jb-kinput::selection),
+	:global(html.jb-theme-light #jb-tree-viewer #jb-ktree ::selection) {
 		color: var(--color-ink);
 		background-color: var(--color-editor-sel-light);
 	}
-	:global(#jb-tree-viewer.jb-theme-light #jb-ktree [role='treeitem'][aria-selected='true'] > .jb-row) {
+	:global(html.jb-theme-light #jb-tree-viewer #jb-ktree [role='treeitem'][aria-selected='true'] > .jb-row) {
 		background: var(--color-canvas-soft-2);
 	}
-	:global(#jb-tree-viewer.jb-theme-light #jb-ktree [role='treeitem']:focus-visible > .jb-row) {
+	:global(html.jb-theme-light #jb-tree-viewer #jb-ktree [role='treeitem']:focus-visible > .jb-row) {
 		outline-color: var(--color-cyan-deep);
 		background: var(--color-canvas-soft-2);
 	}
-	:global(#jb-tree-viewer.jb-theme-light #jb-ktree .jb-children) {
+	:global(html.jb-theme-light #jb-tree-viewer #jb-ktree .jb-children) {
 		border-left-color: var(--color-hairline);
 	}
-	:global(#jb-tree-viewer.jb-theme-light #jb-ktree .jb-toggle) {
+	:global(html.jb-theme-light #jb-tree-viewer #jb-ktree .jb-toggle) {
 		color: var(--color-mute);
 	}
-	:global(#jb-tree-viewer.jb-theme-light #jb-ktree .jb-key) {
+	:global(html.jb-theme-light #jb-tree-viewer #jb-ktree .jb-key) {
 		color: var(--color-ink);
 	}
-	:global(#jb-tree-viewer.jb-theme-light #jb-ktree .jb-punct),
-	:global(#jb-tree-viewer.jb-theme-light #jb-ktree .jb-summary) {
+	:global(html.jb-theme-light #jb-tree-viewer #jb-ktree .jb-punct),
+	:global(html.jb-theme-light #jb-tree-viewer #jb-ktree .jb-summary) {
 		color: var(--color-mute);
 	}
-	:global(#jb-tree-viewer.jb-theme-light #jb-ktree .jb-string) {
+	:global(html.jb-theme-light #jb-tree-viewer #jb-ktree .jb-string) {
 		color: var(--color-link-deep);
 	}
-	:global(#jb-tree-viewer.jb-theme-light #jb-ktree .jb-number) {
+	:global(html.jb-theme-light #jb-tree-viewer #jb-ktree .jb-number) {
 		color: var(--color-violet);
 	}
-	:global(#jb-tree-viewer.jb-theme-light #jb-ktree .jb-bool),
-	:global(#jb-tree-viewer.jb-theme-light #jb-ktree .jb-null) {
+	:global(html.jb-theme-light #jb-tree-viewer #jb-ktree .jb-bool),
+	:global(html.jb-theme-light #jb-tree-viewer #jb-ktree .jb-null) {
 		color: var(--color-cyan-deep);
 	}
-	:global(#jb-tree-viewer.jb-theme-light #jb-ktree .jb-more) {
+	:global(html.jb-theme-light #jb-tree-viewer #jb-ktree .jb-more) {
 		border-color: var(--color-hairline);
 		background: var(--color-canvas-soft);
 		color: var(--color-body);
 	}
-	:global(#jb-tree-viewer.jb-theme-light .jb-kbd) {
+	:global(html.jb-theme-light #jb-tree-viewer .jb-kbd) {
 		background: var(--color-canvas-soft);
 	}
 
@@ -330,6 +330,8 @@ const sample = `{
 <script>
 	import { checkJson } from '../lib/json';
 	import { loadDoc, saveDoc } from '../lib/doc-store';
+	import { initThemeToggle } from '../lib/island-theme';
+	import { copyToClipboard } from '../lib/island-clipboard';
 
 	const root = document.getElementById('jb-tree-viewer');
 	const inputEl = document.getElementById('jb-kinput') as HTMLTextAreaElement | null;
@@ -900,66 +902,23 @@ const sample = `{
 					/* keep raw */
 				}
 			}
-			try {
-				await navigator.clipboard.writeText(out);
-				flashStatus('ok', 'Copied JSON');
-			} catch {
-				flashStatus('error', 'Clipboard unavailable');
-			}
+			if (await copyToClipboard(out)) flashStatus('ok', 'Copied JSON');
+			else flashStatus('error', 'Clipboard unavailable');
 		}
 
 		async function copyPath(path: string): Promise<void> {
 			if (!path) return;
-			try {
-				await navigator.clipboard.writeText(path);
-				flashStatus('ok', `Copied path: ${path}`);
-			} catch {
-				flashStatus('error', 'Clipboard unavailable');
-			}
+			if (await copyToClipboard(path)) flashStatus('ok', `Copied path: ${path}`);
+			else flashStatus('error', 'Clipboard unavailable');
 		}
 
-		// ── Theme toggle — shares the `jb-theme` key with the formatter & viewer ──
-		type Mode = 'dark' | 'light';
-		const THEME_KEY = 'jb-theme';
-		const ICON_SUN =
-			'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>';
-		const ICON_MOON =
-			'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"></path></svg>';
-
-		function readMode(): Mode {
-			try {
-				const stored = localStorage.getItem(THEME_KEY);
-				if (stored === 'light' || stored === 'dark') return stored;
-			} catch {
-				/* storage blocked — fall through to default */
-			}
-			return 'dark';
-		}
-
-		let mode: Mode = readMode();
-		const themeBtn = root.querySelector<HTMLButtonElement>('[data-action="theme"]');
-		const themeIcon = themeBtn?.querySelector<HTMLElement>('[data-theme-icon]') ?? null;
-
-		function paintTheme(): void {
-			if (themeIcon) themeIcon.innerHTML = mode === 'dark' ? ICON_SUN : ICON_MOON;
-			themeBtn?.setAttribute('aria-label', mode === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
-			root?.classList.toggle('jb-theme-light', mode === 'light');
-		}
-
-		function applyMode(next: Mode): void {
-			mode = next;
-			try {
-				localStorage.setItem(THEME_KEY, mode);
-			} catch {
-				/* storage blocked — keep the choice in memory for this session */
-			}
-			paintTheme();
-		}
+		// ── Theme toggle — shared across every tool island (lib/island-theme). ───
+		const themeCtl = initThemeToggle({ root });
 
 		const actions: Record<string, () => void | Promise<void>> = {
 			expand: expandAll,
 			collapse: collapseAll,
-			theme: () => applyMode(mode === 'dark' ? 'light' : 'dark'),
+			theme: () => themeCtl.toggle(),
 			'copy-path': () => copyPath(current?.dataset.path ?? '$'),
 			sample: () => {
 				input.value = SAMPLE;
@@ -1008,7 +967,6 @@ const sample = `{
 			inputTimer = window.setTimeout(applyInput, 300);
 		});
 
-		paintTheme();
 		update();
 	}
 </script>

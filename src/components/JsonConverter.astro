@@ -1,0 +1,748 @@
+---
+/**
+ * JsonConverter island — one framework-free surface that powers all four
+ * convert tools (JSON → CSV / YAML / TypeScript / Go) via a single `target`
+ * prop, exactly like JsonFormatter re-skins one island across five variants.
+ *
+ * What makes these the best-in-class converters:
+ *   • Live conversion — output updates ~250 ms after you stop typing, with a
+ *     byte/line count and a real validity check on the input.
+ *   • Deep, deterministic option surface per target (see each options bar) —
+ *     more knobs than the popular single-purpose tools, all client-side.
+ *   • CSV ships a real spreadsheet PREVIEW (sortable column header), not just a
+ *     wall of comma text — toggle Table ⇄ Raw.
+ *   • TS / Go share a structural inference engine that merges object shapes
+ *     across array elements, so optional / nullable / union / date / int-vs-float
+ *     are all inferred — matching quicktype-grade output.
+ *   • Copy + Download (correct extension & Excel BOM), dark/light theme, and the
+ *     shared working document carries in from any other tool (paste once).
+ *
+ * Conversion engines are lazy-loaded on first use (dynamic import) so the page's
+ * initial JS stays tiny. Nothing is ever uploaded — all processing is local.
+ */
+export type ConvertTarget = 'csv' | 'yaml' | 'typescript' | 'go';
+
+interface Props {
+	target: ConvertTarget;
+}
+const { target } = Astro.props;
+
+const OUTPUT_LABEL: Record<ConvertTarget, string> = {
+	csv: 'CSV',
+	yaml: 'YAML',
+	typescript: 'TypeScript',
+	go: 'Go',
+};
+---
+
+<div
+	id="jb-cv"
+	data-target={target}
+	class="overflow-hidden rounded-md border border-hairline bg-canvas shadow-e3"
+>
+	<!-- Toolbar -->
+	<div class="flex flex-wrap items-center gap-1.5 border-b border-hairline bg-canvas-soft px-3 py-2">
+		<button type="button" data-action="sample" class="jb-btn" title="Load a sample document">Sample</button>
+
+		<span class="mx-1 hidden h-5 w-px bg-hairline sm:block" aria-hidden="true"></span>
+
+		<div class="ml-auto flex flex-wrap items-center gap-1.5">
+			<button type="button" data-action="copy" class="jb-btn" title="Copy output to clipboard">Copy output</button>
+			<button type="button" data-action="download" class="jb-btn" title="Download output file">Download ↓</button>
+			<button
+				type="button"
+				data-action="theme"
+				class="jb-btn jb-btn-icon"
+				aria-label="Switch to light theme"
+				title="Toggle dark / light"
+			><span data-theme-icon aria-hidden="true"></span></button>
+			<button type="button" data-action="clear" class="jb-btn" title="Clear input">Clear</button>
+		</div>
+	</div>
+
+	<!-- Options bar (per target) -->
+	<div class="jb-cv-bar flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-hairline bg-canvas-soft px-3 py-2">
+		<span class="font-mono text-caption uppercase tracking-wide text-mute">Options</span>
+
+		{target === 'csv' && (
+			<>
+				<label class="jb-cv-ctl">Delimiter
+					<select id="cv-delimiter" class="jb-cv-select">
+						<option value="comma">Comma ,</option>
+						<option value="semicolon">Semicolon ;</option>
+						<option value="tab">Tab ⇥ (TSV)</option>
+						<option value="pipe">Pipe |</option>
+					</select>
+				</label>
+				<label class="jb-cv-ctl">Arrays
+					<select id="cv-array" class="jb-cv-select">
+						<option value="join">Join</option>
+						<option value="json">JSON</option>
+						<option value="columns">Columns</option>
+					</select>
+				</label>
+				<label class="jb-cv-check"><input type="checkbox" id="cv-flatten" checked /> Flatten objects</label>
+				<label class="jb-cv-check"><input type="checkbox" id="cv-header" checked /> Header row</label>
+				<label class="jb-cv-check"><input type="checkbox" id="cv-bom" /> Excel BOM</label>
+				<label class="jb-cv-check" title="Prefix cells that start with = + - @ with a quote so a spreadsheet treats them as text, not formulas (CSV-injection safe). Plain numbers are left untouched."><input type="checkbox" id="cv-formula" /> Escape formulas</label>
+			</>
+		)}
+
+		{target === 'yaml' && (
+			<>
+				<label class="jb-cv-ctl">Indent
+					<select id="cv-indent" class="jb-cv-select">
+						<option value="2">2 spaces</option>
+						<option value="4">4 spaces</option>
+					</select>
+				</label>
+				<label class="jb-cv-ctl">Strings
+					<select id="cv-quote" class="jb-cv-select">
+						<option value="auto">Quote when needed</option>
+						<option value="single">Always single</option>
+						<option value="double">Always double</option>
+					</select>
+				</label>
+				<label class="jb-cv-check"><input type="checkbox" id="cv-sort" /> Sort keys</label>
+				<label class="jb-cv-check"><input type="checkbox" id="cv-docstart" /> <span class="font-mono">---</span> marker</label>
+			</>
+		)}
+
+		{target === 'typescript' && (
+			<>
+				<label class="jb-cv-ctl">Root name
+					<input type="text" id="cv-root" class="jb-cv-text" value="Root" spellcheck="false" autocomplete="off" />
+				</label>
+				<label class="jb-cv-ctl">Declare
+					<select id="cv-decl" class="jb-cv-select">
+						<option value="interface">interface</option>
+						<option value="type">type</option>
+					</select>
+				</label>
+				<label class="jb-cv-ctl">Optional
+					<select id="cv-optional" class="jb-cv-select">
+						<option value="question">field?: T</option>
+						<option value="union-undefined">T | undefined</option>
+					</select>
+				</label>
+				<label class="jb-cv-check"><input type="checkbox" id="cv-readonly" /> readonly</label>
+				<label class="jb-cv-check"><input type="checkbox" id="cv-enums" /> Literal unions</label>
+			</>
+		)}
+
+		{target === 'go' && (
+			<>
+				<label class="jb-cv-ctl">Root name
+					<input type="text" id="cv-root" class="jb-cv-text" value="Root" spellcheck="false" autocomplete="off" />
+				</label>
+				<label class="jb-cv-ctl">Integers
+					<select id="cv-int" class="jb-cv-select">
+						<option value="int">int</option>
+						<option value="int64">int64</option>
+					</select>
+				</label>
+				<label class="jb-cv-check"><input type="checkbox" id="cv-tags" checked /> JSON tags</label>
+				<label class="jb-cv-check"><input type="checkbox" id="cv-omit" /> omitempty</label>
+				<label class="jb-cv-check"><input type="checkbox" id="cv-ptr" checked /> Pointers</label>
+				<label class="jb-cv-check"><input type="checkbox" id="cv-time" checked /> time.Time</label>
+				<label class="jb-cv-check"><input type="checkbox" id="cv-inline" /> Inline structs</label>
+			</>
+		)}
+	</div>
+
+	<!-- Two-pane content -->
+	<div class="grid grid-cols-1 lg:grid-cols-2">
+		<!-- Left: JSON input -->
+		<div class="border-b border-hairline lg:border-b-0 lg:border-r">
+			<div class="flex items-center gap-2 border-b border-hairline bg-canvas-soft px-3 py-1">
+				<span class="font-mono text-caption uppercase tracking-wide text-mute">JSON input</span>
+				<span id="jb-cv-input-status" class="ml-auto font-mono text-caption" aria-live="polite"></span>
+			</div>
+			<label class="sr-only" for="jb-cv-input">JSON input document</label>
+			<textarea
+				id="jb-cv-input"
+				spellcheck="false"
+				autocomplete="off"
+				autocapitalize="off"
+				aria-label="JSON input document"
+				class="h-[62vh] min-h-[360px] w-full"
+			></textarea>
+		</div>
+
+		<!-- Right: Output -->
+		<div class="flex flex-col">
+			<div class="flex items-center gap-2 border-b border-hairline bg-canvas-soft px-3 py-1">
+				<span class="font-mono text-caption uppercase tracking-wide text-mute">{OUTPUT_LABEL[target]} output</span>
+				{target === 'csv' && (
+					<div role="group" aria-label="CSV view" class="ml-2 flex gap-0.5">
+						<button type="button" data-view="table" aria-pressed="true" class="jb-cv-viewbtn" title="Spreadsheet preview">Table</button>
+						<button type="button" data-view="csv" aria-pressed="false" class="jb-cv-viewbtn" title="Raw CSV text">Raw</button>
+					</div>
+				)}
+				<span id="jb-cv-meta" class="ml-auto font-mono text-caption text-mute" aria-live="polite"></span>
+			</div>
+			<div id="jb-cv-output" class="relative h-[62vh] min-h-[360px] overflow-auto" role="region" aria-label="Conversion output">
+				<pre id="jb-cv-code" class="hidden m-0 px-3 py-3 font-mono text-code" aria-live="polite"></pre>
+				<div id="jb-cv-table-wrap" class="hidden"></div>
+				<div id="jb-cv-empty" class="hidden flex-col items-center justify-center gap-2 px-6 py-12 text-center">
+					<p class="font-mono text-caption text-mute">Paste JSON on the left to convert.</p>
+				</div>
+				<div id="jb-cv-error" class="hidden px-3 py-3">
+					<p class="font-mono text-caption font-medium text-error" data-message></p>
+					<p class="mt-1 font-mono text-caption text-mute" data-hint></p>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Status bar -->
+	<div class="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-hairline bg-canvas-soft px-3 py-2 text-body-sm">
+		<span id="jb-cv-status" class="inline-flex items-center gap-1.5 font-medium" role="status" aria-live="polite">
+			<span class="h-2 w-2 rounded-full bg-mute" data-dot></span>
+			<span data-label>Ready</span>
+		</span>
+		<span class="ml-auto inline-flex items-center gap-1.5 text-caption text-mute">
+			<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+				<path d="M8 1.5 3 3.5v3.2c0 3 2.1 5.8 5 6.8 2.9-1 5-3.8 5-6.8V3.5L8 1.5Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"></path>
+			</svg>
+			Processed locally — nothing uploaded
+		</span>
+	</div>
+</div>
+
+<style>
+/* ── Input + code output share the dark editor surface ──────────────────────── */
+#jb-cv-input {
+	background-color: var(--color-editor-bg);
+	color: var(--color-editor-fg);
+	font-family: var(--font-mono);
+	font-size: 13px;
+	line-height: 1.6;
+	padding: 12px 14px;
+	border: none;
+	outline: none;
+	resize: none;
+	display: block;
+	tab-size: 2;
+	width: 100%;
+}
+#jb-cv-output { background-color: var(--color-editor-bg); color: var(--color-editor-fg); }
+#jb-cv-code { white-space: pre; color: var(--color-editor-fg); }
+#jb-cv-empty, #jb-cv-error { display: none; }
+#jb-cv-empty.is-on, #jb-cv-error.is-on { display: flex; flex-direction: column; }
+#jb-cv-empty.is-on { height: 100%; align-items: center; justify-content: center; }
+
+/* ── CSV spreadsheet preview — light surface regardless of theme ────────────── */
+#jb-cv-table-wrap { background: var(--color-canvas); }
+.jb-cv-table {
+	border-collapse: collapse;
+	font-family: var(--font-mono);
+	font-size: 12px;
+	width: max-content;
+	min-width: 100%;
+	color: var(--color-ink);
+}
+.jb-cv-table th {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	text-align: left;
+	background: var(--color-canvas-soft-2);
+	color: var(--color-body);
+	font-weight: 600;
+	padding: 5px 12px;
+	border-bottom: 1px solid var(--color-hairline-strong);
+	white-space: nowrap;
+}
+.jb-cv-table td {
+	padding: 4px 12px;
+	border-top: 1px solid var(--color-hairline);
+	white-space: nowrap;
+	max-width: 280px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.jb-cv-table tr:hover td { background: var(--color-canvas-soft); }
+.jb-cv-rownum { color: var(--color-mute); user-select: none; text-align: right; }
+.jb-cv-note { padding: 8px 12px; font-family: var(--font-mono); font-size: 11px; color: var(--color-mute); }
+
+/* ── Options controls ───────────────────────────────────────────────────────── */
+.jb-cv-ctl {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-size: var(--text-body-sm);
+	color: var(--color-body);
+	white-space: nowrap;
+}
+.jb-cv-select, .jb-cv-text {
+	height: 30px;
+	border-radius: var(--radius-sm);
+	border: 1px solid var(--color-hairline);
+	background: var(--color-canvas);
+	color: var(--color-ink);
+	font-size: var(--text-body-sm);
+	padding: 0 8px;
+}
+.jb-cv-text { width: 96px; font-family: var(--font-mono); }
+.jb-cv-select:focus, .jb-cv-text:focus {
+	outline: none;
+	border-color: var(--color-link);
+	box-shadow: 0 0 0 1px var(--color-link);
+}
+.jb-cv-check {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-size: var(--text-body-sm);
+	color: var(--color-body);
+	white-space: nowrap;
+	cursor: pointer;
+}
+.jb-cv-check input { width: 15px; height: 15px; accent-color: var(--color-ink); cursor: pointer; }
+
+/* ── CSV view toggle ────────────────────────────────────────────────────────── */
+.jb-cv-viewbtn {
+	height: 24px;
+	padding: 0 10px;
+	border-radius: var(--radius-sm);
+	font-size: var(--text-caption);
+	font-weight: 500;
+	color: var(--color-body);
+}
+.jb-cv-viewbtn[aria-pressed='true'] {
+	background: var(--color-ink);
+	color: var(--color-on-primary);
+}
+
+/* ── Light theme: input + code on the light canvas ──────────────────────────── */
+:global(html.jb-theme-light #jb-cv #jb-cv-input),
+:global(html.jb-theme-light #jb-cv #jb-cv-output),
+:global(html.jb-theme-light #jb-cv #jb-cv-code) {
+	background-color: var(--color-canvas);
+	color: var(--color-ink);
+}
+
+/* ── Text selection in the editor panes ─────────────────────────────────────── */
+:global(#jb-cv-input::selection), :global(#jb-cv-code::selection) {
+	background-color: var(--color-editor-sel-dark);
+	color: var(--color-editor-fg);
+}
+:global(html.jb-theme-light #jb-cv #jb-cv-input::selection),
+:global(html.jb-theme-light #jb-cv #jb-cv-code::selection) {
+	background-color: var(--color-editor-sel-light);
+	color: var(--color-ink);
+}
+
+@media (pointer: coarse) {
+	.jb-cv-select, .jb-cv-text, .jb-cv-viewbtn { height: 44px; }
+	.jb-cv-check input { width: 20px; height: 20px; }
+}
+</style>
+
+<script>
+import { loadDoc, saveDoc } from '../lib/doc-store';
+import { initThemeToggle } from '../lib/island-theme';
+import { copyToClipboard } from '../lib/island-clipboard';
+import type { CsvArrayMode, CsvOptions, CsvResult } from '../lib/convert-csv';
+import type { YamlOptions, YamlQuoteStyle } from '../lib/convert-yaml';
+import type { TsOptions } from '../lib/emit-typescript';
+import type { GoOptions } from '../lib/emit-go';
+
+type ConvertTarget = 'csv' | 'yaml' | 'typescript' | 'go';
+
+const sample = `[
+  {
+    "id": 1,
+    "name": "Ada Lovelace",
+    "email": "ada@example.com",
+    "active": true,
+    "roles": ["admin", "author"],
+    "address": { "city": "London", "zip": "EC1A" },
+    "createdAt": "2023-01-15T09:30:00Z",
+    "score": 9.5
+  },
+  {
+    "id": 2,
+    "name": "Alan Turing",
+    "email": "alan@example.com",
+    "active": false,
+    "roles": ["author"],
+    "address": { "city": "Manchester", "zip": "M1" },
+    "createdAt": "2023-03-22T14:05:00Z",
+    "score": 8,
+    "manager": null
+  }
+]`;
+
+// ─── DOM refs ─────────────────────────────────────────────────────────────────
+
+const rootEl = document.getElementById('jb-cv');
+const inputEl = document.getElementById('jb-cv-input') as HTMLTextAreaElement | null;
+const codeEl = document.getElementById('jb-cv-code');
+const tableWrapEl = document.getElementById('jb-cv-table-wrap');
+const emptyEl = document.getElementById('jb-cv-empty');
+const errorEl = document.getElementById('jb-cv-error');
+const metaEl = document.getElementById('jb-cv-meta');
+const statusEl = document.getElementById('jb-cv-status');
+const inputStatusEl = document.getElementById('jb-cv-input-status');
+const themeIconEl = document.querySelector<HTMLElement>('[data-theme-icon]');
+
+if (!(rootEl && inputEl && codeEl && tableWrapEl && emptyEl && errorEl && metaEl && statusEl && inputStatusEl)) {
+	throw new Error('jb-cv: DOM not found');
+}
+
+const root = rootEl;
+const input = inputEl;
+const code = codeEl;
+const tableWrap = tableWrapEl;
+const empty = emptyEl;
+const errorBox = errorEl;
+const meta = metaEl;
+const status = statusEl;
+const inputStat = inputStatusEl;
+
+const target = (root.dataset['target'] as ConvertTarget) ?? 'csv';
+
+// ─── State ────────────────────────────────────────────────────────────────────
+
+let lastText = '';
+let lastCsv: CsvResult | null = null;
+let csvView: 'table' | 'csv' = 'table';
+let debounceTimer = 0;
+const DEBOUNCE = 250;
+const TABLE_ROW_CAP = 1000;
+
+// ─── Theme ────────────────────────────────────────────────────────────────────
+
+const themeCtl = initThemeToggle({ root, icon: themeIconEl });
+
+// ─── Status helpers ───────────────────────────────────────────────────────────
+
+function setStatus(label: string, color: 'mute' | 'ok' | 'err' | 'run'): void {
+	const dot = status.querySelector<HTMLElement>('[data-dot]');
+	const lbl = status.querySelector<HTMLElement>('[data-label]');
+	if (dot) {
+		dot.className = 'h-2 w-2 rounded-full';
+		dot.classList.add(color === 'ok' ? 'bg-success' : color === 'err' ? 'bg-error' : color === 'run' ? 'bg-warning' : 'bg-mute');
+	}
+	if (lbl) lbl.textContent = label;
+}
+
+function setPanel(which: 'code' | 'table' | 'empty' | 'error'): void {
+	code.classList.toggle('hidden', which !== 'code');
+	tableWrap.classList.toggle('hidden', which !== 'table');
+	empty.classList.toggle('is-on', which === 'empty');
+	errorBox.classList.toggle('is-on', which === 'error');
+	empty.classList.toggle('hidden', which !== 'empty');
+	errorBox.classList.toggle('hidden', which !== 'error');
+}
+
+// ─── Option readers ───────────────────────────────────────────────────────────
+
+function sel(id: string, fallback: string): string {
+	const el = document.getElementById(id) as HTMLSelectElement | null;
+	return el ? el.value : fallback;
+}
+function chk(id: string, fallback: boolean): boolean {
+	const el = document.getElementById(id) as HTMLInputElement | null;
+	return el ? el.checked : fallback;
+}
+function txt(id: string, fallback: string): string {
+	const el = document.getElementById(id) as HTMLInputElement | null;
+	const v = el?.value.trim();
+	return v ? v : fallback;
+}
+
+const DELIMITERS: Record<string, CsvOptions['delimiter']> = { comma: ',', semicolon: ';', tab: '\t', pipe: '|' };
+
+function csvOptions(): Partial<CsvOptions> {
+	return {
+		delimiter: DELIMITERS[sel('cv-delimiter', 'comma')] ?? ',',
+		flatten: chk('cv-flatten', true),
+		arrayMode: sel('cv-array', 'join') as CsvArrayMode,
+		header: chk('cv-header', true),
+		formulaGuard: chk('cv-formula', false),
+	};
+}
+function yamlOptions(): Partial<YamlOptions> {
+	return {
+		indent: Number(sel('cv-indent', '2')),
+		quoteStyle: sel('cv-quote', 'auto') as YamlQuoteStyle,
+		sortKeys: chk('cv-sort', false),
+		documentStart: chk('cv-docstart', false),
+	};
+}
+function tsOptions(): Partial<TsOptions> {
+	return {
+		rootName: txt('cv-root', 'Root'),
+		declaration: sel('cv-decl', 'interface') as TsOptions['declaration'],
+		optionalStyle: sel('cv-optional', 'question') as TsOptions['optionalStyle'],
+		useReadonly: chk('cv-readonly', false),
+		enums: chk('cv-enums', false),
+	};
+}
+function goOptions(): Partial<GoOptions> {
+	return {
+		rootName: txt('cv-root', 'Root'),
+		intType: sel('cv-int', 'int') as GoOptions['intType'],
+		jsonTags: chk('cv-tags', true),
+		omitempty: chk('cv-omit', false),
+		pointersForNullable: chk('cv-ptr', true),
+		detectTime: chk('cv-time', true),
+		inlineStructs: chk('cv-inline', false),
+	};
+}
+
+// ─── Input validation ─────────────────────────────────────────────────────────
+
+function parseInput(): { ok: true; data: unknown } | { ok: false; message: string } {
+	const raw = input.value.trim();
+	if (!raw) {
+		inputStat.textContent = '';
+		inputStat.className = 'ml-auto font-mono text-caption';
+		return { ok: false, message: '' };
+	}
+	try {
+		const data = JSON.parse(raw);
+		inputStat.textContent = '✓ valid JSON';
+		inputStat.className = 'ml-auto font-mono text-caption text-success';
+		return { ok: true, data };
+	} catch (e) {
+		const msg = e instanceof Error ? e.message.replace(/^JSON.parse: /, '') : 'Invalid JSON';
+		inputStat.textContent = '✗ ' + msg.slice(0, 48);
+		inputStat.className = 'ml-auto font-mono text-caption text-error';
+		return { ok: false, message: msg };
+	}
+}
+
+// ─── Rendering ────────────────────────────────────────────────────────────────
+
+function renderCode(text: string): void {
+	code.textContent = text;
+	setPanel('code');
+	const lines = text === '' ? 0 : text.split('\n').length;
+	meta.textContent = `${lines} line${lines !== 1 ? 's' : ''} · ${formatBytes(text.length)}`;
+}
+
+function renderCsvTable(r: CsvResult): void {
+	tableWrap.replaceChildren();
+	const table = document.createElement('table');
+	table.className = 'jb-cv-table';
+
+	const thead = document.createElement('thead');
+	const htr = document.createElement('tr');
+	const corner = document.createElement('th');
+	corner.className = 'jb-cv-rownum';
+	corner.textContent = '#';
+	htr.appendChild(corner);
+	for (const h of r.headers) {
+		const th = document.createElement('th');
+		th.textContent = h;
+		htr.appendChild(th);
+	}
+	thead.appendChild(htr);
+	table.appendChild(thead);
+
+	const tbody = document.createElement('tbody');
+	const shown = Math.min(r.rows.length, TABLE_ROW_CAP);
+	for (let i = 0; i < shown; i++) {
+		const tr = document.createElement('tr');
+		const num = document.createElement('td');
+		num.className = 'jb-cv-rownum';
+		num.textContent = String(i + 1);
+		tr.appendChild(num);
+		for (const cell of r.rows[i]) {
+			const td = document.createElement('td');
+			td.textContent = cell;
+			td.title = cell;
+			tr.appendChild(td);
+		}
+		tbody.appendChild(tr);
+	}
+	table.appendChild(tbody);
+	tableWrap.appendChild(table);
+
+	if (r.rows.length > shown) {
+		const note = document.createElement('div');
+		note.className = 'jb-cv-note';
+		note.textContent = `Showing first ${shown.toLocaleString()} of ${r.rows.length.toLocaleString()} rows — download for the full file.`;
+		tableWrap.appendChild(note);
+	}
+	setPanel('table');
+	meta.textContent = `${r.rowCount.toLocaleString()} row${r.rowCount !== 1 ? 's' : ''} × ${r.columnCount} col${r.columnCount !== 1 ? 's' : ''}`;
+}
+
+function renderCsv(): void {
+	if (!lastCsv) return;
+	if (csvView === 'table') renderCsvTable(lastCsv);
+	else renderCode(lastCsv.csv);
+}
+
+function showError(message: string, hint: string): void {
+	const m = errorBox.querySelector<HTMLElement>('[data-message]');
+	const h = errorBox.querySelector<HTMLElement>('[data-hint]');
+	if (m) m.textContent = message;
+	if (h) h.textContent = hint;
+	setPanel('error');
+	meta.textContent = '';
+	setStatus('Invalid JSON', 'err');
+}
+
+function formatBytes(n: number): string {
+	if (n < 1024) return `${n} B`;
+	if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+	return `${(n / 1024 / 1024).toFixed(2)} MB`;
+}
+
+// ─── Conversion ───────────────────────────────────────────────────────────────
+
+async function convert(): Promise<void> {
+	const parsed = parseInput();
+	if (!parsed.ok) {
+		lastText = '';
+		lastCsv = null;
+		if (parsed.message === '') {
+			setPanel('empty');
+			meta.textContent = '';
+			setStatus('Ready', 'mute');
+		} else {
+			showError(parsed.message, 'Fix the JSON above — conversion needs a valid document.');
+		}
+		return;
+	}
+
+	setStatus('Converting…', 'run');
+	try {
+		if (target === 'csv') {
+			const { jsonToCsv } = await import('../lib/convert-csv');
+			lastCsv = jsonToCsv(parsed.data, csvOptions());
+			lastText = lastCsv.csv;
+			renderCsv();
+		} else if (target === 'yaml') {
+			const { jsonToYaml } = await import('../lib/convert-yaml');
+			lastText = jsonToYaml(parsed.data, yamlOptions());
+			renderCode(lastText);
+		} else if (target === 'typescript') {
+			const [{ inferSchema }, { emitTypeScript }] = await Promise.all([
+				import('../lib/infer'),
+				import('../lib/emit-typescript'),
+			]);
+			lastText = emitTypeScript(inferSchema(parsed.data), tsOptions());
+			renderCode(lastText);
+		} else {
+			const [{ inferSchema }, { emitGo }] = await Promise.all([
+				import('../lib/infer'),
+				import('../lib/emit-go'),
+			]);
+			lastText = emitGo(inferSchema(parsed.data), goOptions());
+			renderCode(lastText);
+		}
+		setStatus('Converted', 'ok');
+		saveDoc(input.value);
+	} catch (e) {
+		const msg = e instanceof Error ? e.message : String(e);
+		showError(`Conversion failed: ${msg}`, 'This is unexpected for valid JSON — please report the input.');
+	}
+}
+
+function schedule(): void {
+	clearTimeout(debounceTimer);
+	debounceTimer = window.setTimeout(convert, DEBOUNCE);
+}
+
+// ─── Download ─────────────────────────────────────────────────────────────────
+
+function downloadMeta(): { name: string; mime: string } {
+	switch (target) {
+		case 'csv': {
+			const tsv = (document.getElementById('cv-delimiter') as HTMLSelectElement | null)?.value === 'tab';
+			return { name: tsv ? 'data.tsv' : 'data.csv', mime: 'text/csv;charset=utf-8' };
+		}
+		case 'yaml':
+			return { name: 'data.yaml', mime: 'text/yaml;charset=utf-8' };
+		case 'typescript':
+			return { name: 'types.ts', mime: 'text/plain;charset=utf-8' };
+		case 'go':
+			return { name: 'types.go', mime: 'text/plain;charset=utf-8' };
+	}
+}
+
+function download(): void {
+	if (!lastText) return;
+	const { name, mime } = downloadMeta();
+	// UTF-8 BOM (U+FEFF) so Excel detects the encoding on double-click open.
+	const bom = target === 'csv' && chk('cv-bom', false) ? String.fromCharCode(0xfeff) : '';
+	const blob = new Blob([bom + lastText], { type: mime });
+	const a = document.createElement('a');
+	a.href = URL.createObjectURL(blob);
+	a.download = name;
+	a.click();
+	URL.revokeObjectURL(a.href);
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+
+function init(): void {
+	const stored = loadDoc();
+	input.value = stored ?? sample;
+	convert();
+
+	document.querySelectorAll<HTMLElement>('[data-action]').forEach((btn) => {
+		btn.addEventListener('click', async () => {
+			switch (btn.dataset['action']) {
+				case 'sample':
+					input.value = sample;
+					convert();
+					break;
+				case 'clear':
+					input.value = '';
+					saveDoc('');
+					convert();
+					break;
+				case 'copy': {
+					if (!lastText) return;
+					const orig = btn.textContent;
+					btn.textContent = (await copyToClipboard(lastText)) ? 'Copied!' : 'Clipboard blocked';
+					setTimeout(() => { btn.textContent = orig; }, 1200);
+					break;
+				}
+				case 'download':
+					download();
+					break;
+				case 'theme':
+					themeCtl.toggle();
+					break;
+			}
+		});
+	});
+
+	// CSV view toggle
+	document.querySelectorAll<HTMLElement>('[data-view]').forEach((btn) => {
+		btn.addEventListener('click', () => {
+			csvView = btn.dataset['view'] as 'table' | 'csv';
+			document.querySelectorAll<HTMLElement>('[data-view]').forEach((b) => {
+				b.setAttribute('aria-pressed', b.dataset['view'] === csvView ? 'true' : 'false');
+			});
+			renderCsv();
+		});
+	});
+
+	// Re-convert whenever an option changes. Selects/checkboxes are discrete —
+	// `change` fires once and converts immediately. The root-name text input
+	// fires per keystroke, so it goes through the debounce to avoid re-inferring
+	// a large sample on every character.
+	root.querySelectorAll<HTMLSelectElement | HTMLInputElement>('.jb-cv-bar select, .jb-cv-bar input').forEach((el) => {
+		if (el instanceof HTMLInputElement && el.type === 'text') {
+			el.addEventListener('input', schedule);
+		} else {
+			el.addEventListener('change', convert);
+		}
+	});
+
+	// Input edits — debounced
+	input.addEventListener('input', () => { saveDoc(input.value); schedule(); });
+}
+
+init();
+</script>

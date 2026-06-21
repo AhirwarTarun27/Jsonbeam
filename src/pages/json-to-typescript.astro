@@ -1,0 +1,77 @@
+---
+import ToolPage from '../components/ToolPage.astro';
+import JsonConverter from '../components/JsonConverter.astro';
+import type { FaqItem } from '../lib/jsonld';
+import type { RelatedTool } from '../components/ToolPage.astro';
+
+const steps = [
+	{ title: 'Paste a JSON sample', body: 'An API response works best — ideally an array with a few items, so optional fields are detected. Parsed locally, never uploaded.' },
+	{ title: 'Choose your style', body: 'interface or type, optional as field?: T or T | undefined, readonly, T[] or Array<T>, and a root type name.' },
+	{ title: 'Read the types', body: 'Get clean, named interfaces with optional, nullable, and union types inferred — updated live as you edit.' },
+	{ title: 'Copy or download', body: 'Copy the TypeScript or download a .ts file and drop it straight into your project.' },
+];
+
+const whatIs = [
+	'A JSON-to-TypeScript generator turns a sample JSON document into static <strong class="font-medium text-ink">interfaces</strong> so your editor can autocomplete and the compiler can catch mistakes. The quality of the output depends entirely on how well the tool infers structure — and this one merges object shapes across <strong class="font-medium text-ink">every element of an array</strong>, so a field present in some items but not others is correctly marked optional (<code>field?</code>), and a field that is sometimes <code>null</code> becomes a nullable union.',
+	'Mixed types unify into a <strong class="font-medium text-ink">union</strong> (<code>string | number</code>) instead of collapsing to <code>any</code>. Identical nested shapes are de-duplicated to a single named interface and referenced everywhere they appear, so you get <code>User</code> once, not <code>User</code> and <code>User2</code>. Nested objects become their own named interfaces, arrays are typed by their merged element, and the root type is emitted first.',
+	'You control the output: <code>interface</code> or <code>type</code> declarations, the optional style, <code>readonly</code> properties, <code>T[]</code> versus <code>Array&lt;T&gt;</code>, and an opt-in mode that infers <strong class="font-medium text-ink">string-literal unions</strong> (enum-like types) from small closed value sets. It all runs in your browser — no upload, no account — and the working document carries over from the other JSON Beam tools.',
+];
+
+const faqs: FaqItem[] = [
+	{
+		question: 'How does it know which fields are optional?',
+		answer:
+			'It infers them from your sample. When you paste an array of objects, the generator merges the shape of every element: a key that appears in all of them is required, and a key that appears in only some becomes optional (field?: T). That is why an API response with several items gives much better types than a single object — the more representative your sample, the more accurate the optionality.',
+	},
+	{
+		question: 'Does it handle null, unions, and nested objects?',
+		answer:
+			'Yes. A field that is sometimes null becomes a nullable union (e.g. string | null). A field with genuinely mixed types unifies into a union like string | number rather than degrading to any. Nested objects are extracted into their own named interfaces, arrays are typed by their merged element type, and structurally identical shapes are de-duplicated to a single interface so the output stays DRY.',
+	},
+	{
+		question: 'Can it generate enums or string-literal unions?',
+		answer:
+			'Yes — enable "Literal unions". When a string field only ever holds a small, closed set of values across your sample (for example "draft", "published", "archived"), the generator emits a string-literal union type instead of a plain string. Fields with many distinct or free-form values stay typed as string so you do not get an unwieldy union.',
+	},
+	{
+		question: 'interface or type — which should I choose?',
+		answer:
+			'Both are supported. interface is the conventional choice for object shapes and supports declaration merging; type aliases are handy when you want to compose with unions and intersections elsewhere. You can also switch the optional style between field?: T and field: T | undefined, toggle readonly properties, and choose T[] or Array<T> array syntax to match your codebase conventions.',
+	},
+	{
+		question: 'Is the output the same quality as quicktype?',
+		answer:
+			'For the everyday case — turning an API response into accurate interfaces — yes. It performs the same core inference quicktype is known for: optional and nullable detection by merging samples, union types, named nested interfaces, and structural de-duplication. It is intentionally focused on TypeScript with a fast, private, in-browser engine and a clear set of formatting options.',
+	},
+	{
+		question: 'Is my JSON private?',
+		answer:
+			'Completely. The sample is parsed and analysed entirely in your browser — nothing is uploaded, logged, or sent anywhere. There is no account, no ads, and it works offline once loaded.',
+	},
+];
+
+const related: RelatedTool[] = [
+	{ name: 'JSON → Go', href: '/json-to-go', desc: 'Generate Go structs from JSON.' },
+	{ name: 'JSON → CSV', href: '/json-to-csv', desc: 'Flatten JSON into a spreadsheet.' },
+	{ name: 'JSON → YAML', href: '/json-to-yaml', desc: 'Convert JSON to clean YAML.' },
+	{ name: 'JSON Tree Viewer', href: '/json-tree-viewer', desc: 'Explore the shape before you generate.' },
+];
+---
+
+<ToolPage
+	slug="/json-to-typescript"
+	title="JSON to TypeScript — Interface Generator Online"
+	description="Generate TypeScript interfaces from JSON in your browser. Infers optional, nullable, union & literal types; interface or type; readonly. 100% private."
+	breadcrumbLabel="JSON to TypeScript"
+	h1="JSON to TypeScript interface generator."
+	intro="Paste a JSON sample and get clean, named TypeScript interfaces. Optional, nullable, union, and string-literal types are inferred by merging your sample — not guessed. Everything runs in your browser; nothing is uploaded."
+	howToTitle="Generate TypeScript in four steps."
+	steps={steps}
+	whatIsTitle="Inference that earns its types."
+	whatIs={whatIs}
+	faqTitle="JSON to TypeScript questions."
+	faqs={faqs}
+	related={related}
+>
+	<JsonConverter slot="tool" target="typescript" />
+</ToolPage>

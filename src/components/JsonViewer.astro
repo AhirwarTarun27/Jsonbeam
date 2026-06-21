@@ -206,45 +206,45 @@ const sample = `{
 	/* ── Light theme — flip both panes to the canvas surface + light palette
 	   (mirrors the formatter's light editor). Toggled by .jb-theme-light on the
 	   #jb-viewer root. ──────────────────────────────────────────────────────── */
-	:global(#jb-viewer.jb-theme-light #jb-input),
-	:global(#jb-viewer.jb-theme-light #jb-tree) {
+	:global(html.jb-theme-light #jb-viewer #jb-input),
+	:global(html.jb-theme-light #jb-viewer #jb-tree) {
 		background-color: var(--color-canvas);
 		color: var(--color-ink);
 	}
-	:global(#jb-viewer.jb-theme-light #jb-input::selection),
-	:global(#jb-viewer.jb-theme-light #jb-tree ::selection) {
+	:global(html.jb-theme-light #jb-viewer #jb-input::selection),
+	:global(html.jb-theme-light #jb-viewer #jb-tree ::selection) {
 		color: var(--color-ink);
 		background-color: var(--color-editor-sel-light);
 	}
-	:global(#jb-viewer.jb-theme-light #jb-tree .jb-children) {
+	:global(html.jb-theme-light #jb-viewer #jb-tree .jb-children) {
 		border-left-color: var(--color-hairline);
 	}
-	:global(#jb-viewer.jb-theme-light #jb-tree .jb-toggle) {
+	:global(html.jb-theme-light #jb-viewer #jb-tree .jb-toggle) {
 		color: var(--color-mute);
 	}
-	:global(#jb-viewer.jb-theme-light #jb-tree .jb-key) {
+	:global(html.jb-theme-light #jb-viewer #jb-tree .jb-key) {
 		color: var(--color-ink);
 	}
-	:global(#jb-viewer.jb-theme-light #jb-tree .jb-punct),
-	:global(#jb-viewer.jb-theme-light #jb-tree .jb-summary) {
+	:global(html.jb-theme-light #jb-viewer #jb-tree .jb-punct),
+	:global(html.jb-theme-light #jb-viewer #jb-tree .jb-summary) {
 		color: var(--color-mute);
 	}
-	:global(#jb-viewer.jb-theme-light #jb-tree .jb-string) {
+	:global(html.jb-theme-light #jb-viewer #jb-tree .jb-string) {
 		color: var(--color-link-deep);
 	}
-	:global(#jb-viewer.jb-theme-light #jb-tree .jb-number) {
+	:global(html.jb-theme-light #jb-viewer #jb-tree .jb-number) {
 		color: var(--color-violet);
 	}
-	:global(#jb-viewer.jb-theme-light #jb-tree .jb-bool),
-	:global(#jb-viewer.jb-theme-light #jb-tree .jb-null) {
+	:global(html.jb-theme-light #jb-viewer #jb-tree .jb-bool),
+	:global(html.jb-theme-light #jb-viewer #jb-tree .jb-null) {
 		color: var(--color-cyan-deep);
 	}
-	:global(#jb-viewer.jb-theme-light #jb-tree .jb-more) {
+	:global(html.jb-theme-light #jb-viewer #jb-tree .jb-more) {
 		border-color: var(--color-hairline);
 		background: var(--color-canvas-soft);
 		color: var(--color-body);
 	}
-	:global(#jb-viewer.jb-theme-light #jb-tree .jb-more:hover) {
+	:global(html.jb-theme-light #jb-viewer #jb-tree .jb-more:hover) {
 		background: var(--color-canvas-soft-2);
 	}
 
@@ -263,6 +263,8 @@ const sample = `{
 <script>
 	import { checkJson } from '../lib/json';
 	import { loadDoc, saveDoc } from '../lib/doc-store';
+	import { initThemeToggle } from '../lib/island-theme';
+	import { copyToClipboard } from '../lib/island-clipboard';
 
 	const root = document.getElementById('jb-viewer');
 	const inputEl = document.getElementById('jb-input') as HTMLTextAreaElement | null;
@@ -616,68 +618,23 @@ const sample = `{
 					/* keep raw */
 				}
 			}
-			try {
-				await navigator.clipboard.writeText(out);
-				flashStatus('ok', 'Copied JSON');
-			} catch {
-				flashStatus('error', 'Clipboard unavailable');
-			}
+			if (await copyToClipboard(out)) flashStatus('ok', 'Copied JSON');
+			else flashStatus('error', 'Clipboard unavailable');
 		}
 
 		async function copyPath(path: string): Promise<void> {
 			if (!path) return;
-			try {
-				await navigator.clipboard.writeText(path);
-				flashStatus('ok', `Copied path: ${path}`);
-			} catch {
-				flashStatus('error', 'Clipboard unavailable');
-			}
+			if (await copyToClipboard(path)) flashStatus('ok', `Copied path: ${path}`);
+			else flashStatus('error', 'Clipboard unavailable');
 		}
 
-		// ── Theme toggle — shares the `jb-theme` key with the formatter so a user's
-		// dark/light choice is consistent across tools. Icon shows the theme you'll
-		// switch *to*. ───────────────────────────────────────────────────────────
-		type Mode = 'dark' | 'light';
-		const THEME_KEY = 'jb-theme';
-		const ICON_SUN =
-			'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>';
-		const ICON_MOON =
-			'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"></path></svg>';
-
-		function readMode(): Mode {
-			try {
-				const stored = localStorage.getItem(THEME_KEY);
-				if (stored === 'light' || stored === 'dark') return stored;
-			} catch {
-				/* storage blocked — fall through to default */
-			}
-			return 'dark';
-		}
-
-		let mode: Mode = readMode();
-		const themeBtn = root.querySelector<HTMLButtonElement>('[data-action="theme"]');
-		const themeIcon = themeBtn?.querySelector<HTMLElement>('[data-theme-icon]') ?? null;
-
-		function paintTheme(): void {
-			if (themeIcon) themeIcon.innerHTML = mode === 'dark' ? ICON_SUN : ICON_MOON;
-			themeBtn?.setAttribute('aria-label', mode === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
-			root?.classList.toggle('jb-theme-light', mode === 'light');
-		}
-
-		function applyMode(next: Mode): void {
-			mode = next;
-			try {
-				localStorage.setItem(THEME_KEY, mode);
-			} catch {
-				/* storage blocked — keep the choice in memory for this session */
-			}
-			paintTheme();
-		}
+		// ── Theme toggle — shared across every tool island (lib/island-theme). ───
+		const themeCtl = initThemeToggle({ root });
 
 		const actions: Record<string, () => void | Promise<void>> = {
 			expand: expandAll,
 			collapse: collapseAll,
-			theme: () => applyMode(mode === 'dark' ? 'light' : 'dark'),
+			theme: () => themeCtl.toggle(),
 			sample: () => {
 				input.value = SAMPLE;
 				applyInput();
@@ -719,7 +676,6 @@ const sample = `{
 			inputTimer = window.setTimeout(applyInput, 300);
 		});
 
-		paintTheme();
 		update();
 	}
 </script>

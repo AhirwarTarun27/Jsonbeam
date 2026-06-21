@@ -62,10 +62,10 @@ export const FOOTER_NAV: NavColumn[] = [
 		title: 'Query & convert',
 		links: [
 			{ label: 'JSON Query (jq / JSONPath)', href: '/json-query' },
-			{ label: 'JSON → CSV', href: '/json-to-csv', soon: true },
-			{ label: 'JSON → YAML', href: '/json-to-yaml', soon: true },
-			{ label: 'JSON → TypeScript', href: '/json-to-typescript', soon: true },
-			{ label: 'JSON → Go', href: '/json-to-go', soon: true },
+			{ label: 'JSON → CSV', href: '/json-to-csv' },
+			{ label: 'JSON → YAML', href: '/json-to-yaml' },
+			{ label: 'JSON → TypeScript', href: '/json-to-typescript' },
+			{ label: 'JSON → Go', href: '/json-to-go' },
 		],
 	},
 	{
@@ -126,10 +126,10 @@ export const TOOL_NAV: ToolTabGroup[] = [
 	{
 		title: 'Convert',
 		items: [
-			{ label: 'CSV', href: '/json-to-csv', soon: true },
-			{ label: 'YAML', href: '/json-to-yaml', soon: true },
-			{ label: 'TypeScript', href: '/json-to-typescript', soon: true },
-			{ label: 'Go', href: '/json-to-go', soon: true },
+			{ label: 'CSV', href: '/json-to-csv' },
+			{ label: 'YAML', href: '/json-to-yaml' },
+			{ label: 'TypeScript', href: '/json-to-typescript' },
+			{ label: 'Go', href: '/json-to-go' },
 		],
 	},
 ];

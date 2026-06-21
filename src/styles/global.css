@@ -268,9 +268,18 @@
     color: var(--color-ink);
     box-shadow: var(--shadow-e1);
   }
-  .jb-tab-active,
-  .jb-tab-active:hover {
+  .jb-tab-active {
     background: var(--color-ink);
+    color: var(--color-on-primary);
+    box-shadow: none;
+  }
+  /* Solid ink at rest; on hover it only lightens — same #2a2a2a as
+     .jb-btn-primary:hover and the header "Format JSON" CTA — and keeps its white
+     label. This MUST stay more specific than (or win source-order over) the
+     in-well hover fill below, or the active tab loses its ink and renders white
+     text on pale gray (the washed-out bug). */
+  .jb-tab-active:hover {
+    background: #2a2a2a;
     color: var(--color-on-primary);
     box-shadow: none;
   }
@@ -313,10 +322,15 @@
     white-space: nowrap;
     user-select: none;
   }
-  /* Inside the white well, the base canvas hover is invisible — go one step
-     darker so the chip still lifts. Active (ink) is unchanged. */
-  .jb-tab-rail .jb-tab:hover {
-    background: var(--color-canvas-soft-2);
+  /* Hover fill for the *idle* tabs only. Scoped with :not() so it can never
+     override the active tab (ink) or an inert "soon" tab — without the guard it
+     out-specifies both and washes their labels out. Inside the white well a
+     canvas-soft-2 fill is only ~5 levels off white and reads as a ghost, so use
+     the stronger hairline gray for a clear highlight; drop the base .jb-tab
+     inset ring (shadow-e1) so it reads as a fill, not a boxed outline. */
+  .jb-tab-rail .jb-tab:not(.jb-tab-active):not(.jb-tab-soon):hover {
+    background: var(--color-hairline);
+    box-shadow: none;
   }
 
   /* ── Command palette (⌘K) trigger — the quiet affordance in the switcher rail.

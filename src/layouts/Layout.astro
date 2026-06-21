@@ -17,9 +17,21 @@ interface Props {
 	image?: string;
 	jsonLd?: Record<string, unknown>[];
 	noindex?: boolean;
+	/**
+	 * Tool pages opt in to the theme boot script so a persisted light theme is
+	 * applied before first paint (no dark→light flash). Marketing/content pages
+	 * leave it off, keeping their 0-KB-app-JS contract (only ld+json inline).
+	 */
+	themed?: boolean;
 }
 
-const { title, description, image, jsonLd, noindex } = Astro.props;
+const { title, description, image, jsonLd, noindex, themed } = Astro.props;
+
+// Apply the persisted editor theme on <html> before the body paints. The class
+// only drives island styles (lib/island-theme); page chrome has no dark rules,
+// so this is a no-op for layout. Default stays dark — the on-brand surface.
+const THEME_BOOT =
+	"try{if(localStorage.getItem('jb-theme')==='light')document.documentElement.classList.add('jb-theme-light')}catch(e){}";
 ---
 
 <!doctype html>
@@ -32,6 +44,7 @@ const { title, description, image, jsonLd, noindex } = Astro.props;
 			jsonLd={jsonLd}
 			noindex={noindex}
 		/>
+		{themed && <script is:inline set:html={THEME_BOOT} />}
 	</head>
 	<body class="min-h-dvh bg-canvas text-ink antialiased">
 		<a

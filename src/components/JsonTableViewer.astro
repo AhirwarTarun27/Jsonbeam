@@ -274,48 +274,48 @@ const sample = `[
 	}
 
 	/* ── Light theme — toggled by .jb-theme-light on #jb-tv ──────────────── */
-	:global(#jb-tv.jb-theme-light #jb-tv-input) {
+	:global(html.jb-theme-light #jb-tv #jb-tv-input) {
 		background-color: var(--color-canvas);
 		color: var(--color-ink);
 	}
-	:global(#jb-tv.jb-theme-light #jb-tv-wrap) {
+	:global(html.jb-theme-light #jb-tv #jb-tv-wrap) {
 		background-color: var(--color-canvas);
 	}
-	:global(#jb-tv.jb-theme-light #jb-tv-table thead tr) {
+	:global(html.jb-theme-light #jb-tv #jb-tv-table thead tr) {
 		background-color: var(--color-canvas-soft);
 	}
-	:global(#jb-tv.jb-theme-light #jb-tv-table th) {
+	:global(html.jb-theme-light #jb-tv #jb-tv-table th) {
 		color: var(--color-mute);
 		border-right-color: var(--color-hairline);
 	}
-	:global(#jb-tv.jb-theme-light #jb-tv-table th:hover:not(.jb-tv-th-rownum)) {
+	:global(html.jb-theme-light #jb-tv #jb-tv-table th:hover:not(.jb-tv-th-rownum)) {
 		color: var(--color-ink);
 	}
-	:global(#jb-tv.jb-theme-light #jb-tv-table th[aria-sort='ascending']),
-	:global(#jb-tv.jb-theme-light #jb-tv-table th[aria-sort='descending']) {
+	:global(html.jb-theme-light #jb-tv #jb-tv-table th[aria-sort='ascending']),
+	:global(html.jb-theme-light #jb-tv #jb-tv-table th[aria-sort='descending']) {
 		color: var(--color-link);
 	}
-	:global(#jb-tv.jb-theme-light #jb-tv-table td) {
+	:global(html.jb-theme-light #jb-tv #jb-tv-table td) {
 		border-bottom-color: var(--color-hairline);
 		border-right-color: rgba(0, 0, 0, 0.03);
 	}
-	:global(#jb-tv.jb-theme-light #jb-tv-table tbody tr:hover td) {
+	:global(html.jb-theme-light #jb-tv #jb-tv-table tbody tr:hover td) {
 		background: var(--color-canvas-soft);
 	}
-	:global(#jb-tv.jb-theme-light #jb-tv-table .jb-tc-string)  { color: var(--color-link-deep); }
-	:global(#jb-tv.jb-theme-light #jb-tv-table .jb-tc-number)  { color: var(--color-violet); }
-	:global(#jb-tv.jb-theme-light #jb-tv-table .jb-tc-bool)    { color: var(--color-cyan-deep); }
-	:global(#jb-tv.jb-theme-light #jb-tv-table .jb-tc-null)    { color: var(--color-mute); }
-	:global(#jb-tv.jb-theme-light #jb-tv-table .jb-tc-object)  { color: var(--color-hairline-strong); }
-	:global(#jb-tv.jb-theme-light #jb-tv-table .jb-tv-filter-row td) {
+	:global(html.jb-theme-light #jb-tv #jb-tv-table .jb-tc-string)  { color: var(--color-link-deep); }
+	:global(html.jb-theme-light #jb-tv #jb-tv-table .jb-tc-number)  { color: var(--color-violet); }
+	:global(html.jb-theme-light #jb-tv #jb-tv-table .jb-tc-bool)    { color: var(--color-cyan-deep); }
+	:global(html.jb-theme-light #jb-tv #jb-tv-table .jb-tc-null)    { color: var(--color-mute); }
+	:global(html.jb-theme-light #jb-tv #jb-tv-table .jb-tc-object)  { color: var(--color-hairline-strong); }
+	:global(html.jb-theme-light #jb-tv #jb-tv-table .jb-tv-filter-row td) {
 		background-color: var(--color-canvas-soft-2);
 	}
-	:global(#jb-tv.jb-theme-light .jb-tv-filter-input) {
+	:global(html.jb-theme-light #jb-tv .jb-tv-filter-input) {
 		background: var(--color-canvas);
 		border-color: var(--color-hairline);
 		color: var(--color-ink);
 	}
-	:global(#jb-tv.jb-theme-light #jb-tv-table .jb-tc-match) {
+	:global(html.jb-theme-light #jb-tv #jb-tv-table .jb-tc-match) {
 		background: var(--color-link-bg-soft);
 	}
 
@@ -335,11 +335,11 @@ const sample = `[
 		color: var(--color-editor-fg);
 	}
 	/* Light mode: soft-blue selection visible on the light canvas */
-	:global(#jb-tv.jb-theme-light #jb-tv-input::selection) {
+	:global(html.jb-theme-light #jb-tv #jb-tv-input::selection) {
 		background-color: var(--color-editor-sel-light);
 		color: var(--color-ink);
 	}
-	:global(#jb-tv.jb-theme-light #jb-tv-table *::selection) {
+	:global(html.jb-theme-light #jb-tv #jb-tv-table *::selection) {
 		background-color: var(--color-editor-sel-light);
 		color: var(--color-ink);
 	}
@@ -348,6 +348,8 @@ const sample = `[
 <script>
 	import { checkJson } from '../lib/json';
 	import { loadDoc, saveDoc } from '../lib/doc-store';
+	import { initThemeToggle } from '../lib/island-theme';
+	import { copyToClipboard } from '../lib/island-clipboard';
 
 	// ── Types ───────────────────────────────────────────────────────────────
 	type JsonValue = string | number | boolean | null | JsonValue[] | { [k: string]: JsonValue };
@@ -363,6 +365,9 @@ const sample = `[
 	// ── State ────────────────────────────────────────────────────────────────
 	let tableData: TableData | null = null;
 	let filteredRows: (JsonValue | undefined)[][] = [];
+	// Source index (into tableData.rows) for each entry in filteredRows, so a
+	// cell's JSON path survives sorting/filtering. Always kept aligned with it.
+	let filteredSrc: number[] = [];
 	let sortCol: string | null = null;
 	let sortDir: 'asc' | 'desc' | 'none' = 'none';
 	const colFilters: Record<string, string> = {};
@@ -505,41 +510,44 @@ const sample = `[
 			return sa < sb ? -1 : sa > sb ? 1 : 0;
 		}
 
-		function computeFiltered(): (JsonValue | undefined)[][] {
-			if (!tableData) return [];
-			let rows = tableData.rows;
+		// Filter + sort by SOURCE INDEX so each visible row remembers where it came
+		// from in the original array — the cell→path lookup must survive reordering.
+		function computeFiltered(): { rows: (JsonValue | undefined)[][]; src: number[] } {
+			if (!tableData) return { rows: [], src: [] };
+			const all = tableData.rows;
+			let idx = all.map((_, i) => i);
 
 			if (globalSearch.trim()) {
 				const q = globalSearch.toLowerCase();
-				rows = rows.filter(row =>
-					row.some(v => v !== undefined && cellText(v).toLowerCase().includes(q))
+				idx = idx.filter(i =>
+					all[i]!.some(v => v !== undefined && cellText(v).toLowerCase().includes(q))
 				);
 			}
 
 			const activeFilters = Object.entries(colFilters).filter(([, v]) => v.trim());
-			if (activeFilters.length > 0 && tableData) {
+			if (activeFilters.length > 0) {
 				const { columns } = tableData;
-				rows = rows.filter(row =>
+				idx = idx.filter(i =>
 					activeFilters.every(([col, q]) => {
 						const ci = columns.indexOf(col);
 						if (ci < 0) return true;
-						const v = row[ci];
+						const v = all[i]![ci];
 						return v !== undefined && cellText(v).toLowerCase().includes(q.toLowerCase());
 					})
 				);
 			}
 
-			if (sortCol && sortDir !== 'none' && tableData) {
+			if (sortCol && sortDir !== 'none') {
 				const ci = tableData.columns.indexOf(sortCol);
 				if (ci >= 0) {
-					rows = [...rows].sort((a, b) => {
-						const cmp = compareVals(a[ci], b[ci]);
+					idx = [...idx].sort((a, b) => {
+						const cmp = compareVals(all[a]![ci], all[b]![ci]);
 						return sortDir === 'asc' ? cmp : -cmp;
 					});
 				}
 			}
 
-			return rows;
+			return { rows: idx.map(i => all[i]!), src: idx };
 		}
 
 		// ── Rendering ───────────────────────────────────────────────────────
@@ -650,7 +658,9 @@ const sample = `[
 					const v = row[j];
 					const td = document.createElement('td');
 					td.className = cellClass(v);
-					td.setAttribute('data-row', String(i));
+					// data-row carries the SOURCE index (into tableData.rows), not the
+					// visible position, so the cell→path lookup is correct after sort/filter.
+					td.setAttribute('data-row', String(filteredSrc[i] ?? i));
 					td.setAttribute('data-col', cols[j]);
 					const display = v === undefined ? '—' : cellText(v);
 					td.textContent = display;
@@ -681,7 +691,9 @@ const sample = `[
 		}
 
 		function renderTable(): void {
-			filteredRows = computeFiltered();
+			const f = computeFiltered();
+			filteredRows = f.rows;
+			filteredSrc = f.src;
 			renderHeader();
 			tbody.replaceChildren();
 			const initial = Math.min(CHUNK, filteredRows.length);
@@ -848,23 +860,32 @@ const sample = `[
 			flashStatus('ok', `Exported ${filteredRows.length.toLocaleString()} rows`);
 		}
 
+		// Build a JSONPath key segment: dot notation for identifier-safe keys,
+		// bracket-quoted (with escaping) otherwise — so keys containing dots, spaces,
+		// or quotes stay unambiguous (e.g. "a.b" → ["a.b"], not .a.b).
+		function jsonPathKey(key: string): string {
+			return /^[A-Za-z_$][\w$]*$/.test(key) ? `.${key}` : `[${JSON.stringify(key)}]`;
+		}
+
 		// ── Cell click: show path + copy value ─────────────────────────────
 		tbody.addEventListener('click', async (e: Event) => {
 			const td = (e.target as HTMLElement).closest<HTMLElement>('td');
 			if (!td || !tableData) return;
 
-			const ri = parseInt(td.getAttribute('data-row') ?? '-1', 10);
+			// data-row is the SOURCE index, so the path is correct after sort/filter.
+			const srcIndex = parseInt(td.getAttribute('data-row') ?? '-1', 10);
 			const col = td.getAttribute('data-col');
-			if (ri < 0 || !col) return;
+			if (srcIndex < 0 || !col) return;
 
 			const ci = tableData.columns.indexOf(col);
-			const row = filteredRows[ri];
+			const row = tableData.rows[srcIndex];
 			if (!row) return;
 
 			const v = row[ci];
-			const pathStr = tableData.mode === 'kv'
-				? `$.${String(row[0])}`
-				: `$[${ri}].${col}`;
+			const pathStr =
+				tableData.mode === 'kv'         ? `$${jsonPathKey(String(row[0]))}` :
+				tableData.mode === 'primitives' ? `$[${srcIndex}]` :
+				`$[${srcIndex}]${jsonPathKey(col)}`;
 			const valStr = v === undefined ? '(missing)' : JSON.stringify(v);
 			const preview = valStr.length > 45 ? valStr.slice(0, 42) + '…' : valStr;
 			spath.textContent = `${pathStr} = ${preview}`;
@@ -873,13 +894,9 @@ const sample = `[
 			tbody.querySelectorAll('.jb-tv-selected').forEach(el => el.classList.remove('jb-tv-selected'));
 			td.classList.add('jb-tv-selected');
 
-			try {
-				const copyVal = v === undefined ? '' : typeof v === 'string' ? v : JSON.stringify(v);
-				await navigator.clipboard.writeText(copyVal);
-				flashStatus('ok', `Copied: ${col}`);
-			} catch {
-				flashStatus('error', 'Clipboard unavailable');
-			}
+			const copyVal = v === undefined ? '' : typeof v === 'string' ? v : JSON.stringify(v);
+			if (await copyToClipboard(copyVal)) flashStatus('ok', `Copied: ${col}`);
+			else flashStatus('error', 'Clipboard unavailable');
 		});
 
 		// ── Load more ───────────────────────────────────────────────────────
@@ -897,43 +914,12 @@ const sample = `[
 			if (checkJson(out).ok && out.trim()) {
 				try { out = JSON.stringify(JSON.parse(out), null, 2); } catch { /* keep raw */ }
 			}
-			try {
-				await navigator.clipboard.writeText(out);
-				flashStatus('ok', 'Copied JSON');
-			} catch {
-				flashStatus('error', 'Clipboard unavailable');
-			}
+			if (await copyToClipboard(out)) flashStatus('ok', 'Copied JSON');
+			else flashStatus('error', 'Clipboard unavailable');
 		}
 
-		// ── Theme ───────────────────────────────────────────────────────────
-		type ThemeMode = 'dark' | 'light';
-		const THEME_KEY = 'jb-theme';
-		const ICON_SUN =
-			'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>';
-		const ICON_MOON =
-			'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"></path></svg>';
-
-		let themeMode: ThemeMode = (() => {
-			try {
-				const s = localStorage.getItem(THEME_KEY);
-				return s === 'light' ? 'light' : 'dark';
-			} catch { return 'dark'; }
-		})();
-
-		const themeBtn = root.querySelector<HTMLButtonElement>('[data-action="theme"]');
-		const themeIcon = themeBtn?.querySelector<HTMLElement>('[data-theme-icon]') ?? null;
-
-		function paintTheme(): void {
-			if (themeIcon) themeIcon.innerHTML = themeMode === 'dark' ? ICON_SUN : ICON_MOON;
-			themeBtn?.setAttribute('aria-label', themeMode === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
-			root?.classList.toggle('jb-theme-light', themeMode === 'light');
-		}
-
-		function applyTheme(next: ThemeMode): void {
-			themeMode = next;
-			try { localStorage.setItem(THEME_KEY, next); } catch { /* blocked */ }
-			paintTheme();
-		}
+		// ── Theme toggle — shared across every tool island (lib/island-theme). ───
+		const themeCtl = initThemeToggle({ root });
 
 		// ── Actions ─────────────────────────────────────────────────────────
 		const filtersBtn = root.querySelector<HTMLButtonElement>('[data-action="filters"]');
@@ -945,7 +931,7 @@ const sample = `[
 				renderTable();
 			},
 			csv: downloadCsv,
-			theme: () => applyTheme(themeMode === 'dark' ? 'light' : 'dark'),
+			theme: () => themeCtl.toggle(),
 			sample: () => { input.value = SAMPLE; applyInput(); },
 			copy: copyJson,
 			clear: () => { input.value = ''; applyInput(); input.focus(); },
@@ -975,8 +961,6 @@ const sample = `[
 		});
 
 		// ── Init ─────────────────────────────────────────────────────────────
-		paintTheme();
-
 		const carried = loadDoc();
 		if (carried !== null) input.value = carried;
 

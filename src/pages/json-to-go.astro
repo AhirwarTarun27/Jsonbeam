@@ -1,0 +1,77 @@
+---
+import ToolPage from '../components/ToolPage.astro';
+import JsonConverter from '../components/JsonConverter.astro';
+import type { FaqItem } from '../lib/jsonld';
+import type { RelatedTool } from '../components/ToolPage.astro';
+
+const steps = [
+	{ title: 'Paste a JSON sample', body: 'An API response is ideal — an array with a few items helps detect optional fields. Parsed in your browser, never uploaded.' },
+	{ title: 'Set the options', body: 'JSON tags, omitempty, pointers for nullable fields, int vs int64, time.Time detection, named or inline structs, and a root name.' },
+	{ title: 'Read the structs', body: 'Get idiomatic, gofmt-aligned structs with correct exported field names and json tags — updated live as you edit.' },
+	{ title: 'Copy or download', body: 'Copy the Go or download a .go file ready to paste into your package.' },
+];
+
+const whatIs = [
+	'A JSON-to-Go generator converts a sample document into Go <strong class="font-medium text-ink">struct</strong> definitions with the <code>json:"…"</code> tags needed to marshal and unmarshal it. Getting the field names right is half the job: this tool produces <strong class="font-medium text-ink">exported, initialism-correct</strong> names the way Go style guides expect — <code>userId</code> becomes <code>UserID</code>, <code>api_url</code> becomes <code>APIURL</code> — and aligns the columns like <code>gofmt</code>.',
+	'Types are inferred precisely. Whole numbers map to <code>int</code> (or <code>int64</code> if you prefer), fractional numbers to <code>float64</code>, and ISO-8601 strings can be detected as <code>time.Time</code> with the matching <code>import</code> added automatically. Object shapes are merged across <strong class="font-medium text-ink">every array element</strong>, so a field that is sometimes absent or <code>null</code> becomes a <strong class="font-medium text-ink">pointer</strong> — letting you tell "missing" apart from "zero value". Nested objects become named, de-duplicated structs, or fully inline structs if you prefer.',
+	'You control the rest: add <code>,omitempty</code> to the tags, switch pointers on or off, choose <code>int</code> or <code>int64</code>, name the root struct, and toggle inline versus named nested types. It runs entirely in your browser — no upload, no account — and the document carries over from the other JSON Beam tools so you never paste twice.',
+];
+
+const faqs: FaqItem[] = [
+	{
+		question: 'Why are some fields pointers (*string, *int)?',
+		answer:
+			'Because they are nullable or optional in your sample. In Go, a non-pointer field cannot distinguish "absent / null" from its zero value (0, "", false). When the generator sees a field that is sometimes null, or present in only some array elements, it makes the field a pointer so your code can check for nil. You can turn pointers off if you would rather use zero values, usually together with omitempty.',
+	},
+	{
+		question: 'How does it choose int vs int64 vs float64?',
+		answer:
+			'Whole numbers become int by default, and you can switch the integer type to int64 with one option — useful for IDs and timestamps that may exceed 32 bits. Any number with a fractional part becomes float64. Because JSON has a single number type, this is inferred from the values in your sample, so include representative data for the best result.',
+	},
+	{
+		question: 'Can it generate time.Time for date strings?',
+		answer:
+			'Yes. With "time.Time" enabled, strings that look like ISO-8601 dates or timestamps (for example 2023-01-15T09:30:00Z) are typed as time.Time, and the import "time" line is added automatically. Disable it if you would rather keep timestamps as plain strings and parse them yourself.',
+	},
+	{
+		question: 'Are the field names and tags idiomatic Go?',
+		answer:
+			'Yes. Field names are exported and follow Go conventions, including common initialisms — ID, URL, API, HTTP, JSON, UUID and more are fully upper-cased (userId → UserID). Each field gets a json tag with the original key so marshalling round-trips correctly, optionally with ,omitempty. The whole struct is column-aligned the way gofmt formats it.',
+	},
+	{
+		question: 'Named structs or inline structs?',
+		answer:
+			'Both. By default nested objects become separate named struct types, which are reusable and easier to read; structurally identical shapes are de-duplicated into one type. Turn on "Inline structs" to nest the definitions directly inside their parent instead — handy for small, one-off shapes you do not want to name.',
+	},
+	{
+		question: 'Is my JSON private?',
+		answer:
+			'Completely. Everything is parsed and generated in your browser — nothing is uploaded, logged, or sent anywhere. No account, no ads, and it works offline once the page has loaded.',
+	},
+];
+
+const related: RelatedTool[] = [
+	{ name: 'JSON → TypeScript', href: '/json-to-typescript', desc: 'Generate TypeScript interfaces from JSON.' },
+	{ name: 'JSON → CSV', href: '/json-to-csv', desc: 'Flatten JSON into a spreadsheet.' },
+	{ name: 'JSON → YAML', href: '/json-to-yaml', desc: 'Convert JSON to clean YAML.' },
+	{ name: 'JSON Query', href: '/json-query', desc: 'Reshape JSON with jq before generating.' },
+];
+---
+
+<ToolPage
+	slug="/json-to-go"
+	title="JSON to Go Struct Converter — Free & Online"
+	description="Generate Go structs from JSON in your browser. Idiomatic names, json tags, omitempty, pointers, int/int64, time.Time detection. 100% private — no upload."
+	breadcrumbLabel="JSON to Go"
+	h1="JSON to Go struct converter."
+	intro="Paste a JSON sample and get idiomatic Go structs with correct json tags. Initialism-aware names, pointers for nullable fields, int vs float, and time.Time detection. Everything runs in your browser — nothing is uploaded."
+	howToTitle="Generate Go structs in four steps."
+	steps={steps}
+	whatIsTitle="Structs a Go reviewer would accept."
+	whatIs={whatIs}
+	faqTitle="JSON to Go questions."
+	faqs={faqs}
+	related={related}
+>
+	<JsonConverter slot="tool" target="go" />
+</ToolPage>

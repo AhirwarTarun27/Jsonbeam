@@ -198,11 +198,11 @@ const sample = `{
 	/* Light theme — flip the input pane to the canvas surface so it matches the
 	   Viewer / Tree-Viewer (shares the `jb-theme` key). The graph canvas itself is
 	   repainted from the JS palette, so only the textarea needs a CSS override. */
-	:global(#jb-graph-viewer.jb-theme-light #jb-ginput) {
+	:global(html.jb-theme-light #jb-graph-viewer #jb-ginput) {
 		background-color: var(--color-canvas);
 		color: var(--color-ink);
 	}
-	:global(#jb-graph-viewer.jb-theme-light #jb-ginput::selection) {
+	:global(html.jb-theme-light #jb-graph-viewer #jb-ginput::selection) {
 		color: var(--color-ink);
 		background-color: var(--color-editor-sel-light);
 	}
@@ -278,6 +278,8 @@ const sample = `{
 <script>
 	import { checkJson } from '../lib/json';
 	import { loadDoc, saveDoc } from '../lib/doc-store';
+	import { initThemeToggle } from '../lib/island-theme';
+	import { copyToClipboard } from '../lib/island-clipboard';
 
 	const root = document.getElementById('jb-graph-viewer');
 	const inputEl = document.getElementById('jb-ginput') as HTMLTextAreaElement | null;
@@ -408,6 +410,10 @@ const sample = `{
 
 		const nodeEls = new Map<number, SVGGElement>();
 		const edgeEls = new Map<number, SVGPathElement>(); // keyed by childId
+		// Incremental-draw cache: stable node path to its rendered group element and
+		// a content signature. Lets `draw` reuse unchanged cards across
+		// expand/collapse/search (repositioning them) instead of recreating each.
+		const nodeElsByPath = new Map<string, { el: SVGGElement; sig: string }>();
 
 		// ── Element + measure helpers ──────────────────────────────────────────────
 		function el<K extends keyof SVGElementTagNameMap>(tag: K): SVGElementTagNameMap[K] {
@@ -735,6 +741,9 @@ const sample = `{
 			};
 		}
 		let pal: Pal = makePal('dark');
+		// Bumped whenever the palette changes (theme toggle) so cached cards, whose
+		// signature embeds it, are rebuilt with the new colors rather than reused.
+		let palVersion = 0;
 		function colorFor(t?: ValueType): string {
 			switch (t) {
 				case 'string':
@@ -878,15 +887,24 @@ const sample = `{
 			return `M${x1},${y1} C${x1},${y1 + dy} ${x2},${y2 - dy} ${x2},${y2}`;
 		}
 
+		// Everything `renderNode` bakes into a card except its position and its
+		// selection/search stroke (both re-applied after every draw). When this is
+		// unchanged the cached card can be reused as-is and merely repositioned.
+		function nodeSig(node: GNode): string {
+			let s = `${node.kind}|${node.w}|${node.h}|${node.expandable}|${expanded.has(node.path) ? 1 : 0}|${dir}|${palVersion}`;
+			for (const r of node.rows) {
+				s += `~${r.kind}|${r.keyText}|${r.path}|${r.valueText ?? ''}|${r.valueType ?? ''}|${r.count ?? ''}|${r.moreCount ?? ''}`;
+			}
+			return s;
+		}
+
 		function draw(g: Graph): void {
 			bgRect.setAttribute('fill', pal.bg);
 			if (dotCircle) dotCircle.setAttribute('fill', pal.dot);
 
+			// Edges are single-element paths — cheap to rebuild wholesale.
 			edgesG.replaceChildren();
-			nodesG.replaceChildren();
-			nodeEls.clear();
 			edgeEls.clear();
-
 			const edgeFrag = document.createDocumentFragment();
 			for (const e of g.edges) {
 				const path = el('path');
@@ -899,13 +917,43 @@ const sample = `{
 			}
 			edgesG.appendChild(edgeFrag);
 
-			const nodeFrag = document.createDocumentFragment();
+			// Nodes — reconcile by stable path. Cards whose content signature is
+			// unchanged are reused (repositioned only); changed ones are re-rendered
+			// in place; vanished ones are removed. This is the incremental valve that
+			// keeps expand/collapse cheap as the visible graph grows.
+			nodeEls.clear();
+			const seen = new Set<string>();
 			for (const node of g.nodes) {
-				const gEl = renderNode(node);
+				const sig = nodeSig(node);
+				const cached = nodeElsByPath.get(node.path);
+				let gEl: SVGGElement;
+				if (cached && cached.sig === sig) {
+					gEl = cached.el;
+					// Reposition + reset interactive base state; selection/search
+					// strokes are restored by the post-draw fix-ups.
+					gEl.setAttribute('transform', `translate(${node.x},${node.y})`);
+					gEl.setAttribute('data-id', String(node.id));
+					gEl.setAttribute('tabindex', '-1');
+					const rect = gEl.querySelector('.jb-card');
+					if (rect) {
+						rect.setAttribute('stroke', pal.nodeStroke);
+						rect.setAttribute('stroke-width', '1');
+					}
+				} else {
+					gEl = renderNode(node);
+					if (cached) cached.el.replaceWith(gEl);
+					else nodesG.appendChild(gEl);
+					nodeElsByPath.set(node.path, { el: gEl, sig });
+				}
 				nodeEls.set(node.id, gEl);
-				nodeFrag.appendChild(gEl);
+				seen.add(node.path);
 			}
-			nodesG.appendChild(nodeFrag);
+			for (const [path, entry] of nodeElsByPath) {
+				if (!seen.has(path)) {
+					entry.el.remove();
+					nodeElsByPath.delete(path);
+				}
+			}
 		}
 
 		// ── Viewport transform ──────────────────────────────────────────────────────
@@ -1517,63 +1565,33 @@ const sample = `{
 					/* keep raw */
 				}
 			}
-			try {
-				await navigator.clipboard.writeText(out);
-				flashStatus('ok', 'Copied JSON');
-			} catch {
-				flashStatus('error', 'Clipboard unavailable');
-			}
+			if (await copyToClipboard(out)) flashStatus('ok', 'Copied JSON');
+			else flashStatus('error', 'Clipboard unavailable');
 		}
 		async function copyPath(path: string): Promise<void> {
 			if (!path) return;
-			try {
-				await navigator.clipboard.writeText(path);
-				flashStatus('ok', `Copied path: ${path}`);
-			} catch {
-				flashStatus('error', 'Clipboard unavailable');
-			}
+			if (await copyToClipboard(path)) flashStatus('ok', `Copied path: ${path}`);
+			else flashStatus('error', 'Clipboard unavailable');
 		}
 
-		// ── Theme — shares the `jb-theme` key with the other tools ───────────────────
-		const THEME_KEY = 'jb-theme';
-		const ICON_SUN =
-			'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>';
-		const ICON_MOON =
-			'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"></path></svg>';
-		function readMode(): Mode {
-			try {
-				const stored = localStorage.getItem(THEME_KEY);
-				if (stored === 'light' || stored === 'dark') return stored;
-			} catch {
-				/* storage blocked */
-			}
-			return 'dark';
-		}
-		let mode: Mode = readMode();
-		const themeBtn = root.querySelector<HTMLButtonElement>('[data-action="theme"]');
-		const themeIcon = themeBtn?.querySelector<HTMLElement>('[data-theme-icon]') ?? null;
-		function paintTheme(): void {
-			pal = makePal(mode);
-			if (themeIcon) themeIcon.innerHTML = mode === 'dark' ? ICON_SUN : ICON_MOON;
-			themeBtn?.setAttribute('aria-label', mode === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
-			root?.classList.toggle('jb-theme-light', mode === 'light');
-		}
-		function applyMode(next: Mode): void {
-			mode = next;
-			try {
-				localStorage.setItem(THEME_KEY, mode);
-			} catch {
-				/* storage blocked */
-			}
-			paintTheme();
-			if (graph) {
-				draw(graph);
-				drawMinimap(graph);
-				applyTransform();
-				reselectAfterRender();
-				applySearch(false);
-			}
-		}
+		// ── Theme toggle — shared across every tool island (lib/island-theme). ───
+		// `onApply` recolors the palette, then redraws if a graph is already on
+		// screen (on first paint `graph` is still null — `update(true)` below
+		// performs the initial render with the freshly-set palette).
+		const themeCtl = initThemeToggle({
+			root,
+			onApply: (m) => {
+				pal = makePal(m);
+				palVersion++;
+				if (graph) {
+					draw(graph);
+					drawMinimap(graph);
+					applyTransform();
+					reselectAfterRender();
+					applySearch(false);
+				}
+			},
+		});
 
 		function toggleDir(): void {
 			dir = dir === 'LR' ? 'TB' : 'LR';
@@ -1601,7 +1619,7 @@ const sample = `{
 			direction: toggleDir,
 			'export-svg': exportSvg,
 			'export-png': exportPng,
-			theme: () => applyMode(mode === 'dark' ? 'light' : 'dark'),
+			theme: () => themeCtl.toggle(),
 			'copy-path': () => copyPath(selectedPath ?? '$'),
 			'search-prev': () => stepMatch(-1),
 			'search-next': () => stepMatch(1),
@@ -1657,7 +1675,6 @@ const sample = `{
 			ro.observe(stage);
 		}
 
-		paintTheme();
 		update(true);
 	}
 </script>

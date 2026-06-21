@@ -128,24 +128,34 @@ const sampleB = `{
 		<div id="jb-dv-summary" class="flex flex-wrap items-center gap-3 font-mono text-caption" aria-live="polite">
 			<span class="text-mute">Compare two JSON documents above.</span>
 		</div>
-		<div class="ml-auto flex items-center gap-1">
-			<span id="jb-dv-nav-label" class="font-mono text-caption text-mute"></span>
-			<button
-				type="button"
-				data-action="prev"
-				class="jb-btn jb-btn-icon"
-				aria-label="Previous change"
-				title="Previous change (p)"
-				disabled
-			>↑</button>
-			<button
-				type="button"
-				data-action="next"
-				class="jb-btn jb-btn-icon"
-				aria-label="Next change"
-				title="Next change (n)"
-				disabled
-			>↓</button>
+		<div class="ml-auto flex items-center gap-4">
+			<!-- Colour key — added uses the brand accent (the five-colour palette has no
+			     green token, per DESIGN.md). Decorative; the summary counts above carry
+			     the same meaning as text for screen readers. -->
+			<div class="hidden items-center gap-3 font-mono text-caption text-mute sm:flex" aria-hidden="true">
+				<span class="inline-flex items-center gap-1"><span class="jb-dv-key jb-dv-key-add"></span>Added</span>
+				<span class="inline-flex items-center gap-1"><span class="jb-dv-key jb-dv-key-rem"></span>Removed</span>
+				<span class="inline-flex items-center gap-1"><span class="jb-dv-key jb-dv-key-chg"></span>Changed</span>
+			</div>
+			<div class="flex items-center gap-1">
+				<span id="jb-dv-nav-label" class="font-mono text-caption text-mute"></span>
+				<button
+					type="button"
+					data-action="prev"
+					class="jb-btn jb-btn-icon"
+					aria-label="Previous change"
+					title="Previous change (p)"
+					disabled
+				>↑</button>
+				<button
+					type="button"
+					data-action="next"
+					class="jb-btn jb-btn-icon"
+					aria-label="Next change"
+					title="Next change (n)"
+					disabled
+				>↓</button>
+			</div>
 		</div>
 	</div>
 
@@ -231,7 +241,7 @@ const sampleB = `{
 		opacity: 0.38;
 	}
 
-	/* Added — green */
+	/* Added — brand accent (success token is #0070f3; the palette has no green) */
 	:global(#jb-dv-content .jb-dl-added) {
 		border-left-color: var(--color-success);
 		background: rgba(0, 112, 243, 0.08);
@@ -262,6 +272,17 @@ const sampleB = `{
 		color: var(--color-warning);
 	}
 
+	/* Colour-key swatches for the summary legend */
+	:global(#jb-dv .jb-dv-key) {
+		width: 9px;
+		height: 9px;
+		border-radius: var(--radius-xs);
+		flex: none;
+	}
+	:global(#jb-dv .jb-dv-key-add) { background: var(--color-success); }
+	:global(#jb-dv .jb-dv-key-rem) { background: var(--color-error); }
+	:global(#jb-dv .jb-dv-key-chg) { background: var(--color-warning); }
+
 	/* Value type colours — dark */
 	:global(#jb-dv-content .jb-dvc-string)  { color: var(--color-cyan); }
 	:global(#jb-dv-content .jb-dvc-number)  { color: var(--color-violet-soft); }
@@ -288,31 +309,31 @@ const sampleB = `{
 	:global(#jb-dv-b-status.jb-err)   { color: var(--color-error); }
 
 	/* ── Light theme ────────────────────────────────────────────────────────── */
-	:global(#jb-dv.jb-theme-light #jb-dv-left),
-	:global(#jb-dv.jb-theme-light #jb-dv-right) {
+	:global(html.jb-theme-light #jb-dv #jb-dv-left),
+	:global(html.jb-theme-light #jb-dv #jb-dv-right) {
 		background-color: var(--color-canvas);
 		color: var(--color-ink);
 	}
-	:global(#jb-dv.jb-theme-light #jb-dv-tree) {
+	:global(html.jb-theme-light #jb-dv #jb-dv-tree) {
 		background-color: var(--color-canvas);
 		color: var(--color-ink);
 	}
-	:global(#jb-dv.jb-theme-light #jb-dv-content .jb-dl-added) {
+	:global(html.jb-theme-light #jb-dv #jb-dv-content .jb-dl-added) {
 		background: rgba(211, 229, 255, 0.5);
 	}
-	:global(#jb-dv.jb-theme-light #jb-dv-content .jb-dl-removed) {
+	:global(html.jb-theme-light #jb-dv #jb-dv-content .jb-dl-removed) {
 		background: rgba(247, 212, 214, 0.5);
 	}
-	:global(#jb-dv.jb-theme-light #jb-dv-content .jb-dl-changed) {
+	:global(html.jb-theme-light #jb-dv #jb-dv-content .jb-dl-changed) {
 		background: rgba(255, 239, 207, 0.6);
 	}
-	:global(#jb-dv.jb-theme-light #jb-dv-content .jb-dvc-string)  { color: var(--color-link-deep); }
-	:global(#jb-dv.jb-theme-light #jb-dv-content .jb-dvc-number)  { color: var(--color-violet); }
-	:global(#jb-dv.jb-theme-light #jb-dv-content .jb-dvc-bool)    { color: var(--color-cyan-deep); }
-	:global(#jb-dv.jb-theme-light #jb-dv-content .jb-dvc-null)    { color: var(--color-mute); }
-	:global(#jb-dv.jb-theme-light #jb-dv-content .jb-dvc-key)     { color: var(--color-ink); }
-	:global(#jb-dv.jb-theme-light #jb-dv-content .jb-dvc-punct)   { color: var(--color-mute); }
-	:global(#jb-dv.jb-theme-light #jb-dv-content .jb-dvc-collapse){ color: var(--color-mute); }
+	:global(html.jb-theme-light #jb-dv #jb-dv-content .jb-dvc-string)  { color: var(--color-link-deep); }
+	:global(html.jb-theme-light #jb-dv #jb-dv-content .jb-dvc-number)  { color: var(--color-violet); }
+	:global(html.jb-theme-light #jb-dv #jb-dv-content .jb-dvc-bool)    { color: var(--color-cyan-deep); }
+	:global(html.jb-theme-light #jb-dv #jb-dv-content .jb-dvc-null)    { color: var(--color-mute); }
+	:global(html.jb-theme-light #jb-dv #jb-dv-content .jb-dvc-key)     { color: var(--color-ink); }
+	:global(html.jb-theme-light #jb-dv #jb-dv-content .jb-dvc-punct)   { color: var(--color-mute); }
+	:global(html.jb-theme-light #jb-dv #jb-dv-content .jb-dvc-collapse){ color: var(--color-mute); }
 	/* ── Text selection ─────────────────────────────────────────────────────── */
 	:global(#jb-dv-left::selection),
 	:global(#jb-dv-right::selection),
@@ -320,9 +341,9 @@ const sampleB = `{
 		background-color: var(--color-editor-sel-dark);
 		color: var(--color-editor-fg);
 	}
-	:global(#jb-dv.jb-theme-light #jb-dv-left::selection),
-	:global(#jb-dv.jb-theme-light #jb-dv-right::selection),
-	:global(#jb-dv.jb-theme-light #jb-dv-content *::selection) {
+	:global(html.jb-theme-light #jb-dv #jb-dv-left::selection),
+	:global(html.jb-theme-light #jb-dv #jb-dv-right::selection),
+	:global(html.jb-theme-light #jb-dv #jb-dv-content *::selection) {
 		background-color: var(--color-editor-sel-light);
 		color: var(--color-ink);
 	}
@@ -331,6 +352,7 @@ const sampleB = `{
 <script>
 	import { checkJson } from '../lib/json';
 	import { loadDoc, saveDoc } from '../lib/doc-store';
+	import { initThemeToggle } from '../lib/island-theme';
 
 	// ── Types ───────────────────────────────────────────────────────────────
 	type JsonValue = string | number | boolean | null | JsonValue[] | { [k: string]: JsonValue };
@@ -514,9 +536,9 @@ const sampleB = `{
 					result.push({ kind: 'changed', from: curr.value, to: next.value });
 					k++;
 				} else if (curr.kind === 'unchanged') {
-					// Re-diff container items for nested changes
-					const d = diff(curr.value, curr.value);
-					result.push(d.kind === 'unchanged' ? { kind: 'unchanged', value: curr.value } : { kind: 'nested', diff: d as DiffObject | DiffArray });
+					// LCS only marks 'same' on deeply-equal items, so an unchanged item
+					// is identical on both sides — emit it directly (no self-diff needed).
+					result.push({ kind: 'unchanged', value: curr.value });
 				} else {
 					result.push(curr);
 				}
@@ -823,10 +845,9 @@ const sampleB = `{
 		): void {
 			if (lineCount >= MAX_LINES) { truncated = true; return; }
 
-			// Determine if this whole subtree has any changes
-			const counts = countChanges(node);
-			const hasChanges = counts.added + counts.removed + counts.changed > 0;
-			const lineKind = hasChanges ? 'unchanged' : 'unchanged';
+			// Container open/close lines are always neutral; the change marking is
+			// carried by the child lines rendered between them.
+			const lineKind = 'unchanged';
 
 			// Open line
 			const openLine = makeLine(lineKind, depth);
@@ -932,7 +953,8 @@ const sampleB = `{
 			content.querySelectorAll('.jb-dl-nav-focus').forEach(el => el.classList.remove('jb-dl-nav-focus'));
 			const el = changeEls[changeIdx];
 			el.classList.add('jb-dl-nav-focus');
-			el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+			const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+			el.scrollIntoView({ block: 'nearest', behavior: smooth ? 'smooth' : 'auto' });
 			updateNavButtons();
 		}
 
@@ -1109,30 +1131,8 @@ const sampleB = `{
 			setStatus('ok', 'Downloaded merge-patch.json');
 		}
 
-		// ── Theme ───────────────────────────────────────────────────────────
-		type ThemeMode = 'dark' | 'light';
-		const THEME_KEY = 'jb-theme';
-		const ICON_SUN = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>';
-		const ICON_MOON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"></path></svg>';
-
-		let themeMode: ThemeMode = (() => {
-			try { const s = localStorage.getItem(THEME_KEY); return s === 'light' ? 'light' : 'dark'; }
-			catch { return 'dark'; }
-		})();
-
-		const themeBtn = root.querySelector<HTMLButtonElement>('[data-action="theme"]');
-		const themeIcon = themeBtn?.querySelector<HTMLElement>('[data-theme-icon]') ?? null;
-
-		function paintTheme(): void {
-			if (themeIcon) themeIcon.innerHTML = themeMode === 'dark' ? ICON_SUN : ICON_MOON;
-			themeBtn?.setAttribute('aria-label', themeMode === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
-			root?.classList.toggle('jb-theme-light', themeMode === 'light');
-		}
-		function applyTheme(next: ThemeMode): void {
-			themeMode = next;
-			try { localStorage.setItem(THEME_KEY, next); } catch { /* blocked */ }
-			paintTheme();
-		}
+		// ── Theme toggle — shared across every tool island (lib/island-theme). ───
+		const themeCtl = initThemeToggle({ root });
 
 		// ── Actions ─────────────────────────────────────────────────────────
 		const actions: Record<string, () => void> = {
@@ -1144,7 +1144,7 @@ const sampleB = `{
 				runDiff();
 			},
 			patch: downloadPatch,
-			theme: () => applyTheme(themeMode === 'dark' ? 'light' : 'dark'),
+			theme: () => themeCtl.toggle(),
 			sample: () => { left.value = SAMPLE_A; right.value = SAMPLE_B; saveDoc(left.value); runDiff(); },
 			'clear-a': () => { left.value = ''; saveDoc(''); runDiff(); left.focus(); },
 			'clear-b': () => { right.value = ''; runDiff(); right.focus(); },
@@ -1175,8 +1175,6 @@ const sampleB = `{
 		right.addEventListener('input', scheduleDiff);
 
 		// ── Init ─────────────────────────────────────────────────────────────
-		paintTheme();
-
 		// Carry the working document into input A
 		const carried = loadDoc();
 		if (carried !== null && carried.trim()) left.value = carried;

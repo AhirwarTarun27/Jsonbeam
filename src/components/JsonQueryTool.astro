@@ -78,12 +78,12 @@
 	<div class="flex flex-wrap items-center gap-2 border-b border-hairline bg-canvas-soft px-3 py-2">
 		<!-- Language selector -->
 		<div role="tablist" aria-label="Query language" class="flex gap-0.5">
-			<button role="tab" data-lang="jsonpath" aria-selected="true"
-				class="jb-tab" title="JSONPath (RFC 9535 / Goessner extended)">JSONPath</button>
-			<button role="tab" data-lang="jmespath" aria-selected="false"
-				class="jb-tab" title="JMESPath — AWS-style structured query">JMESPath</button>
-			<button role="tab" data-lang="jq" aria-selected="false"
-				class="jb-tab" title="jq — the Swiss army knife for JSON">jq</button>
+			<button role="tab" data-lang="jsonpath" aria-selected="true" aria-keyshortcuts="Alt+1"
+				class="jb-tab" title="JSONPath (RFC 9535 / Goessner extended) · Alt+1">JSONPath</button>
+			<button role="tab" data-lang="jmespath" aria-selected="false" aria-keyshortcuts="Alt+2"
+				class="jb-tab" title="JMESPath — AWS-style structured query · Alt+2">JMESPath</button>
+			<button role="tab" data-lang="jq" aria-selected="false" aria-keyshortcuts="Alt+3"
+				class="jb-tab" title="jq — the Swiss army knife for JSON · Alt+3">jq</button>
 		</div>
 
 		<span class="hidden h-5 w-px bg-hairline sm:block" aria-hidden="true"></span>
@@ -530,21 +530,21 @@
 /* ── Snippet arrow animation ─────────────────────────────────────────────────── */
 #jb-qt-snippets[open] #jb-qt-snip-arrow { transform: rotate(90deg); }
 /* ── Light theme overrides ───────────────────────────────────────────────────── */
-:global(#jb-qt.jb-theme-light #jb-qt-input) {
+:global(html.jb-theme-light #jb-qt #jb-qt-input) {
 	background-color: var(--color-canvas);
 	color: var(--color-ink);
 }
-:global(#jb-qt.jb-theme-light #jb-qt-result) {
+:global(html.jb-theme-light #jb-qt #jb-qt-result) {
 	background-color: var(--color-canvas);
 	color: var(--color-ink);
 }
-:global(#jb-qt.jb-theme-light #jb-qt-out .jb-q-s)  { color: var(--color-cyan-deep); }
-:global(#jb-qt.jb-theme-light #jb-qt-out .jb-q-n)  { color: var(--color-violet); }
-:global(#jb-qt.jb-theme-light #jb-qt-out .jb-q-b)  { color: var(--color-warning-deep); }
-:global(#jb-qt.jb-theme-light #jb-qt-out .jb-q-nl) { color: var(--color-mute); }
-:global(#jb-qt.jb-theme-light #jb-qt-out .jb-q-k)  { color: var(--color-ink); }
-:global(#jb-qt.jb-theme-light #jb-qt-out .jb-q-p)  { color: var(--color-mute); }
-:global(#jb-qt.jb-theme-light #jb-qt-out .jb-q-sep){ border-top-color: var(--color-hairline); }
+:global(html.jb-theme-light #jb-qt #jb-qt-out .jb-q-s)  { color: var(--color-cyan-deep); }
+:global(html.jb-theme-light #jb-qt #jb-qt-out .jb-q-n)  { color: var(--color-violet); }
+:global(html.jb-theme-light #jb-qt #jb-qt-out .jb-q-b)  { color: var(--color-warning-deep); }
+:global(html.jb-theme-light #jb-qt #jb-qt-out .jb-q-nl) { color: var(--color-mute); }
+:global(html.jb-theme-light #jb-qt #jb-qt-out .jb-q-k)  { color: var(--color-ink); }
+:global(html.jb-theme-light #jb-qt #jb-qt-out .jb-q-p)  { color: var(--color-mute); }
+:global(html.jb-theme-light #jb-qt #jb-qt-out .jb-q-sep){ border-top-color: var(--color-hairline); }
 /* ── Text selection in editor panes ─────────────────────────────────────────── */
 /* Dark mode: desaturated-blue tint — visible on the dark editor surface */
 :global(#jb-qt-input::selection) {
@@ -556,11 +556,11 @@
 	color: var(--color-editor-fg);
 }
 /* Light mode: soft blue tint — visible on the light canvas */
-:global(#jb-qt.jb-theme-light #jb-qt-input::selection) {
+:global(html.jb-theme-light #jb-qt #jb-qt-input::selection) {
 	background-color: var(--color-editor-sel-light);
 	color: var(--color-ink);
 }
-:global(#jb-qt.jb-theme-light #jb-qt-out *::selection) {
+:global(html.jb-theme-light #jb-qt #jb-qt-out *::selection) {
 	background-color: var(--color-editor-sel-light);
 	color: var(--color-ink);
 }
@@ -568,6 +568,8 @@
 
 <script>
 import { loadDoc, saveDoc } from '../lib/doc-store';
+import { initThemeToggle } from '../lib/island-theme';
+import { copyToClipboard } from '../lib/island-clipboard';
 
 const sample = `{
   "store": {
@@ -675,16 +677,7 @@ function renderHistory(l: Lang) {
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 
-function paintTheme() {
-	const light = localStorage.getItem('jb-theme') === 'light';
-	root.classList.toggle('jb-theme-light', light);
-	const icon = themeIconEl;
-	if (icon) icon.textContent = light ? '☾' : '☀';
-	const langBtn = document.querySelector<HTMLElement>('[data-action="theme"]');
-	if (langBtn) langBtn.setAttribute('aria-label', light ? 'Switch to dark theme' : 'Switch to light theme');
-}
-paintTheme();
-window.addEventListener('storage', e => { if (e.key === 'jb-theme') paintTheme(); });
+const themeCtl = initThemeToggle({ root, icon: themeIconEl });
 
 // ─── Language switching ────────────────────────────────────────────────────────
 
@@ -1056,9 +1049,8 @@ function init() {
 					const text = lastResult.length === 1
 						? JSON.stringify(lastResult[0], null, 2)
 						: JSON.stringify(lastResult, null, 2);
-					await navigator.clipboard.writeText(text);
 					const orig = btn.textContent;
-					btn.textContent = 'Copied!';
+					btn.textContent = (await copyToClipboard(text)) ? 'Copied!' : 'Clipboard blocked';
 					setTimeout(() => { btn.textContent = orig; }, 1200);
 					break;
 				}
@@ -1077,13 +1069,9 @@ function init() {
 					codeMenu.classList.toggle('hidden');
 					break;
 				}
-				case 'theme': {
-					const cur = localStorage.getItem('jb-theme');
-					localStorage.setItem('jb-theme', cur === 'light' ? 'dark' : 'light');
-					paintTheme();
-					window.dispatchEvent(new StorageEvent('storage', { key: 'jb-theme' }));
+				case 'theme':
+					themeCtl.toggle();
 					break;
-				}
 			}
 		});
 	});
@@ -1114,11 +1102,11 @@ function init() {
 		item.addEventListener('click', async () => {
 			codeMenu.classList.add('hidden');
 			const snippet = codeSnippet(item.dataset['langCode']!);
-			await navigator.clipboard.writeText(snippet);
+			const ok = await copyToClipboard(snippet);
 			const codeBtn = document.querySelector<HTMLElement>('[data-action="copy-code"]');
 			if (codeBtn) {
 				const orig = codeBtn.textContent;
-				codeBtn.textContent = 'Copied!';
+				codeBtn.textContent = ok ? 'Copied!' : 'Clipboard blocked';
 				setTimeout(() => { codeBtn.textContent = orig; }, 1400);
 			}
 		});
@@ -1148,13 +1136,14 @@ function init() {
 		}
 	});
 
-	// Keyboard: Tab to switch language
-	expr.addEventListener('keydown', (e: KeyboardEvent) => {
-		if (e.key === 'Tab' && !e.shiftKey) {
+	// Keyboard: Alt+1/2/3 to switch language. Tab is deliberately left untouched so
+	// it still moves focus out of the expression field — keyboard users must never
+	// be trapped (the old Tab-to-switch binding was an a11y dead end).
+	document.addEventListener('keydown', (e: KeyboardEvent) => {
+		if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === '1' || e.key === '2' || e.key === '3')) {
 			e.preventDefault();
 			const langs: Lang[] = ['jsonpath', 'jmespath', 'jq'];
-			const next = langs[(langs.indexOf(lang) + 1) % langs.length]!;
-			switchLang(next);
+			switchLang(langs[Number(e.key) - 1]!);
 		}
 	});
 }
