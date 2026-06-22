@@ -55,6 +55,15 @@ const serialize = (data: Record<string, unknown>) =>
 	gtag('config', 'G-Y4L94RDJBB');
 </script>
 
+<!-- Google AdSense. is:inline ships it verbatim (no Astro bundling). Loads a
+     third-party script from Google for ad serving; it never touches user JSON,
+     which is processed entirely client-side and never uploaded. -->
+<script
+	is:inline
+	async
+	src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6296837849054919"
+	crossorigin="anonymous"></script>
+
 <title>{title}</title>
 <meta name="description" content={description} />
 <link rel="canonical" href={canonical} />
