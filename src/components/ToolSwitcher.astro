@@ -1,0 +1,98 @@
+---
+/**
+ * Persistent in-app tool switcher. A quiet, grouped rail rendered directly
+ * above every tool island so any tool is one click away from inside any tool
+ * page — no scroll-and-hunt back to the footer. Links are zero-JS: the active
+ * tool is filled ink + aria-current; not-yet-shipped tools render muted and
+ * non-interactive, so the roadmap is visible without being clickable.
+ *
+ * Layout: each group (Format / View / Query / Convert) is its own segmented
+ * well — a faint bg-canvas card with an inset hairline — so the group reads as
+ * one unit and its label is clearly *bound* to it by a hairline tick divider
+ * (common-region grouping), not floating beside its chips. The wells wrap as
+ * units across rows on a narrow rail. The carry note + ⌘K trigger are the last
+ * item and float to the right of the *last wrapped row* (ml-auto) — never a
+ * dedicated extra row — so the rail stays compact and the editor below keeps
+ * maximum screen height.
+ *
+ * The "carries across tools" note makes the "paste once" power move discoverable
+ * (full reassurance in its tooltip + the island status bar). The ⌘K trigger is
+ * wired by CommandPalette, loaded alongside on every tool page.
+ *
+ * In-app 6px control scale (.jb-tab in global.css) — never the marketing pill.
+ */
+import { TOOL_NAV } from '../consts';
+
+interface Props {
+	/** The current page's route, e.g. "/json-validator" — marks the active tab. */
+	current: string;
+}
+const { current } = Astro.props;
+---
+
+<nav
+	aria-label="JSON tools"
+	class="mb-3 rounded-md border border-hairline bg-canvas-soft px-3 py-2 shadow-e1"
+>
+	<ul class="flex flex-wrap items-center gap-x-2.5 gap-y-2">
+		{
+			TOOL_NAV.map((group) => (
+				<li class="jb-tab-rail">
+					<span class="jb-tab-rail-label">{group.title}</span>
+					{group.items.map((item) =>
+						item.soon ? (
+							<span class="jb-tab jb-tab-soon" title="Coming soon">
+								{item.label}
+								<span class="sr-only"> (coming soon)</span>
+							</span>
+						) : item.href === current ? (
+							<a href={item.href} class="jb-tab jb-tab-active" aria-current="page">
+								{item.label}
+							</a>
+						) : (
+							<a href={item.href} class="jb-tab">
+								{item.label}
+							</a>
+						)
+					)}
+				</li>
+			))
+		}
+
+		<!-- Last item: rides the right of the final wrapped row, never its own row. -->
+		<li class="ml-auto flex items-center gap-2">
+			<span
+				class="hidden items-center gap-1.5 whitespace-nowrap text-caption text-mute md:inline-flex"
+				title="Your JSON carries from tool to tool — it never leaves your browser."
+				aria-hidden="true"
+			>
+				<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+					<path
+						d="M2 8h9M8 4.5 11.5 8 8 11.5"
+						stroke="currentColor"
+						stroke-width="1.4"
+						stroke-linecap="round"
+						stroke-linejoin="round"></path>
+					<path d="M13.5 3v10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"></path>
+				</svg>
+				Your JSON carries across tools
+			</span>
+			<span class="sr-only">Your JSON carries across tools and never leaves your browser.</span>
+
+			<button
+				type="button"
+				data-cmdk-trigger
+				class="jb-cmdk-trigger"
+				aria-label="Search tools"
+				title="Search tools"
+			>
+				<svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+					<circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.4"></circle>
+					<path d="M11 11l3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"></path>
+				</svg>
+				<span class="hidden sm:inline">Search</span>
+				<kbd data-cmdk-kbd aria-hidden="true">⌘K</kbd>
+			</button>
+		</li>
+	</ul>
+</nav>

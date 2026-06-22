@@ -1,0 +1,63 @@
+---
+/**
+ * Command-palette loader. Renders no markup — its only job is a tiny client
+ * script that lazy-imports the implementation (lib/command-palette) on the first
+ * ⌘K / Ctrl K press or trigger click. So the palette adds only a small listener
+ * to the initial bundle and nothing at all to the text-mode editor budget; the
+ * dialog DOM + logic load on demand.
+ *
+ * Included once per tool page (via ToolPage). Never on marketing/content pages —
+ * those keep the 0-JS contract. The visible affordance lives in ToolSwitcher.
+ */
+---
+
+<script>
+	import type { PaletteApi } from '../lib/command-palette';
+
+	let api: PaletteApi | null = null;
+	let loading: Promise<PaletteApi> | null = null;
+
+	async function ensure(): Promise<PaletteApi> {
+		if (api) return api;
+		if (!loading) {
+			loading = import('../lib/command-palette').then((m) => {
+				api = m.createPalette();
+				return api;
+			});
+		}
+		return loading;
+	}
+
+	async function toggle(): Promise<void> {
+		(await ensure()).toggle();
+	}
+	async function open(): Promise<void> {
+		(await ensure()).open();
+	}
+
+	// ⌘K / Ctrl K from anywhere — capture phase so the editor never swallows it.
+	window.addEventListener(
+		'keydown',
+		(e) => {
+			if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === 'k') {
+				e.preventDefault();
+				e.stopPropagation();
+				void toggle();
+			}
+		},
+		{ capture: true },
+	);
+
+	// The visible affordance in the switcher rail.
+	document.querySelectorAll<HTMLElement>('[data-cmdk-trigger]').forEach((btn) => {
+		btn.addEventListener('click', () => void open());
+	});
+
+	// Show the platform-correct shortcut (markup defaults to the ⌘ glyph).
+	const isApple = /Mac|iPhone|iPad|iPod/.test(navigator.platform);
+	if (!isApple) {
+		document.querySelectorAll<HTMLElement>('[data-cmdk-kbd]').forEach((el) => {
+			el.textContent = 'Ctrl K';
+		});
+	}
+</script>

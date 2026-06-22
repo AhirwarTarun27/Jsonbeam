@@ -1,0 +1,972 @@
+---
+/**
+ * The /json-tree-viewer island — a keyboard-first JSON tree explorer.
+ *
+ * This is the deliberately DISTINCT sibling of `JsonViewer.astro`. The viewer is
+ * mouse-driven (click to expand, click a key to copy). The *tree* viewer is built
+ * around the WAI-ARIA Tree View keyboard pattern: a single roving tab stop, and
+ * ↑ ↓ → ← / Home / End / Enter / type-ahead to fly through deeply nested data
+ * without touching the mouse. Its signature element is a live **path breadcrumb**
+ * that always reflects the focused node — so the path you want is read off the
+ * top of the pane, not hunted for.
+ *
+ * Framework-free (HTML + one typed client module). Large-file safe: children are
+ * materialised lazily on first expand, and any single sibling render is windowed.
+ * All processing is local — nothing is uploaded. In-app controls use the shared
+ * 6px `.jb-btn` scale (global.css).
+ */
+const sample = `{
+  "name": "JSON Beam",
+  "private": true,
+  "version": 2,
+  "modes": ["text", "tree", "table", "graph"],
+  "limits": { "maxFileSizeMB": 100, "workers": 4 },
+  "users": [
+    { "id": 1, "name": "Ada", "admin": true },
+    { "id": 2, "name": "Linus", "admin": false }
+  ],
+  "tags": null
+}`;
+---
+
+<div
+	id="jb-tree-viewer"
+	class="overflow-hidden rounded-md border border-hairline bg-canvas shadow-e3"
+>
+	<!-- Toolbar -->
+	<div class="flex flex-wrap items-center gap-1.5 border-b border-hairline bg-canvas-soft px-3 py-2">
+		<button type="button" data-action="expand" class="jb-btn" title="Expand every node">Expand all</button>
+		<button type="button" data-action="collapse" class="jb-btn" title="Collapse every node">Collapse all</button>
+
+		<span class="mx-1 hidden h-5 w-px bg-hairline sm:block" aria-hidden="true"></span>
+
+		<div class="ml-auto flex items-center gap-1.5">
+			<button
+				type="button"
+				data-action="theme"
+				class="jb-btn jb-btn-icon"
+				aria-label="Switch to light theme"
+				title="Toggle dark / light"
+			><span data-theme-icon aria-hidden="true"></span></button>
+			<button type="button" data-action="sample" class="jb-btn" title="Load a sample document">Sample</button>
+			<button type="button" data-action="copy" class="jb-btn" title="Copy formatted JSON">Copy JSON</button>
+			<button type="button" data-action="clear" class="jb-btn" title="Clear the input">Clear</button>
+		</div>
+	</div>
+
+	<!-- Path breadcrumb — the signature element: tracks the focused node. -->
+	<div class="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-hairline bg-canvas-soft px-3 py-1.5">
+		<span class="select-none font-mono text-caption uppercase tracking-wide text-mute">Path</span>
+		<code data-path-display class="font-mono text-code text-body" title="Focused node path">$</code>
+		<span data-path-meta class="font-mono text-caption text-mute"></span>
+		<button
+			type="button"
+			data-action="copy-path"
+			class="jb-btn jb-btn-icon ml-auto"
+			aria-label="Copy focused node path"
+			title="Copy focused path"
+		>
+			<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+				<rect x="5.5" y="5.5" width="8" height="8" rx="1.4" stroke="currentColor" stroke-width="1.3"></rect>
+				<path d="M10.5 5.5V4a1.5 1.5 0 0 0-1.5-1.5H4A1.5 1.5 0 0 0 2.5 4v5A1.5 1.5 0 0 0 4 10.5h1.5" stroke="currentColor" stroke-width="1.3"></path>
+			</svg>
+		</button>
+	</div>
+
+	<!-- Split: input + keyboard tree -->
+	<div class="grid grid-cols-1 lg:grid-cols-2">
+		<div class="border-b border-hairline lg:border-b-0 lg:border-r">
+			<label class="sr-only" for="jb-kinput">JSON input</label>
+			<textarea
+				id="jb-kinput"
+				spellcheck="false"
+				autocomplete="off"
+				autocapitalize="off"
+				aria-label="JSON input"
+				class="h-[40vh] min-h-[240px] w-full lg:h-[72vh]"
+			>{sample}</textarea>
+		</div>
+		<div
+			id="jb-ktree"
+			role="tree"
+			aria-label="JSON tree — use arrow keys to navigate"
+			class="h-[54vh] min-h-[320px] overflow-auto lg:h-[72vh]"
+		></div>
+	</div>
+
+	<!-- Status bar -->
+	<div class="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-hairline bg-canvas-soft px-3 py-2 text-body-sm">
+		<span id="jb-kstatus" class="inline-flex items-center gap-1.5 font-medium" role="status" aria-live="polite">
+			<span class="h-2 w-2 rounded-full bg-mute" data-dot></span>
+			<span data-label>Ready</span>
+		</span>
+		<span data-stats class="font-mono text-caption text-mute">0 chars</span>
+		<span class="hidden items-center gap-1 font-mono text-caption text-mute sm:inline-flex" aria-hidden="true">
+			<kbd class="jb-kbd">↑</kbd><kbd class="jb-kbd">↓</kbd><kbd class="jb-kbd">→</kbd><kbd class="jb-kbd">←</kbd>
+			to navigate
+		</span>
+		<span class="ml-auto inline-flex items-center gap-1.5 text-caption text-mute">
+			<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+				<path d="M8 1.5 3 3.5v3.2c0 3 2.1 5.8 5 6.8 2.9-1 5-3.8 5-6.8V3.5L8 1.5Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"></path>
+			</svg>
+			Processed locally — nothing uploaded
+		</span>
+	</div>
+</div>
+
+<style>
+	/* Both panes share the dark code-workbench surface (matches the formatter's
+	   default, the viewer, and the homepage mockups). */
+	#jb-kinput {
+		background-color: var(--color-editor-bg);
+		color: var(--color-editor-fg);
+		font-family: var(--font-mono);
+		font-size: 13px;
+		line-height: 1.6;
+		padding: 14px;
+		border: none;
+		outline: none;
+		resize: none;
+		display: block;
+		tab-size: 2;
+	}
+	#jb-ktree {
+		background-color: var(--color-editor-bg);
+		color: var(--color-editor-fg);
+		font-family: var(--font-mono);
+		font-size: 13px;
+		line-height: 1.7;
+		padding: 8px 10px;
+	}
+
+	/* Selection stays readable on the dark surface. */
+	:global(#jb-kinput::selection),
+	:global(#jb-ktree ::selection) {
+		color: var(--color-on-primary);
+		background-color: var(--color-editor-sel-dark);
+	}
+
+	.jb-kbd {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 16px;
+		padding: 0 3px;
+		border: 1px solid var(--color-hairline);
+		border-radius: var(--radius-xs);
+		background: var(--color-canvas);
+		font-size: 11px;
+		line-height: 1.4;
+	}
+
+	/* ── Tree rows ─────────────────────────────────────────────────────────── */
+	:global(#jb-ktree [role='treeitem']) {
+		outline: none;
+	}
+	:global(#jb-ktree .jb-row) {
+		display: flex;
+		align-items: flex-start;
+		gap: 4px;
+		white-space: pre;
+		padding: 1px 4px;
+		border-radius: var(--radius-xs);
+	}
+	/* The roving-focus / selected node — the keyboard cursor. */
+	:global(#jb-ktree [role='treeitem'][aria-selected='true'] > .jb-row) {
+		background: rgba(255, 255, 255, 0.07);
+	}
+	:global(#jb-ktree [role='treeitem']:focus-visible > .jb-row) {
+		outline: 2px solid var(--color-cyan);
+		outline-offset: -2px;
+		background: rgba(255, 255, 255, 0.1);
+	}
+	:global(#jb-ktree .jb-children) {
+		margin-left: 7px;
+		padding-left: 14px;
+		border-left: 1px solid rgba(255, 255, 255, 0.08);
+	}
+
+	/* Caret / leaf spacer — fixed width so keys align across rows. */
+	:global(#jb-ktree .jb-toggle) {
+		flex: 0 0 auto;
+		width: 16px;
+		height: 20px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0;
+		border: none;
+		background: none;
+		color: var(--color-hairline-strong);
+		cursor: pointer;
+	}
+	:global(#jb-ktree .jb-toggle--leaf) {
+		cursor: default;
+	}
+	:global(#jb-ktree .jb-toggle svg) {
+		transition: transform 0.12s ease;
+	}
+	:global(#jb-ktree [role='treeitem'][aria-expanded='true'] > .jb-row > .jb-toggle svg) {
+		transform: rotate(90deg);
+	}
+
+	/* Tokens — reuse the dark syntax palette from the editor. */
+	:global(#jb-ktree .jb-key) {
+		color: var(--color-editor-fg);
+		font-weight: 500;
+		cursor: pointer;
+	}
+	:global(#jb-ktree .jb-key:hover) {
+		text-decoration: underline;
+	}
+	:global(#jb-ktree .jb-punct),
+	:global(#jb-ktree .jb-summary) {
+		color: var(--color-hairline-strong);
+	}
+	:global(#jb-ktree .jb-summary) {
+		cursor: pointer;
+	}
+	:global(#jb-ktree .jb-string) {
+		color: var(--color-cyan);
+	}
+	:global(#jb-ktree .jb-number) {
+		color: var(--color-violet-soft);
+	}
+	:global(#jb-ktree .jb-bool),
+	:global(#jb-ktree .jb-null) {
+		color: var(--color-warning);
+	}
+	:global(#jb-ktree .jb-placeholder) {
+		color: var(--color-mute);
+		padding: 6px 2px;
+		white-space: normal;
+	}
+	:global(#jb-ktree .jb-more) {
+		display: inline-block;
+		margin: 4px 0 4px 16px;
+		padding: 2px 10px;
+		border-radius: var(--radius-sm);
+		border: 1px solid rgba(255, 255, 255, 0.16);
+		background: rgba(255, 255, 255, 0.04);
+		color: var(--color-editor-fg);
+		font-family: var(--font-mono);
+		font-size: 12px;
+		cursor: pointer;
+	}
+	:global(#jb-ktree .jb-more:hover) {
+		background: rgba(255, 255, 255, 0.1);
+	}
+
+	/* ── Light theme — flip both panes to the canvas surface + light palette.
+	   Toggled by .jb-theme-light on the #jb-tree-viewer root (shares the
+	   `jb-theme` key with the formatter & viewer). ──────────────────────────── */
+	:global(html.jb-theme-light #jb-tree-viewer #jb-kinput),
+	:global(html.jb-theme-light #jb-tree-viewer #jb-ktree) {
+		background-color: var(--color-canvas);
+		color: var(--color-ink);
+	}
+	:global(html.jb-theme-light #jb-tree-viewer #jb-kinput::selection),
+	:global(html.jb-theme-light #jb-tree-viewer #jb-ktree ::selection) {
+		color: var(--color-ink);
+		background-color: var(--color-editor-sel-light);
+	}
+	:global(html.jb-theme-light #jb-tree-viewer #jb-ktree [role='treeitem'][aria-selected='true'] > .jb-row) {
+		background: var(--color-canvas-soft-2);
+	}
+	:global(html.jb-theme-light #jb-tree-viewer #jb-ktree [role='treeitem']:focus-visible > .jb-row) {
+		outline-color: var(--color-cyan-deep);
+		background: var(--color-canvas-soft-2);
+	}
+	:global(html.jb-theme-light #jb-tree-viewer #jb-ktree .jb-children) {
+		border-left-color: var(--color-hairline);
+	}
+	:global(html.jb-theme-light #jb-tree-viewer #jb-ktree .jb-toggle) {
+		color: var(--color-mute);
+	}
+	:global(html.jb-theme-light #jb-tree-viewer #jb-ktree .jb-key) {
+		color: var(--color-ink);
+	}
+	:global(html.jb-theme-light #jb-tree-viewer #jb-ktree .jb-punct),
+	:global(html.jb-theme-light #jb-tree-viewer #jb-ktree .jb-summary) {
+		color: var(--color-mute);
+	}
+	:global(html.jb-theme-light #jb-tree-viewer #jb-ktree .jb-string) {
+		color: var(--color-link-deep);
+	}
+	:global(html.jb-theme-light #jb-tree-viewer #jb-ktree .jb-number) {
+		color: var(--color-violet);
+	}
+	:global(html.jb-theme-light #jb-tree-viewer #jb-ktree .jb-bool),
+	:global(html.jb-theme-light #jb-tree-viewer #jb-ktree .jb-null) {
+		color: var(--color-cyan-deep);
+	}
+	:global(html.jb-theme-light #jb-tree-viewer #jb-ktree .jb-more) {
+		border-color: var(--color-hairline);
+		background: var(--color-canvas-soft);
+		color: var(--color-body);
+	}
+	:global(html.jb-theme-light #jb-tree-viewer .jb-kbd) {
+		background: var(--color-canvas-soft);
+	}
+
+	/* Coarse pointers: bigger touch targets for the carets + roomier rows. */
+	@media (pointer: coarse) {
+		:global(#jb-ktree .jb-toggle) {
+			width: 28px;
+			height: 28px;
+		}
+		:global(#jb-ktree .jb-row) {
+			padding: 3px 4px;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		:global(#jb-ktree .jb-toggle svg) {
+			transition: none;
+		}
+	}
+</style>
+
+<script>
+	import { checkJson } from '../lib/json';
+	import { loadDoc, saveDoc } from '../lib/doc-store';
+	import { initThemeToggle } from '../lib/island-theme';
+	import { copyToClipboard } from '../lib/island-clipboard';
+
+	const root = document.getElementById('jb-tree-viewer');
+	const inputEl = document.getElementById('jb-kinput') as HTMLTextAreaElement | null;
+	const treeEl = document.getElementById('jb-ktree');
+
+	if (root && inputEl && treeEl) {
+		const input = inputEl;
+		const tree = treeEl;
+
+		type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+		type JsonObject = { [key: string]: JsonValue };
+
+		// Captured once so the Sample button can restore the starting document.
+		const SAMPLE = input.value;
+
+		// "Paste once" carry: rehydrate the document the user already has going this
+		// session (from another tool) before the first render. A fresh visitor with
+		// nothing carried keeps the sample, so the page still demos itself.
+		const carried = loadDoc();
+		if (carried !== null) input.value = carried;
+
+		const dot = root.querySelector<HTMLElement>('[data-dot]');
+		const label = root.querySelector<HTMLElement>('[data-label]');
+		const statsEl = root.querySelector<HTMLElement>('[data-stats]');
+		const pathDisplay = root.querySelector<HTMLElement>('[data-path-display]');
+		const pathMeta = root.querySelector<HTMLElement>('[data-path-meta]');
+
+		// Per-container build closures — children are materialised lazily on first
+		// expand (the large-file safety valve).
+		const builders = new WeakMap<HTMLElement, () => void>();
+
+		// Build the caret SVG once and clone it per node.
+		const chevronHost = document.createElement('span');
+		chevronHost.innerHTML =
+			'<svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
+		const CHEVRON_NODE = chevronHost.firstElementChild;
+
+		const AUTO_EXPAND_MAX = 100;
+		const CHUNK = 1000;
+		const IDENT = /^[A-Za-z_$][\w$]*$/;
+
+		function isObject(v: JsonValue): v is JsonObject {
+			return typeof v === 'object' && v !== null && !Array.isArray(v);
+		}
+		function isArray(v: JsonValue): v is JsonValue[] {
+			return Array.isArray(v);
+		}
+
+		function childPath(parent: string, key: string | number): string {
+			if (typeof key === 'number') return `${parent}[${key}]`;
+			return IDENT.test(key) ? `${parent}.${key}` : `${parent}[${JSON.stringify(key)}]`;
+		}
+
+		function entriesOf(value: JsonObject | JsonValue[]): [string | number, JsonValue][] {
+			return isArray(value)
+				? value.map((v, i) => [i, v] as [number, JsonValue])
+				: Object.entries(value);
+		}
+
+		function punct(text: string): HTMLElement {
+			const span = document.createElement('span');
+			span.className = 'jb-punct';
+			span.textContent = text;
+			return span;
+		}
+
+		function keySpan(key: string | number, path: string): HTMLElement {
+			const span = document.createElement('span');
+			span.className = 'jb-key';
+			span.textContent = typeof key === 'number' ? String(key) : key;
+			span.setAttribute('data-copy-path', '');
+			span.setAttribute('data-path', path);
+			span.setAttribute('title', `Copy path: ${path}`);
+			return span;
+		}
+
+		function valueSpan(value: string | number | boolean | null): HTMLElement {
+			const span = document.createElement('span');
+			span.className = 'jb-val';
+			if (typeof value === 'string') span.classList.add('jb-string');
+			else if (typeof value === 'number') span.classList.add('jb-number');
+			else if (typeof value === 'boolean') span.classList.add('jb-bool');
+			else span.classList.add('jb-null');
+			span.textContent = JSON.stringify(value);
+			return span;
+		}
+
+		function metaOf(value: JsonValue): string {
+			if (isArray(value)) {
+				const n = value.length;
+				return `array · ${n} ${n === 1 ? 'item' : 'items'}`;
+			}
+			if (isObject(value)) {
+				const n = Object.keys(value).length;
+				return `object · ${n} ${n === 1 ? 'key' : 'keys'}`;
+			}
+			if (value === null) return 'null';
+			return typeof value; // string | number | boolean
+		}
+
+		function summarySpan(value: JsonObject | JsonValue[]): HTMLElement {
+			const span = document.createElement('span');
+			span.className = 'jb-summary';
+			span.setAttribute('data-toggle', '');
+			if (isArray(value)) {
+				const n = value.length;
+				span.textContent = n === 0 ? '[ ]' : `[ ${n} ${n === 1 ? 'item' : 'items'} ]`;
+			} else {
+				const n = Object.keys(value).length;
+				span.textContent = n === 0 ? '{ }' : `{ ${n} ${n === 1 ? 'key' : 'keys'} }`;
+			}
+			return span;
+		}
+
+		function appendChildren(
+			container: HTMLElement,
+			entries: [string | number, JsonValue][],
+			parentPath: string,
+			start: number,
+		): void {
+			const end = Math.min(start + CHUNK, entries.length);
+			const frag = document.createDocumentFragment();
+			for (let i = start; i < end; i++) {
+				const entry = entries[i];
+				frag.appendChild(createItem(entry[0], entry[1], parentPath));
+			}
+			container.appendChild(frag);
+			if (end < entries.length) {
+				const remaining = entries.length - end;
+				const more = document.createElement('button');
+				more.type = 'button';
+				more.className = 'jb-more';
+				more.textContent = `Show ${Math.min(CHUNK, remaining)} more — ${remaining.toLocaleString()} left`;
+				more.addEventListener('click', () => {
+					more.remove();
+					appendChildren(container, entries, parentPath, end);
+				});
+				container.appendChild(more);
+			}
+		}
+
+		function createItem(key: string | number | null, value: JsonValue, parentPath: string): HTMLElement {
+			const path = key === null ? parentPath : childPath(parentPath, key);
+			const item = document.createElement('div');
+			item.setAttribute('role', 'treeitem');
+			item.setAttribute('tabindex', '-1');
+			item.dataset.path = path;
+			item.dataset.meta = metaOf(value);
+			if (key !== null) item.dataset.key = typeof key === 'number' ? String(key) : key;
+			const row = document.createElement('div');
+			row.className = 'jb-row';
+
+			if (isObject(value) || isArray(value)) {
+				item.setAttribute('aria-expanded', 'false');
+				const toggle = document.createElement('button');
+				toggle.type = 'button';
+				toggle.className = 'jb-toggle';
+				toggle.setAttribute('data-toggle', '');
+				toggle.setAttribute('tabindex', '-1');
+				toggle.setAttribute('aria-label', 'Expand');
+				if (CHEVRON_NODE) toggle.appendChild(CHEVRON_NODE.cloneNode(true));
+				row.appendChild(toggle);
+				if (key !== null) {
+					row.appendChild(keySpan(key, path));
+					row.appendChild(punct(':'));
+				}
+				row.appendChild(summarySpan(value));
+
+				const group = document.createElement('div');
+				group.className = 'jb-children';
+				group.setAttribute('role', 'group');
+				group.hidden = true;
+
+				item.appendChild(row);
+				item.appendChild(group);
+
+				const container = value;
+				let built = false;
+				builders.set(item, () => {
+					if (built) return;
+					built = true;
+					appendChildren(group, entriesOf(container), path, 0);
+				});
+			} else {
+				const leaf = document.createElement('span');
+				leaf.className = 'jb-toggle jb-toggle--leaf';
+				row.appendChild(leaf);
+				if (key !== null) {
+					row.appendChild(keySpan(key, path));
+					row.appendChild(punct(':'));
+				}
+				row.appendChild(valueSpan(value));
+				item.appendChild(row);
+			}
+			return item;
+		}
+
+		// ── Tree topology helpers (keyboard navigation) ─────────────────────────
+		function isExpandable(item: HTMLElement): boolean {
+			return item.hasAttribute('aria-expanded');
+		}
+		function isExpanded(item: HTMLElement): boolean {
+			return item.getAttribute('aria-expanded') === 'true';
+		}
+		function childGroup(item: HTMLElement): HTMLElement | null {
+			return item.querySelector<HTMLElement>(':scope > .jb-children');
+		}
+		function childItems(item: HTMLElement): HTMLElement[] {
+			const group = childGroup(item);
+			if (!group) return [];
+			return Array.from(group.querySelectorAll<HTMLElement>(':scope > [role="treeitem"]'));
+		}
+		function siblingItem(item: HTMLElement, dir: 'next' | 'previous'): HTMLElement | null {
+			let el: Element | null = dir === 'next' ? item.nextElementSibling : item.previousElementSibling;
+			while (el && el.getAttribute('role') !== 'treeitem') {
+				el = dir === 'next' ? el.nextElementSibling : el.previousElementSibling;
+			}
+			return el as HTMLElement | null;
+		}
+		function parentItem(item: HTMLElement): HTMLElement | null {
+			const group = item.parentElement;
+			if (!group || !group.classList.contains('jb-children')) return null;
+			const parent = group.parentElement;
+			return parent && parent.getAttribute('role') === 'treeitem' ? parent : null;
+		}
+		function deepestVisible(item: HTMLElement): HTMLElement {
+			let cur = item;
+			while (isExpandable(cur) && isExpanded(cur)) {
+				const kids = childItems(cur);
+				if (kids.length === 0) break;
+				cur = kids[kids.length - 1];
+			}
+			return cur;
+		}
+		function nextVisible(item: HTMLElement): HTMLElement | null {
+			if (isExpandable(item) && isExpanded(item)) {
+				const kids = childItems(item);
+				if (kids.length > 0) return kids[0];
+			}
+			let cur: HTMLElement | null = item;
+			while (cur) {
+				const sib = siblingItem(cur, 'next');
+				if (sib) return sib;
+				cur = parentItem(cur);
+			}
+			return null;
+		}
+		function prevVisible(item: HTMLElement): HTMLElement | null {
+			const sib = siblingItem(item, 'previous');
+			if (sib) return deepestVisible(sib);
+			return parentItem(item);
+		}
+		function firstItem(): HTMLElement | null {
+			return tree.querySelector<HTMLElement>(':scope > [role="treeitem"]');
+		}
+		function lastVisibleItem(): HTMLElement | null {
+			const roots = tree.querySelectorAll<HTMLElement>(':scope > [role="treeitem"]');
+			const last = roots[roots.length - 1];
+			return last ? deepestVisible(last) : null;
+		}
+
+		// ── Roving focus + breadcrumb ───────────────────────────────────────────
+		let current: HTMLElement | null = null;
+
+		function updateBreadcrumb(item: HTMLElement | null): void {
+			if (!pathDisplay || !pathMeta) return;
+			pathDisplay.textContent = item?.dataset.path ?? '$';
+			pathMeta.textContent = item ? `· ${item.dataset.meta ?? ''}` : '';
+		}
+
+		function setCurrent(item: HTMLElement | null, focus = true): void {
+			if (current && current !== item) {
+				current.setAttribute('tabindex', '-1');
+				current.removeAttribute('aria-selected');
+			}
+			current = item;
+			if (!item) {
+				updateBreadcrumb(null);
+				return;
+			}
+			item.setAttribute('tabindex', '0');
+			item.setAttribute('aria-selected', 'true');
+			if (focus) item.focus();
+			updateBreadcrumb(item);
+		}
+
+		function toggleItem(item: HTMLElement, expand?: boolean): void {
+			const group = childGroup(item);
+			if (!group) return;
+			const next = expand === undefined ? !isExpanded(item) : expand;
+			if (next) builders.get(item)?.();
+			group.hidden = !next;
+			item.setAttribute('aria-expanded', String(next));
+			const toggle = item.querySelector<HTMLElement>(':scope > .jb-row > .jb-toggle');
+			toggle?.setAttribute('aria-label', next ? 'Collapse' : 'Expand');
+		}
+
+		function expandTopLevel(): void {
+			tree
+				.querySelectorAll<HTMLElement>(':scope > [role="treeitem"][aria-expanded="false"]')
+				.forEach((item) => toggleItem(item, true));
+		}
+
+		function expandAll(): void {
+			let guard = 0;
+			while (guard < 100000) {
+				const collapsed = tree.querySelectorAll<HTMLElement>('[role="treeitem"][aria-expanded="false"]');
+				if (collapsed.length === 0) break;
+				collapsed.forEach((item) => toggleItem(item, true));
+				guard++;
+			}
+		}
+
+		function collapseAll(): void {
+			tree
+				.querySelectorAll<HTMLElement>('[role="treeitem"][aria-expanded="true"]')
+				.forEach((item) => toggleItem(item, false));
+			// Focus may have lived inside a now-collapsed branch — pull it to a root.
+			if (current && current.getAttribute('aria-selected') === 'true' && !current.isConnected) {
+				setCurrent(firstItem(), false);
+			} else if (current && parentItem(current)) {
+				setCurrent(firstItem(), false);
+			}
+		}
+
+		function showPlaceholder(message: string): void {
+			tree.replaceChildren();
+			current = null;
+			updateBreadcrumb(null);
+			const p = document.createElement('div');
+			p.className = 'jb-placeholder';
+			p.textContent = message;
+			tree.appendChild(p);
+		}
+
+		function renderRoot(value: JsonValue): void {
+			tree.replaceChildren();
+			current = null;
+			if (isObject(value) || isArray(value)) {
+				const entries = entriesOf(value);
+				if (entries.length === 0) {
+					showPlaceholder(isArray(value) ? 'Empty array — [ ]' : 'Empty object — { }');
+					return;
+				}
+				appendChildren(tree, entries, '$', 0);
+				if (entries.length <= AUTO_EXPAND_MAX) expandTopLevel();
+			} else {
+				tree.appendChild(createItem(null, value, '$'));
+			}
+			// Seed the roving tab stop on the first node (no focus steal on load).
+			setCurrent(firstItem(), false);
+		}
+
+		// ── Keyboard navigation (WAI-ARIA tree pattern) ─────────────────────────
+		let typeBuffer = '';
+		let typeTimer = 0;
+
+		function typeAhead(char: string): void {
+			clearTimeout(typeTimer);
+			typeBuffer += char.toLowerCase();
+			typeTimer = window.setTimeout(() => {
+				typeBuffer = '';
+			}, 600);
+
+			// Walk visible items starting just after the current one, wrapping once.
+			const start = current ?? firstItem();
+			if (!start) return;
+			let node: HTMLElement | null = start;
+			let guard = 0;
+			const visited: HTMLElement[] = [];
+			while (node && guard < 20000) {
+				visited.push(node);
+				node = nextVisible(node);
+				guard++;
+			}
+			// Continue from the top so search wraps around.
+			let head: HTMLElement | null = firstItem();
+			while (head && head !== start && guard < 40000) {
+				visited.push(head);
+				head = nextVisible(head);
+				guard++;
+			}
+			for (const candidate of visited) {
+				if (candidate === start) continue;
+				const key = (candidate.dataset.key ?? '').toLowerCase();
+				if (key.startsWith(typeBuffer)) {
+					setCurrent(candidate);
+					return;
+				}
+			}
+		}
+
+		tree.addEventListener('keydown', (e: KeyboardEvent) => {
+			const target = e.target as HTMLElement;
+			const item = target.closest<HTMLElement>('[role="treeitem"]');
+			if (!item) return;
+
+			switch (e.key) {
+				case 'ArrowDown': {
+					e.preventDefault();
+					const n = nextVisible(item);
+					if (n) setCurrent(n);
+					break;
+				}
+				case 'ArrowUp': {
+					e.preventDefault();
+					const p = prevVisible(item);
+					if (p) setCurrent(p);
+					break;
+				}
+				case 'ArrowRight': {
+					e.preventDefault();
+					if (isExpandable(item) && !isExpanded(item)) {
+						toggleItem(item, true);
+					} else if (isExpandable(item) && isExpanded(item)) {
+						const kids = childItems(item);
+						if (kids.length) setCurrent(kids[0]);
+					}
+					break;
+				}
+				case 'ArrowLeft': {
+					e.preventDefault();
+					if (isExpandable(item) && isExpanded(item)) {
+						toggleItem(item, false);
+					} else {
+						const parent = parentItem(item);
+						if (parent) setCurrent(parent);
+					}
+					break;
+				}
+				case 'Home': {
+					e.preventDefault();
+					const f = firstItem();
+					if (f) setCurrent(f);
+					break;
+				}
+				case 'End': {
+					e.preventDefault();
+					const l = lastVisibleItem();
+					if (l) setCurrent(l);
+					break;
+				}
+				case 'Enter':
+				case ' ': {
+					e.preventDefault();
+					if (isExpandable(item)) toggleItem(item);
+					else void copyPath(item.dataset.path ?? '');
+					break;
+				}
+				case 'c':
+				case 'C': {
+					if (e.metaKey || e.ctrlKey) return; // let native copy work
+					e.preventDefault();
+					void copyPath(item.dataset.path ?? '');
+					break;
+				}
+				default: {
+					if (e.key.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey && /\S/.test(e.key)) {
+						e.preventDefault();
+						typeAhead(e.key);
+					}
+				}
+			}
+		});
+
+		// ── Status bar ──────────────────────────────────────────────────────────
+		function setStatus(state: 'ok' | 'error' | 'idle', text: string): void {
+			if (!dot || !label) return;
+			const colors: Record<string, string> = {
+				ok: 'var(--color-success)',
+				error: 'var(--color-error)',
+				idle: 'var(--color-mute)',
+			};
+			dot.style.backgroundColor = colors[state] ?? colors.idle;
+			label.textContent = text;
+			label.style.color = state === 'error' ? 'var(--color-error-deep)' : 'var(--color-ink)';
+		}
+
+		function topSummary(value: JsonValue): string {
+			if (isArray(value)) {
+				const n = value.length;
+				return `${n} ${n === 1 ? 'item' : 'items'}`;
+			}
+			if (isObject(value)) {
+				const n = Object.keys(value).length;
+				return `${n} ${n === 1 ? 'key' : 'keys'}`;
+			}
+			return 'scalar';
+		}
+
+		function setStats(chars: number, summary: string | null): void {
+			if (!statsEl) return;
+			const parts = [`${chars.toLocaleString()} chars`];
+			if (summary) parts.unshift(summary);
+			statsEl.textContent = parts.join(' · ');
+		}
+
+		function refreshStatus(): void {
+			const text = input.value;
+			if (text.trim() === '') {
+				setStatus('idle', 'Empty');
+				setStats(text.length, null);
+				return;
+			}
+			const res = checkJson(text);
+			if (!res.ok) {
+				setStatus('error', res.message);
+				setStats(text.length, null);
+				return;
+			}
+			setStatus('ok', 'Valid JSON');
+			try {
+				setStats(text.length, topSummary(JSON.parse(text) as JsonValue));
+			} catch {
+				setStats(text.length, null);
+			}
+		}
+
+		let flashTimer = 0;
+		function flashStatus(state: 'ok' | 'error', text: string): void {
+			setStatus(state, text);
+			clearTimeout(flashTimer);
+			flashTimer = window.setTimeout(refreshStatus, 1300);
+		}
+
+		// ── Parse + render ────────────────────────────────────────────────────────
+		function update(): void {
+			const text = input.value;
+			if (text.trim() === '') {
+				setStatus('idle', 'Empty');
+				setStats(text.length, null);
+				showPlaceholder('Paste JSON in the editor to explore it as a tree.');
+				return;
+			}
+			const res = checkJson(text);
+			if (!res.ok) {
+				setStatus('error', res.message);
+				setStats(text.length, null);
+				showPlaceholder('Fix the JSON errors to see the tree.');
+				return;
+			}
+			let parsed: JsonValue;
+			try {
+				parsed = JSON.parse(text) as JsonValue;
+			} catch {
+				setStatus('error', 'Invalid JSON');
+				showPlaceholder('Fix the JSON errors to see the tree.');
+				return;
+			}
+			setStatus('ok', 'Valid JSON');
+			setStats(text.length, topSummary(parsed));
+			renderRoot(parsed);
+		}
+
+		function applyInput(): void {
+			update();
+			saveDoc(input.value);
+		}
+
+		// ── Actions ────────────────────────────────────────────────────────────────
+		async function copyJson(): Promise<void> {
+			let out = input.value;
+			const res = checkJson(out);
+			if (res.ok) {
+				try {
+					out = JSON.stringify(JSON.parse(input.value), null, 2);
+				} catch {
+					/* keep raw */
+				}
+			}
+			if (await copyToClipboard(out)) flashStatus('ok', 'Copied JSON');
+			else flashStatus('error', 'Clipboard unavailable');
+		}
+
+		async function copyPath(path: string): Promise<void> {
+			if (!path) return;
+			if (await copyToClipboard(path)) flashStatus('ok', `Copied path: ${path}`);
+			else flashStatus('error', 'Clipboard unavailable');
+		}
+
+		// ── Theme toggle — shared across every tool island (lib/island-theme). ───
+		const themeCtl = initThemeToggle({ root });
+
+		const actions: Record<string, () => void | Promise<void>> = {
+			expand: expandAll,
+			collapse: collapseAll,
+			theme: () => themeCtl.toggle(),
+			'copy-path': () => copyPath(current?.dataset.path ?? '$'),
+			sample: () => {
+				input.value = SAMPLE;
+				applyInput();
+			},
+			copy: copyJson,
+			clear: () => {
+				input.value = '';
+				applyInput();
+				input.focus();
+			},
+		};
+
+		root.querySelectorAll('[data-action]').forEach((btn) => {
+			const action = btn.getAttribute('data-action');
+			if (!action) return;
+			btn.addEventListener('click', () => {
+				const fn = actions[action];
+				if (fn) void fn();
+			});
+		});
+
+		// One delegated listener for the tree: copy-path beats toggle, and any click
+		// updates the roving focus so keyboard nav resumes from where the mouse left.
+		tree.addEventListener('click', (e) => {
+			const target = e.target as HTMLElement;
+			const item = target.closest<HTMLElement>('[role="treeitem"]');
+			const copyEl = target.closest<HTMLElement>('[data-copy-path]');
+			if (copyEl) {
+				if (item) setCurrent(item, false);
+				void copyPath(copyEl.getAttribute('data-path') ?? '');
+				return;
+			}
+			const toggleTarget = target.closest<HTMLElement>('[data-toggle]');
+			if (toggleTarget && item) {
+				setCurrent(item, false);
+				toggleItem(item);
+				return;
+			}
+			if (item) setCurrent(item);
+		});
+
+		let inputTimer = 0;
+		input.addEventListener('input', () => {
+			clearTimeout(inputTimer);
+			inputTimer = window.setTimeout(applyInput, 300);
+		});
+
+		update();
+	}
+</script>

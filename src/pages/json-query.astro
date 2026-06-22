@@ -1,0 +1,82 @@
+---
+import ToolPage from '../components/ToolPage.astro';
+import JsonQueryTool from '../components/JsonQueryTool.astro';
+import type { FaqItem } from '../lib/jsonld';
+import type { RelatedTool } from '../components/ToolPage.astro';
+
+const steps = [
+	{ title: 'Paste your JSON', body: 'Drop it into the left editor. It is parsed entirely in your browser — nothing is ever uploaded.' },
+	{ title: 'Pick a language', body: 'Choose JSONPath, JMESPath, or jq from the tab row. Each has its own snippet library to get you started.' },
+	{ title: 'Type or click a query', body: 'Enter an expression, or click any snippet to load it instantly. Results update 300 ms after you stop typing.' },
+	{ title: 'Copy or download', body: 'Copy the result, download it as JSON, or grab a ready-to-run code snippet in JS, Python, Go, or CLI.' },
+];
+
+const whatIs = [
+	'A JSON query tool lets you extract, filter, and transform data without writing a loop. This one runs three query languages in a single surface — <strong class="font-medium text-ink">JSONPath</strong> (the RFC 9535 standard, plus the widely-used Goessner extensions), <strong class="font-medium text-ink">JMESPath</strong> (the AWS-standard structured-query language), and <strong class="font-medium text-ink">jq</strong> (the Swiss army knife for JSON on the command line). No other free online tool supports all three.',
+	'Each language has a curated snippet library — grouped by use case, not alphabet — so you can click an example, see the result, and learn the syntax in seconds. The evaluator runs entirely in your browser and updates live as you type, with a 300 ms debounce. Multi-value outputs (jq and JSONPath can produce streams) are shown individually with their index, and a <strong class="font-medium text-ink">Copy as code</strong> button generates a runnable snippet in JavaScript, Python, Go, or the jq CLI so you can paste it straight into a project.',
+	'The query history panel shows your last five queries per language — click any chip to re-run it. The document you are working on carries over from the Formatter, Diff, or Table Viewer so you never paste twice. Everything is local, offline-capable, and free.',
+];
+
+const faqs: FaqItem[] = [
+	{
+		question: 'What is the difference between JSONPath, JMESPath, and jq?',
+		answer:
+			'JSONPath was invented by Stefan Goessner and standardised as RFC 9535. It uses $ as the root and supports wildcards, slices, recursive descent (..), and filter expressions (?(@.field)). JMESPath is the AWS-standard query language used in the AWS CLI and SDKs; it avoids $ and supports projections, multi-select objects, and built-in functions. jq is a full command-line programming language for JSON — it has pipes, variables, reducers, format strings, and hundreds of built-in functions, making it the most powerful of the three but also the steepest learning curve.',
+	},
+	{
+		question: 'Which query language should I use?',
+		answer:
+			'Use JSONPath if you just need to extract values at specific paths in a document and want the widest library support. Use JMESPath if you are working with AWS tools or need a language with a formal specification and strong typing guarantees. Use jq if you need to transform, reshape, aggregate, or script complex transformations — it can do everything the other two can do and far more.',
+	},
+	{
+		question: 'How does jq work without installing anything?',
+		answer:
+			'The jq evaluator on this page is a pure TypeScript implementation of the jq language that runs directly in your browser — no download, no WebAssembly, no server. It covers the complete everyday jq vocabulary: field access, pipes, array and object construction, select, map, sort_by, group_by, reduce, to_entries, string interpolation, format strings (@base64, @uri, @csv…), and all standard built-ins.',
+	},
+	{
+		question: 'Can it handle large JSON files?',
+		answer:
+			'Yes. The evaluator processes JSON in the browser and produces at most 10 000 output values per query before truncating (a safety limit). The JSON input textarea accepts text of any size your browser can hold. For files larger than a megabyte, paste and query work fine; only the table and graph renderers have separate virtualisation for huge arrays.',
+	},
+	{
+		question: 'What is the "Copy as code" button for?',
+		answer:
+			'It copies a ready-to-run code snippet — matching the active query language — in seven flavours: JavaScript with jsonpath-plus, JavaScript with jmespath.js, JavaScript with jq-web, Python with jsonpath-ng, Python with jmespath.py, the jq CLI command, and Go with tidwall/gjson. Paste it straight into your project without looking up the API.',
+	},
+	{
+		question: 'What does the result mode switch do?',
+		answer:
+			'Pretty (default) renders the result as syntax-highlighted JSON. Raw shows each value on its own line with its index — useful when a query returns many values and you want to scan them quickly. Count shows only the number of matching values — handy for assertion or debugging ("how many items match this filter?").',
+	},
+	{
+		question: 'Is this tool private and free?',
+		answer:
+			'Completely. Your JSON is parsed and queried entirely in your browser — nothing is sent to any server. There is no account, no rate limit, and no upload. The query history is stored in sessionStorage and cleared when you close the tab.',
+	},
+];
+
+const related: RelatedTool[] = [
+	{ name: 'JSON Formatter', href: '/json-formatter', desc: 'Beautify, minify, validate & repair.' },
+	{ name: 'JSON Diff',      href: '/json-diff',      desc: 'Compare two JSON documents.' },
+	{ name: 'JSON Table Viewer', href: '/json-table-viewer', desc: 'Arrays as sortable, filterable rows.' },
+	{ name: 'JSON Tree Viewer', href: '/json-tree-viewer', desc: 'Keyboard-first collapsible tree.' },
+];
+---
+
+<ToolPage
+	slug="/json-query"
+	title="JSON Query — JSONPath, JMESPath & jq Online"
+	description="Free online JSON query tool. Run JSONPath, JMESPath, or jq filters in your browser — live results, snippet library, copy-as-code, no upload."
+	breadcrumbLabel="JSON Query"
+	h1="JSON query — JSONPath, JMESPath, and jq in one tool."
+	intro="Paste JSON, pick a language, and type a query. Results appear live. Copy the output or grab a ready-to-run code snippet for JS, Python, Go, or the CLI. Everything runs in your browser — nothing is uploaded."
+	howToTitle="Query JSON in four steps."
+	steps={steps}
+	whatIsTitle="Three languages, one surface."
+	whatIs={whatIs}
+	faqTitle="JSON query questions."
+	faqs={faqs}
+	related={related}
+>
+	<JsonQueryTool slot="tool" />
+</ToolPage>

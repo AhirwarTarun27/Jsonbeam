@@ -1,0 +1,82 @@
+---
+import ToolPage from '../components/ToolPage.astro';
+import JsonTableViewer from '../components/JsonTableViewer.astro';
+import type { FaqItem } from '../lib/jsonld';
+import type { RelatedTool } from '../components/ToolPage.astro';
+
+const steps = [
+	{ title: 'Paste your JSON', body: 'Drop an array of objects into the editor. It parses entirely in your browser — nothing is sent anywhere.' },
+	{ title: 'Sort any column', body: 'Click a column header once for ascending, twice for descending, a third time to clear. Sorting is type-aware: numbers sort numerically, strings alphabetically.' },
+	{ title: 'Filter and search', body: 'Type in the global search box to keep only rows that match. Hit Filters to reveal per-column inputs for pinpoint filtering.' },
+	{ title: 'Copy or export', body: 'Click any cell to copy its value. Hit CSV to download the visible rows as a properly quoted RFC 4180 file.' },
+];
+
+const whatIs = [
+	'A JSON table viewer converts an <strong class="font-medium text-ink">array of JSON objects</strong> into a spreadsheet-style grid where each object is a row and each unique key becomes a column. It is the fastest way to spot patterns, compare values, and extract data from API responses, log files, or any record-oriented JSON.',
+	'This viewer handles the awkward cases most tools ignore. <strong class="font-medium text-ink">Ragged rows</strong> — objects with different sets of keys — display cleanly: every unique key across the whole array becomes a column, and missing cells show a quiet dash. Nested objects and arrays appear as compact previews in their cells, with the full value in a tooltip.',
+	'Column sort is <strong class="font-medium text-ink">type-aware</strong>: numbers sort numerically rather than lexicographically, so 10 comes after 9 instead of before 2. The three-way cycle (ascending → descending → off) lets you restore the original order without refreshing the page. Everything runs locally — safe for sensitive payloads and works fully offline.',
+];
+
+const faqs: FaqItem[] = [
+	{
+		question: 'What JSON shapes does the table viewer support?',
+		answer:
+			'Arrays of objects are the primary use case — each object becomes a row. Arrays of primitives display as an index/value two-column table. A single object at the root displays as a key/value table. Deeply nested or mixed structures that cannot be flattened to a grid show a suggestion to try the Tree Viewer instead.',
+	},
+	{
+		question: 'What are "ragged rows" and how does the viewer handle them?',
+		answer:
+			'Ragged rows are objects in the array that have different sets of keys. For example, one record might have a "team" field and another might not. The table viewer unions all keys across every object in the array and uses them as columns. Missing cells show a quiet em-dash rather than an error, so the table stays readable even when records are inconsistent.',
+	},
+	{
+		question: 'How does column sorting work?',
+		answer:
+			'Click a column header once to sort ascending, twice to sort descending, and a third time to remove the sort. Sorting is type-aware: numbers compare numerically, strings compare alphabetically (case-insensitive), booleans sort false before true, and null values always sort to the bottom regardless of direction.',
+	},
+	{
+		question: 'Can I filter the table?',
+		answer:
+			'Yes. The global search box in the toolbar filters rows to those containing the search term in any cell. The Filters button reveals per-column filter inputs below the header, so you can combine filters — for example, filtering "role" to "Engineer" and "active" to "true" at the same time.',
+	},
+	{
+		question: 'Can it handle large arrays without freezing?',
+		answer:
+			'Yes. The table renders the first 500 rows immediately and a "Show more" button loads the next batch on demand. Sorting and filtering always run on the full data set, so filtering a 50 000-row array and rendering the 12 matching rows is instant.',
+	},
+	{
+		question: 'How do I export the data as CSV?',
+		answer:
+			'Click the CSV button in the toolbar. The download includes only the rows currently visible after your active search and per-column filters, and it respects the current column sort order. Values are quoted per RFC 4180, so commas and line breaks inside strings are escaped correctly.',
+	},
+	{
+		question: 'Is the table viewer private and free?',
+		answer:
+			'Completely. There is no account and no upload. Your JSON is parsed and displayed entirely in your browser, so it is safe for sensitive production data and works offline once the page has loaded.',
+	},
+];
+
+const related: RelatedTool[] = [
+	{ name: 'JSON Diff',        href: '/json-diff',        desc: 'Compare two documents — added, removed, changed.' },
+	{ name: 'JSON Viewer',      href: '/json-viewer',      desc: 'Explore any JSON as a collapsible tree.' },
+	{ name: 'JSON Tree Viewer', href: '/json-tree-viewer', desc: 'Keyboard-first tree navigation.' },
+	{ name: 'JSON Formatter',   href: '/json-formatter',   desc: 'Beautify, minify, validate & repair.' },
+];
+---
+
+<ToolPage
+	slug="/json-table-viewer"
+	title="JSON Table Viewer — Sort, Filter & Export JSON as a Table"
+	description="Free online JSON table viewer. Display arrays of JSON objects as a sortable, filterable table. Handles ragged rows, exports CSV, and runs entirely in your browser."
+	breadcrumbLabel="JSON Table Viewer"
+	h1="JSON table viewer — sort, filter, and export your data."
+	intro="Paste an array of JSON objects and see it as a live, sortable table. Click a column header to sort, use the search box to filter rows, and export as CSV — all in your browser, nothing uploaded."
+	howToTitle="Turn JSON into a table in four steps."
+	steps={steps}
+	whatIsTitle="A table that handles real-world JSON."
+	whatIs={whatIs}
+	faqTitle="JSON table viewer questions."
+	faqs={faqs}
+	related={related}
+>
+	<JsonTableViewer slot="tool" />
+</ToolPage>

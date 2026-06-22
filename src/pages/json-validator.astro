@@ -1,0 +1,80 @@
+---
+import ToolPage from '../components/ToolPage.astro';
+import type { FaqItem } from '../lib/jsonld';
+import type { RelatedTool } from '../components/ToolPage.astro';
+
+const steps = [
+	{ title: 'Paste or type your JSON', body: "Drop it into the editor. It's checked as you type — nothing is uploaded." },
+	{ title: 'Read the verdict', body: 'The status bar shows "Valid JSON" or the precise error, updated live.' },
+	{ title: 'Jump to the error', body: 'Invalid JSON is underlined exactly where parsing fails; hover to read why.' },
+	{ title: 'Fix and re-check', body: 'Edit in place and it re-validates automatically. Repair can auto-fix common mistakes.' },
+];
+
+const whatIs = [
+	'JSON has a strict grammar (RFC 8259): double-quoted keys and strings, no trailing commas, no comments, and carefully balanced braces and brackets. A single stray character anywhere makes the whole document invalid.',
+	"A validator parses your JSON the same way a program would and reports the first place it fails — the exact position and the reason — so you don't have to hunt. JSON Beam underlines that spot inline and explains it in plain language.",
+	'Everything runs locally in your browser, so you can safely validate sensitive or proprietary payloads, and it keeps working offline.',
+];
+
+const faqs: FaqItem[] = [
+	{
+		question: 'How do I check if my JSON is valid?',
+		answer:
+			'Paste or type your JSON into the editor — it is validated live as you type. If the document parses, it is valid JSON; if not, the exact spot where parsing fails is underlined with the reason and position. There is no button to press, and nothing is uploaded — validation runs entirely in your browser.',
+	},
+	{
+		question: 'What makes JSON invalid?',
+		answer:
+			'The most common causes are trailing commas, single quotes instead of double quotes, comments, unquoted keys, and unbalanced braces or brackets. Any one of these makes the entire document fail to parse.',
+	},
+	{
+		question: 'How do I find the error in my JSON?',
+		answer:
+			'As you type, the exact character where parsing fails is underlined, and the status bar shows the reason and position. Hover the underline to read the message inline, then fix it in place.',
+	},
+	{
+		question: 'Can it fix the errors it finds?',
+		answer:
+			'Yes. The Repair action automatically fixes the most common mistakes — trailing commas, single quotes, comments, and unquoted keys — then re-formats the result so you get valid JSON in one click.',
+	},
+	{
+		question: 'Does it validate against a JSON Schema?',
+		answer:
+			'Not yet. This tool checks JSON syntax — whether the document parses at all — rather than JSON Schema rules like required fields or types. Schema validation is on the roadmap.',
+	},
+	{
+		question: 'Is this JSON validator free and private?',
+		answer:
+			'Yes. It is completely free with no account or signup, and it runs entirely in your browser. Your JSON is never uploaded to a server, so it is safe to validate sensitive data.',
+	},
+	{
+		question: 'Does it work offline?',
+		answer:
+			'Yes. Because all processing happens client-side, the validator keeps working with no network connection once the page has loaded.',
+	},
+];
+
+const related: RelatedTool[] = [
+	{ name: 'JSON Formatter', href: '/json-formatter', desc: 'Beautify, minify, validate & repair.' },
+	{ name: 'JSON Editor', href: '/json-editor', desc: 'Edit with live validation.' },
+	{ name: 'JSON Repair', href: '/json-repair', desc: 'Auto-fix broken JSON.' },
+	{ name: 'JSON Viewer', href: '/json-viewer', desc: 'Explore structure as a tree.' },
+];
+---
+
+<ToolPage
+	variant="validate"
+	slug="/json-validator"
+	title="JSON Validator — Find Syntax Errors Online Free"
+	description="Free online JSON validator. Instantly check JSON for syntax errors with the exact position and reason — private, in-browser, nothing uploaded."
+	breadcrumbLabel="JSON Validator"
+	h1="JSON validator — pinpoint the exact syntax error."
+	intro="Paste JSON and know instantly whether it's valid. The exact spot that breaks parsing is underlined, with the reason in plain language. Nothing you paste ever leaves your browser."
+	howToTitle="Validate JSON in four steps."
+	steps={steps}
+	whatIsTitle="A validator that shows you where and why."
+	whatIs={whatIs}
+	faqTitle="JSON validator questions."
+	faqs={faqs}
+	related={related}
+/>

@@ -1,0 +1,82 @@
+---
+import ToolPage from '../components/ToolPage.astro';
+import JsonDiffViewer from '../components/JsonDiffViewer.astro';
+import type { FaqItem } from '../lib/jsonld';
+import type { RelatedTool } from '../components/ToolPage.astro';
+
+const steps = [
+	{ title: 'Paste your two documents', body: 'Drop the original JSON in the A (left) panel and the modified version in the B (right) panel.' },
+	{ title: 'Read the diff', body: 'Blue lines are added (+), red lines are removed (−), and orange lines are changed (~). A colour key sits in the summary bar. Unchanged lines are dimmed so the eye goes straight to the differences.' },
+	{ title: 'Navigate between changes', body: 'Use the ↑ ↓ buttons in the summary bar — or press n / p while the diff is focused — to jump from one change to the next.' },
+	{ title: 'Download the patch', body: 'Click Merge Patch to download a JSON Merge Patch (RFC 7396) document that transforms A into B — useful for patch APIs and configuration management.' },
+];
+
+const whatIs = [
+	'A JSON diff tool compares two JSON documents and shows exactly what changed: which keys were added, which were removed, and which values were modified. Unlike a line-based text diff, <strong class="font-medium text-ink">JSON Beam\'s diff is structure-aware</strong> — it understands objects and arrays instead of treating the document as a sequence of text lines.',
+	'Object keys are matched <strong class="font-medium text-ink">by name</strong>, not by position, so adding a new key in the middle of an object does not make every following key look like it changed. Array items are aligned using a <strong class="font-medium text-ink">Longest Common Subsequence (LCS)</strong> algorithm for arrays up to 200 items long, so a single inserted element is shown as one addition rather than a cascade of changes.',
+	'The output is a navigable diff tree, not a wall of plus and minus signs. Added sections, removed sections, and changed values are each colour-coded and independently scrollable. A live summary bar counts the total additions, removals, and changes. Everything runs client-side — your JSON never leaves the browser, and the tool works fully offline.',
+];
+
+const faqs: FaqItem[] = [
+	{
+		question: 'How do I compare two JSON files?',
+		answer:
+			'Paste the original JSON on the left and the changed version on the right — JSON Beam highlights every added, removed, and changed value instantly. The comparison is structural, not line-by-line: it matches object keys by name and uses LCS to align array items, so a key added in the middle of an object does not make every other key look changed, and a single array insertion shows as one line rather than a cascade. Both documents are compared entirely in your browser.',
+	},
+	{
+		question: 'What does the LCS algorithm do for arrays?',
+		answer:
+			'For arrays up to 200 items, the viewer uses Longest Common Subsequence to find the longest sequence of elements that appear in the same order in both arrays, then annotates items not in that sequence as added or removed. For larger arrays it falls back to index-by-index comparison. This means inserting one element near the start of a 50-element array is shown as one addition rather than 49 changes.',
+	},
+	{
+		question: 'What are the colour codes in the diff?',
+		answer:
+			'Lines prefixed with + and highlighted in blue are added (present in B but not A). Lines prefixed with − and highlighted in red are removed (present in A but not in B). Lines prefixed with ~ and highlighted in orange are changed values — the old value is shown struck through and the new value follows an arrow. A colour key in the summary bar labels each. Unchanged lines are dimmed so the eye goes to the differences.',
+	},
+	{
+		question: 'What is a JSON Merge Patch?',
+		answer:
+			'A JSON Merge Patch (RFC 7396) is a concise document that describes the changes needed to transform one JSON document into another. A key set to null means "remove this key"; any other value means "add or replace". The Merge Patch button generates this document locally so you can use it with patch-supporting APIs or store it in version control.',
+	},
+	{
+		question: 'Can I navigate between changes with the keyboard?',
+		answer:
+			'Yes. Click anywhere in the diff output panel to focus it, then press n or ↓ to jump to the next change and p or ↑ to jump to the previous one. The ↑↓ buttons in the summary bar do the same with the mouse. The focused change is highlighted with a blue outline so it is easy to spot.',
+	},
+	{
+		question: 'Can it handle large JSON files?',
+		answer:
+			'Yes, within limits. The diff algorithm runs in the browser on the main thread, so very large documents (hundreds of kilobytes each) may take a moment to process. The rendered diff is capped at 2 000 displayed lines to keep the browser responsive; a notice appears if the diff is truncated. For extremely large files, the diff still correctly identifies all changes — the cap only limits what is rendered.',
+	},
+	{
+		question: 'Is the diff tool private and free?',
+		answer:
+			'Completely. There is no account, and your JSON is never uploaded — both documents are diffed entirely in your browser. It also works offline once the page has loaded.',
+	},
+];
+
+const related: RelatedTool[] = [
+	{ name: 'JSON Table Viewer', href: '/json-table-viewer', desc: 'See arrays of records as a sortable table.' },
+	{ name: 'JSON Viewer',       href: '/json-viewer',       desc: 'Explore JSON as a collapsible tree.' },
+	{ name: 'JSON Tree Viewer',  href: '/json-tree-viewer',  desc: 'Keyboard-first tree navigation.' },
+	{ name: 'JSON Formatter',    href: '/json-formatter',    desc: 'Beautify, minify, validate & repair.' },
+];
+---
+
+<ToolPage
+	slug="/json-diff"
+	title="JSON Diff — Compare Two JSON Documents Online"
+	description="Free online JSON diff tool. Paste two JSON documents and see a structure-aware semantic diff — added, removed, and changed keys highlighted. Download as JSON Merge Patch."
+	breadcrumbLabel="JSON Diff"
+	h1="JSON diff — compare two documents, see exactly what changed."
+	intro="Paste your original JSON in A and the modified version in B. The diff is structure-aware: object keys match by name, array items align by LCS. Blue is added, red is removed, orange is changed. Navigate changes, download a Merge Patch — nothing is uploaded."
+	howToTitle="Compare JSON in four steps."
+	steps={steps}
+	whatIsTitle="A semantic diff that understands JSON."
+	whatIs={whatIs}
+	faqTitle="JSON diff questions."
+	faqs={faqs}
+	related={related}
+>
+	<JsonDiffViewer slot="tool" />
+</ToolPage>

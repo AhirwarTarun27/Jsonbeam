@@ -1,0 +1,77 @@
+---
+import ToolPage from '../components/ToolPage.astro';
+import JsonViewer from '../components/JsonViewer.astro';
+import type { FaqItem } from '../lib/jsonld';
+import type { RelatedTool } from '../components/ToolPage.astro';
+
+const steps = [
+	{ title: 'Paste or type your JSON', body: 'Drop it into the editor on the left. It stays in your browser.' },
+	{ title: 'Browse the tree', body: 'Every object and array becomes a collapsible node with a key or item count.' },
+	{ title: 'Expand what you need', body: 'Click a node to drill in, or use Expand all / Collapse all. Deep nodes load on demand.' },
+	{ title: 'Copy a path', body: 'Click any key to copy its path — like $.users[0].name — to your clipboard.' },
+];
+
+const whatIs = [
+	'Raw JSON is hard to read once it nests more than a level or two. A tree viewer turns it into an outline you can collapse and expand, so you can see the shape of the data and drill into just the part you care about.',
+	"JSON Beam color-codes every value by type, shows how many keys or items each node holds before you open it, and copies a node's path on click — so you can reference <strong class='font-medium text-ink'>$.users[0].name</strong> straight in your code.",
+	'Children render only when you expand a node, so even deeply nested, megabyte-scale documents open without freezing the tab. Everything runs locally — safe for sensitive data, and it works offline.',
+];
+
+const faqs: FaqItem[] = [
+	{
+		question: 'What is a JSON viewer?',
+		answer:
+			'A JSON viewer renders JSON as an interactive, collapsible tree instead of a wall of text. You can expand and collapse objects and arrays, see counts at a glance, and read color-coded values by type.',
+	},
+	{
+		question: 'Can it handle large JSON files?',
+		answer:
+			'Yes. Child nodes are built only when you expand them, so the viewer stays responsive on deeply nested or large documents instead of rendering everything at once.',
+	},
+	{
+		question: 'How do I copy the path to a value?',
+		answer:
+			'Click any key in the tree. Its path — for example $.users[0].name — is copied to your clipboard, ready to paste into code or a query.',
+	},
+	{
+		question: 'Can I edit the JSON here too?',
+		answer:
+			'Yes. Edit the text on the left and the tree updates live. For full formatting, minifying, and repair, use the JSON Formatter.',
+	},
+	{
+		question: 'Is this JSON viewer private and free?',
+		answer:
+			'Yes. It is completely free with no account or signup, and your JSON is parsed entirely in your browser — nothing is ever uploaded.',
+	},
+	{
+		question: 'Does it work offline?',
+		answer:
+			'Yes. Because all processing happens client-side, the viewer keeps working with no network connection once the page has loaded.',
+	},
+];
+
+const related: RelatedTool[] = [
+	{ name: 'JSON Tree Viewer', href: '/json-tree-viewer', desc: 'Keyboard-first tree navigation.' },
+	{ name: 'JSON Visualizer', href: '/json-visualizer', desc: 'See JSON as an interactive graph.' },
+	{ name: 'JSON Graph Viewer', href: '/json-graph-viewer', desc: 'See JSON as a node diagram.' },
+	{ name: 'JSON Formatter', href: '/json-formatter', desc: 'Beautify, minify, validate & repair.' },
+];
+---
+
+<ToolPage
+	slug="/json-viewer"
+	title="JSON Viewer — Explore & Read JSON as a Tree"
+	description="Free online JSON viewer. Explore JSON as a collapsible, color-coded tree, copy any node's path, and handle large files — all in your browser, no upload."
+	breadcrumbLabel="JSON Viewer"
+	h1="JSON viewer — read and explore your data as a tree."
+	intro="Paste JSON and explore it as a collapsible, color-coded tree. Expand only what you need, copy any node's path, and stay fast on large files. Nothing you paste leaves your browser."
+	howToTitle="Explore JSON in four steps."
+	steps={steps}
+	whatIsTitle="A tree built for big, nested JSON."
+	whatIs={whatIs}
+	faqTitle="JSON viewer questions."
+	faqs={faqs}
+	related={related}
+>
+	<JsonViewer slot="tool" />
+</ToolPage>

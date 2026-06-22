@@ -1,0 +1,201 @@
+---
+/**
+ * Reusable tool landing-page template. Drives every "Format & validate" page
+ * (and, later, the View/Query/Convert surfaces) from a single content config so
+ * the pages stay consistent and DRY without copy-pasting the shell.
+ *
+ * It renders the SEO-critical sections — hero, the live tool island, a how-to,
+ * a "what it is" explainer, a visible FAQ, and related-tool cross-links — and
+ * builds the JSON-LD (SoftwareApplication + FAQPage + BreadcrumbList) from the
+ * same props, so structured data and visible content never drift apart.
+ *
+ * Content pages stay 0-JS except the island itself (CLAUDE.md perf contract).
+ */
+import Layout from '../layouts/Layout.astro';
+import JsonFormatter from './JsonFormatter.astro';
+import ToolSwitcher from './ToolSwitcher.astro';
+import NextSteps from './NextSteps.astro';
+import CommandPalette from './CommandPalette.astro';
+import { SITE_URL, type ToolVariant } from '../consts';
+import { softwareApplication, faqPage, breadcrumbs, type FaqItem } from '../lib/jsonld';
+
+export interface RelatedTool {
+	name: string;
+	href: string;
+	desc: string;
+	/** Not-yet-shipped tools render as muted, non-linked rows. */
+	soon?: boolean;
+}
+
+interface Props {
+	/**
+	 * Which behavior the shared formatter island runs (primary button + Ctrl+S).
+	 * Ignored when the page supplies its own island via the `tool` slot.
+	 */
+	variant?: ToolVariant;
+	/** Route this page lives at, e.g. "/json-validator". */
+	slug: string;
+	/** <title> (≤60 chars, keyword first) and meta title. */
+	title: string;
+	/** <meta description> (≤155 chars). */
+	description: string;
+	/** Short label for the breadcrumb + structured data, e.g. "JSON Validator". */
+	breadcrumbLabel: string;
+	/** Visible H1. */
+	h1: string;
+	/** Hero sub-paragraph. */
+	intro: string;
+	howToTitle: string;
+	steps: { title: string; body: string }[];
+	whatIsTitle: string;
+	/** Explainer paragraphs — rendered with set:html so inline <strong> works. */
+	whatIs: string[];
+	faqTitle: string;
+	faqs: FaqItem[];
+	related: RelatedTool[];
+}
+
+const {
+	variant = 'format',
+	slug,
+	title,
+	description,
+	breadcrumbLabel,
+	h1,
+	intro,
+	howToTitle,
+	steps,
+	whatIsTitle,
+	whatIs,
+	faqTitle,
+	faqs,
+	related,
+} = Astro.props;
+
+const pageUrl = `${SITE_URL}${slug}`;
+
+const jsonLd = [
+	softwareApplication({ name: `JSON Beam — ${breadcrumbLabel}`, description, url: pageUrl }),
+	faqPage(faqs),
+	breadcrumbs([
+		{ name: 'Home', url: SITE_URL },
+		{ name: breadcrumbLabel, url: pageUrl },
+	]),
+];
+---
+
+<Layout title={title} description={description} jsonLd={jsonLd} themed>
+	<section class="border-b border-hairline bg-canvas-soft">
+		<div class="container-page py-10">
+			<!-- Breadcrumb -->
+			<nav aria-label="Breadcrumb" class="font-mono text-caption text-mute">
+				<a href="/" class="hover:text-ink">Home</a>
+				<span class="px-1.5">/</span>
+				<span class="text-body">{breadcrumbLabel}</span>
+			</nav>
+
+			<h1 class="mt-4 max-w-3xl text-display-lg" set:html={h1} />
+			<p class="mt-4 max-w-2xl text-body-lg text-body">{intro}</p>
+		</div>
+	</section>
+
+	<!-- The tool. Pages can supply their own island via the `tool` slot;
+	     otherwise the shared formatter island renders for the given variant. -->
+	<section class="bg-canvas">
+		<div class="container-page py-10">
+			<ToolSwitcher current={slug} />
+			<slot name="tool"><JsonFormatter variant={variant} /></slot>
+			<NextSteps items={related} />
+		</div>
+	</section>
+
+	<!-- ⌘K command palette: lazy-loaded loader script, no markup. Tool pages only. -->
+	<CommandPalette />
+
+	<!-- How to -->
+	<section class="bg-canvas-soft">
+		<div class="container-page py-20">
+			<div class="max-w-2xl">
+				<p class="font-mono text-caption uppercase tracking-wide text-mute">How to use it</p>
+				<h2 class="mt-3 text-display-md">{howToTitle}</h2>
+			</div>
+			<ol class="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+				{
+					steps.map((step, i) => (
+						<li class="rounded-md bg-canvas p-6 shadow-e2">
+							<span class="font-mono text-caption text-mute">0{i + 1}</span>
+							<h3 class="mt-2 text-display-sm">{step.title}</h3>
+							<p class="mt-2 text-body-sm text-body">{step.body}</p>
+						</li>
+					))
+				}
+			</ol>
+		</div>
+	</section>
+
+	<!-- What is -->
+	<section class="bg-canvas">
+		<div class="container-page grid gap-10 py-20 lg:grid-cols-[1fr_1.4fr]">
+			<div>
+				<p class="font-mono text-caption uppercase tracking-wide text-mute">What it is</p>
+				<h2 class="mt-3 text-display-md">{whatIsTitle}</h2>
+			</div>
+			<div class="max-w-2xl space-y-4 text-body-md text-body">
+				{whatIs.map((para) => <p set:html={para} />)}
+			</div>
+		</div>
+	</section>
+
+	<!-- FAQ -->
+	<section class="bg-canvas-soft">
+		<div class="container-page grid gap-x-12 gap-y-8 py-20 lg:grid-cols-[1fr_1.7fr]">
+			<div>
+				<p class="font-mono text-caption uppercase tracking-wide text-mute">FAQ</p>
+				<h2 class="mt-3 text-display-md">{faqTitle}</h2>
+			</div>
+			<div class="divide-y divide-hairline border-t border-hairline">
+				{
+					faqs.map((faq) => (
+						<details class="group py-5">
+							<summary class="flex cursor-pointer items-center justify-between gap-4 text-body-md font-medium text-ink marker:hidden [&::-webkit-details-marker]:hidden">
+								{faq.question}
+								<span class="text-mute transition-transform group-open:rotate-45" aria-hidden="true">+</span>
+							</summary>
+							<p class="mt-3 text-body-md text-body">{faq.answer}</p>
+						</details>
+					))
+				}
+			</div>
+		</div>
+	</section>
+
+	<!-- Related tools -->
+	<section class="bg-canvas">
+		<div class="container-page py-20">
+			<h2 class="text-display-sm">Related tools</h2>
+			<div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+				{
+					related.map((tool) =>
+						tool.soon ? (
+							<div class="flex flex-col rounded-md bg-canvas-soft p-5 shadow-e1">
+								<div class="flex items-center justify-between">
+									<h3 class="text-body-md font-medium text-body">{tool.name}</h3>
+									<span class="rounded-full bg-canvas px-2 py-0.5 text-caption text-mute">Soon</span>
+								</div>
+								<p class="mt-1.5 text-body-sm text-mute">{tool.desc}</p>
+							</div>
+						) : (
+							<a
+								href={tool.href}
+								class="flex flex-col rounded-md bg-canvas-soft p-5 shadow-e1 transition-shadow hover:shadow-e3"
+							>
+								<h3 class="text-body-md font-medium text-ink">{tool.name}</h3>
+								<p class="mt-1.5 text-body-sm text-body">{tool.desc}</p>
+							</a>
+						)
+					)
+				}
+			</div>
+		</div>
+	</section>
+</Layout>

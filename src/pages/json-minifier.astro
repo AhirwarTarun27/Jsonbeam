@@ -1,0 +1,75 @@
+---
+import ToolPage from '../components/ToolPage.astro';
+import type { FaqItem } from '../lib/jsonld';
+import type { RelatedTool } from '../components/ToolPage.astro';
+
+const steps = [
+	{ title: 'Paste or type your JSON', body: 'Drop in formatted or messy JSON. It stays in your browser.' },
+	{ title: 'Click Minify', body: 'Every space, tab, and line break is stripped, leaving compact valid JSON.' },
+	{ title: 'Check the size', body: 'The status bar shows the new character count so you can see the saving.' },
+	{ title: 'Copy or download', body: 'Grab the minified result to your clipboard or save it as data.json.' },
+];
+
+const whatIs = [
+	"Minifying JSON removes everything a machine doesn't need — indentation, spaces between tokens, and line breaks — without changing the data itself. The result parses identically but is as small as JSON can be.",
+	'Smaller payloads mean faster API responses, lower bandwidth, and quicker page loads. Minified JSON also compresses well over gzip or Brotli, compounding the saving on the wire.',
+	'Everything runs locally in your browser, so you can safely minify sensitive payloads, and it keeps working offline. Need it readable again? The Format button reverses it instantly.',
+];
+
+const faqs: FaqItem[] = [
+	{
+		question: 'What does minifying JSON do?',
+		answer:
+			'It removes all non-essential whitespace — indentation, spaces, and newlines — to produce the smallest valid JSON. The data is unchanged; only the formatting is.',
+	},
+	{
+		question: 'Does minifying change my data?',
+		answer:
+			'No. Minification only removes whitespace between tokens. Keys, values, ordering, and types are all preserved exactly — it parses to the same object.',
+	},
+	{
+		question: 'How much smaller will my JSON get?',
+		answer:
+			'It depends on how heavily it was indented, but pretty-printed JSON often shrinks 20–50%. The status bar shows the exact before-and-after character count.',
+	},
+	{
+		question: 'Can I un-minify (beautify) it again?',
+		answer:
+			'Yes. Click Format, or open the JSON Beautifier, to re-indent minified JSON into a clean, readable structure with your chosen spacing.',
+	},
+	{
+		question: 'Is this JSON minifier free and private?',
+		answer:
+			'Yes. It is completely free with no account or signup, and it runs entirely in your browser. Your JSON is never uploaded to a server.',
+	},
+	{
+		question: 'Does it work offline?',
+		answer:
+			'Yes. Because all processing happens client-side, the minifier keeps working with no network connection once the page has loaded.',
+	},
+];
+
+const related: RelatedTool[] = [
+	{ name: 'JSON Beautifier', href: '/json-beautifier', desc: 'The reverse — readable indentation.' },
+	{ name: 'JSON Formatter', href: '/json-formatter', desc: 'Beautify, minify, validate & repair.' },
+	{ name: 'JSON Validator', href: '/json-validator', desc: 'Line-anchored syntax errors.' },
+	{ name: 'JSON Repair', href: '/json-repair', desc: 'Auto-fix broken JSON.' },
+];
+---
+
+<ToolPage
+	variant="minify"
+	slug="/json-minifier"
+	title="JSON Minifier — Compress & Shrink JSON Online"
+	description="Free online JSON minifier. Strip every byte of whitespace to shrink JSON for production and faster API payloads — in-browser, nothing uploaded."
+	breadcrumbLabel="JSON Minifier"
+	h1="JSON minifier — strip every wasted byte."
+	intro="Paste JSON and compress it to the smallest valid form, with all whitespace and line breaks removed. Smaller payloads, faster transfers. Nothing you paste leaves your browser."
+	howToTitle="Minify JSON in four steps."
+	steps={steps}
+	whatIsTitle="Smaller JSON, byte for byte."
+	whatIs={whatIs}
+	faqTitle="JSON minifier questions."
+	faqs={faqs}
+	related={related}
+/>

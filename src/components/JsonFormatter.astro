@@ -1,22 +1,38 @@
 ---
 /**
- * The /json-formatter workbench island. Framework-free: markup + a single
+ * The shared JSON workbench island. Framework-free: markup + a single
  * client-side module that mounts CodeMirror 6. Does format / minify / repair /
  * validate with inline error squiggles. All processing is local — nothing is
  * uploaded. In-app controls use the 6px radius scale (not marketing pills).
+ *
+ * The `variant` prop re-skins behavior for each landing page (validator,
+ * minifier, repair, beautifier) without re-bundling: it picks the primary
+ * (ink) toolbar button, what Ctrl+S runs, and — for repair — a broken default
+ * document so the payoff is one click away.
  */
+import type { ToolVariant } from '../consts';
+
+interface Props {
+	variant?: ToolVariant;
+}
+
+const { variant = 'format' } = Astro.props;
+// 'beautify' is the formatter's Format action under a search-friendlier name.
+const primaryAction: 'format' | 'minify' | 'validate' | 'repair' =
+	variant === 'beautify' ? 'format' : variant;
 ---
 
 <div
 	id="jb-formatter"
+	data-variant={variant}
 	class="overflow-hidden rounded-md border border-hairline bg-canvas shadow-e3"
 >
 	<!-- Toolbar -->
 	<div class="flex flex-wrap items-center gap-1.5 border-b border-hairline bg-canvas-soft px-3 py-2">
-		<button type="button" data-action="format" class="jb-btn jb-btn-primary" title="Beautify (Ctrl+S)">Format</button>
-		<button type="button" data-action="minify" class="jb-btn" title="Strip all whitespace">Minify</button>
-		<button type="button" data-action="repair" class="jb-btn" title="Fix common JSON mistakes">Repair</button>
-		<button type="button" data-action="validate" class="jb-btn" title="Check for errors">Validate</button>
+		<button type="button" data-action="format" class:list={['jb-btn', { 'jb-btn-primary': primaryAction === 'format' }]} title="Beautify">Format</button>
+		<button type="button" data-action="minify" class:list={['jb-btn', { 'jb-btn-primary': primaryAction === 'minify' }]} title="Strip all whitespace">Minify</button>
+		<button type="button" data-action="repair" class:list={['jb-btn', { 'jb-btn-primary': primaryAction === 'repair' }]} title="Fix common JSON mistakes">Repair</button>
+		<button type="button" data-action="validate" class:list={['jb-btn', { 'jb-btn-primary': primaryAction === 'validate' }]} title="Check for errors">Validate</button>
 
 		<span class="mx-1 hidden h-5 w-px bg-hairline sm:block" aria-hidden="true"></span>
 
@@ -49,7 +65,7 @@
 	</div>
 
 	<!-- Editor -->
-	<div id="jb-editor" class="h-[58vh] min-h-[380px] w-full overflow-hidden"></div>
+	<div id="jb-editor" class="h-[74vh] min-h-[460px] w-full overflow-hidden"></div>
 
 	<!-- Status bar -->
 	<div class="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-hairline bg-canvas-soft px-3 py-2 text-body-sm">
@@ -68,37 +84,9 @@
 </div>
 
 <style>
-	.jb-btn {
-		display: inline-flex;
-		align-items: center;
-		height: 32px;
-		padding: 0 12px;
-		border-radius: 6px;
-		border: 1px solid var(--color-hairline);
-		background: var(--color-canvas);
-		color: var(--color-ink);
-		font-size: 14px;
-		font-weight: 500;
-		line-height: 1;
-		transition: background-color 0.12s ease;
-	}
-	.jb-btn:hover {
-		background: var(--color-canvas-soft-2);
-	}
-	.jb-btn-primary {
-		background: var(--color-ink);
-		color: var(--color-on-primary);
-		border-color: var(--color-ink);
-	}
-	.jb-btn-primary:hover {
-		background: #2a2a2a;
-	}
-	.jb-btn-icon {
-		width: 32px;
-		padding: 0;
-		justify-content: center;
-		color: var(--color-body);
-	}
+	/* .jb-btn / .jb-btn-primary / .jb-btn-icon now live in global.css (shared
+	   across islands). Only editor-specific styles remain below. */
+
 	/* Dark by default so the mount area matches the editor before hydration. */
 	#jb-editor {
 		background-color: var(--color-editor-bg);
@@ -117,15 +105,14 @@
 		color: var(--color-on-primary);
 		background-color: var(--color-editor-sel-dark);
 	}
-	:global(#jb-editor.jb-theme-light .cm-editor ::selection) {
+	:global(html.jb-theme-light #jb-editor .cm-editor ::selection) {
 		color: var(--color-ink);
 		background-color: var(--color-editor-sel-light);
 	}
 
-	/* Inflate dense in-app controls to the 44px touch floor on coarse pointers. */
+	/* .jb-btn / .jb-btn-icon coarse-pointer inflation is global; only the
+	   formatter's indent <select> needs the 44px floor added here. */
 	@media (pointer: coarse) {
-		.jb-btn { height: 44px; }
-		.jb-btn-icon { width: 44px; }
 		#jb-indent { height: 44px; }
 	}
 </style>
@@ -139,6 +126,9 @@
 	import { tags as t } from '@lezer/highlight';
 	import { lintGutter, linter, type Diagnostic } from '@codemirror/lint';
 	import { checkJson } from '../lib/json';
+	import { loadDoc, saveDoc } from '../lib/doc-store';
+	import { initThemeToggle, getTheme } from '../lib/island-theme';
+	import { copyToClipboard } from '../lib/island-clipboard';
 	// jsonrepair is lazy-loaded on first Repair click (kept out of the initial bundle).
 
 	const root = document.getElementById('jb-formatter');
@@ -164,6 +154,16 @@
 			'  maxFileSizeMB: 100,',
 			'}',
 		].join('\n');
+
+		// Variant re-skins behavior (see component frontmatter). On the repair
+		// page we open with broken JSON so the fix is one click away.
+		const variant = root.dataset.variant ?? 'format';
+
+		// "Paste once" carry: if the user already has a document going (from another
+		// tool this session), rehydrate it; otherwise fall back to the variant's
+		// demo seed so first-time visitors still land on something to try.
+		const carried = loadDoc();
+		const INITIAL_DOC = carried !== null ? carried : variant === 'repair' ? MESSY_DOC : DEFAULT_DOC;
 
 		// ── Theme + syntax — dark code workbench (default) or light variant ──
 		// Surface + palette mirror DESIGN.md's `code-editor-mockup` and the
@@ -213,22 +213,24 @@
 			return [editorTheme(mode), syntaxHighlighting(editorHighlight(mode))];
 		}
 
-		// Persisted editor theme — default dark (the developer-native, on-brand surface).
-		const THEME_KEY = 'jb-theme';
-		function readMode(): Mode {
-			try {
-				const stored = localStorage.getItem(THEME_KEY);
-				if (stored === 'light' || stored === 'dark') return stored;
-			} catch {
-				/* storage blocked (private mode / disabled) — fall through to default */
-			}
-			return 'dark';
-		}
+		// Persisted editor theme — default dark (the developer-native, on-brand
+		// surface). Read via the shared island core (lib/island-theme).
 		const themeComp = new Compartment();
-		let mode: Mode = readMode();
+		const initialTheme = getTheme();
+
+		// ── Large-input valves ───────────────────────────────────────────────
+		// Parsing/serializing tens of megabytes blocks the main thread. Above
+		// OFFLOAD_BYTES, user-triggered format/minify run in a Web Worker
+		// (lib/json-engine, lazy-loaded — zero initial-bundle cost). Above
+		// LIVE_VALIDATE_MAX, the on-every-change validation + linting pause, so
+		// pasting a huge document never freezes the tab.
+		const OFFLOAD_BYTES = 1_048_576; // 1 MB
+		const LIVE_VALIDATE_MAX = 4_194_304; // 4 MB
+		let busy = false;
 
 		// ── Validation: precise, line-anchored error messages (see lib/json.ts) ─
 		function diagnostics(view: EditorView): Diagnostic[] {
+			if (view.state.doc.length > LIVE_VALIDATE_MAX) return [];
 			const res = checkJson(view.state.doc.toString());
 			if (res.ok) return [];
 			const len = view.state.doc.length;
@@ -260,6 +262,10 @@
 				setStatus('idle', 'Empty');
 				return;
 			}
+			if (chars > LIVE_VALIDATE_MAX) {
+				setStatus('idle', 'Large file — validation paused');
+				return;
+			}
 			const res = checkJson(text);
 			if (res.ok) setStatus('ok', 'Valid JSON');
 			else setStatus('error', res.message);
@@ -272,7 +278,7 @@
 
 		const view = new EditorView({
 			parent: mount,
-			doc: DEFAULT_DOC,
+			doc: INITIAL_DOC,
 			extensions: [
 				lineNumbers(),
 				highlightActiveLineGutter(),
@@ -284,7 +290,7 @@
 				highlightActiveLine(),
 				indentComp.of(indentUnit.of(indentStrings[indentKey])),
 				json(),
-				themeComp.of(themeExtensions(mode)),
+				themeComp.of(themeExtensions(initialTheme)),
 				linter(diagnostics, { delay: 350 }),
 				lintGutter(),
 				keymap.of([...defaultKeymap, ...historyKeymap, ...foldKeymap, indentWithTab]),
@@ -292,11 +298,15 @@
 				EditorView.updateListener.of((u) => {
 					if (u.docChanged) {
 						clearTimeout(statusTimer);
-						statusTimer = window.setTimeout(refreshStatus, 250);
+						statusTimer = window.setTimeout(() => {
+							refreshStatus();
+							// Carry the working doc to the next tool page (sessionStorage only).
+							saveDoc(view.state.doc.toString());
+						}, 250);
 					}
 				}),
-				// Format on Ctrl/Cmd+S
-				keymap.of([{ key: 'Mod-s', preventDefault: true, run: () => { doFormat(); return true; } }]),
+				// Ctrl/Cmd+S runs the page's primary action (format/minify/repair/validate).
+				keymap.of([{ key: 'Mod-s', preventDefault: true, run: () => { runPrimary(); return true; } }]),
 			],
 		});
 
@@ -308,8 +318,7 @@
 			view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: next } });
 			refreshStatus();
 		}
-		function flashInvalid() {
-			refreshStatus();
+		function shakeLabel() {
 			const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 			if (label && !reduce) {
 				label.animate(
@@ -318,26 +327,47 @@
 				);
 			}
 		}
+		function flashInvalid() {
+			refreshStatus();
+			shakeLabel();
+		}
 		function spaceArg() {
 			return indentKey === 'tab' ? '\t' : parseInt(indentKey, 10);
 		}
-		function doFormat() {
+		// Format (space set) or minify (space null). Small inputs run inline for
+		// instant feedback; large ones offload the parse/serialize to a worker so
+		// the tab never freezes (see the large-input valves above).
+		async function transform(space: string | number | null): Promise<void> {
+			if (busy) return;
 			const text = getText();
 			if (text.trim() === '') return;
+			if (text.length <= OFFLOAD_BYTES) {
+				try {
+					setText(space === null ? JSON.stringify(JSON.parse(text)) : JSON.stringify(JSON.parse(text), null, space));
+				} catch {
+					flashInvalid();
+				}
+				return;
+			}
+			busy = true;
+			editorEl.setAttribute('aria-busy', 'true');
+			setStatus('idle', space === null ? 'Minifying…' : 'Formatting…');
 			try {
-				setText(JSON.stringify(JSON.parse(text), null, spaceArg()));
+				const eng = await import('../lib/json-engine');
+				setText(space === null ? await eng.minifyJson(text) : await eng.formatJson(text, space));
 			} catch {
-				flashInvalid();
+				setStatus('error', 'Invalid JSON');
+				shakeLabel();
+			} finally {
+				busy = false;
+				editorEl.removeAttribute('aria-busy');
 			}
 		}
+		function doFormat() {
+			void transform(spaceArg());
+		}
 		function doMinify() {
-			const text = getText();
-			if (text.trim() === '') return;
-			try {
-				setText(JSON.stringify(JSON.parse(text)));
-			} catch {
-				flashInvalid();
-			}
+			void transform(null);
 		}
 		async function doRepair() {
 			const text = getText();
@@ -352,11 +382,10 @@
 			}
 		}
 		async function doCopy() {
-			try {
-				await navigator.clipboard.writeText(getText());
+			if (await copyToClipboard(getText())) {
 				setStatus('ok', 'Copied to clipboard');
 				setTimeout(refreshStatus, 1200);
-			} catch {
+			} else {
 				setStatus('error', 'Clipboard unavailable');
 			}
 		}
@@ -369,30 +398,25 @@
 			a.click();
 			URL.revokeObjectURL(url);
 		}
-
-		// ── Theme toggle (icon shows the theme you'll switch *to*) ───────────
-		const ICON_SUN =
-			'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>';
-		const ICON_MOON =
-			'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"></path></svg>';
-		const themeBtn = root.querySelector<HTMLButtonElement>('[data-action="theme"]');
-		const themeIcon = themeBtn?.querySelector<HTMLElement>('[data-theme-icon]') ?? null;
-
-		function paintThemeButton() {
-			if (themeIcon) themeIcon.innerHTML = mode === 'dark' ? ICON_SUN : ICON_MOON;
-			if (themeBtn) themeBtn.setAttribute('aria-label', mode === 'dark' ? 'Switch to light editor theme' : 'Switch to dark editor theme');
-			editorEl.classList.toggle('jb-theme-light', mode === 'light');
-		}
-		function applyMode(next: Mode) {
-			mode = next;
-			view.dispatch({ effects: themeComp.reconfigure(themeExtensions(mode)) });
-			try {
-				localStorage.setItem(THEME_KEY, mode);
-			} catch {
-				/* storage blocked — keep the choice in memory for this session */
+		// The variant's headline action, fired by Ctrl/Cmd+S.
+		function runPrimary() {
+			switch (variant) {
+				case 'minify': void doMinify(); break;
+				case 'repair': void doRepair(); break;
+				case 'validate': refreshStatus(); break;
+				default: void doFormat();
 			}
-			paintThemeButton();
 		}
+
+		// ── Theme toggle — shared island core (lib/island-theme). `onApply`
+		// reconfigures the CodeMirror theme compartment so the live editor
+		// surface matches the chosen mode. ──────────────────────────────────
+		const themeBtn = root.querySelector<HTMLButtonElement>('[data-action="theme"]');
+		const themeCtl = initThemeToggle({
+			root: editorEl,
+			button: themeBtn,
+			onApply: (m) => view.dispatch({ effects: themeComp.reconfigure(themeExtensions(m)) }),
+		});
 
 		const actions: Record<string, () => void | Promise<void>> = {
 			format: doFormat,
@@ -403,7 +427,7 @@
 			download: doDownload,
 			clear: () => { setText(''); view.focus(); },
 			sample: () => setText(MESSY_DOC),
-			theme: () => applyMode(mode === 'dark' ? 'light' : 'dark'),
+			theme: () => themeCtl.toggle(),
 		};
 
 		root.querySelectorAll('[data-action]').forEach((btn) => {
@@ -425,7 +449,6 @@
 			});
 		}
 
-		paintThemeButton();
 		refreshStatus();
 	}
 </script>

@@ -1,0 +1,77 @@
+---
+import ToolPage from '../components/ToolPage.astro';
+import JsonGraphViewer from '../components/JsonGraphViewer.astro';
+import type { FaqItem } from '../lib/jsonld';
+import type { RelatedTool } from '../components/ToolPage.astro';
+
+const steps = [
+	{ title: 'Paste your JSON', body: 'Drop it into the editor on the left. It is parsed entirely in your browser.' },
+	{ title: 'Watch it become a graph', body: 'Every object and array becomes a card, with edges drawn to the values it points at.' },
+	{ title: 'Pan, zoom & search', body: 'Drag to pan, scroll to zoom, Fit to frame it all, and search to jump to any key or value.' },
+	{ title: 'Drill in or export', body: 'Expand cards to go deeper, copy any node’s path, or export the diagram as PNG or SVG.' },
+];
+
+const whatIs = [
+	'A JSON visualizer turns the text of your JSON into a picture. Instead of reading indentation, you see a <strong class="font-medium text-ink">node-link diagram</strong> where every object and array is a card and every nested value is an edge — so the <em>shape</em> of the data, how records connect and how deeply they nest, is obvious at a glance.',
+	'It is built for real files. Cards build only as you expand them, very wide arrays are windowed, and a node budget keeps the canvas bounded — so even large, deeply nested documents render and pan smoothly instead of locking up the tab. Pan, zoom, fit-to-screen, a live minimap, and an instant search keep you oriented. Prefer an outline? The <a href="/json-tree-viewer" class="font-medium text-link hover:text-link-deep">tree viewer</a> shows the same data as a collapsible hierarchy.',
+	'<strong class="font-medium text-ink">PNG and SVG export are free</strong> and rendered locally, the nodes are fully keyboard-navigable, and a live breadcrumb shows the path to whatever you select. Everything runs client-side: nothing you paste is ever uploaded, and it keeps working offline.',
+];
+
+const faqs: FaqItem[] = [
+	{
+		question: 'What is a JSON visualizer?',
+		answer:
+			'A JSON visualizer renders JSON as a picture instead of text — typically a node-link graph where every object and array is a card and nested values are edges connecting the cards. It makes the structure of unfamiliar or deeply nested data easy to grasp at a glance.',
+	},
+	{
+		question: 'How does visualizing JSON as a graph help?',
+		answer:
+			'A graph lays the document out spatially, so you can see how records relate and how deep the nesting goes without mentally parsing indentation. It is the fastest way to understand the shape of an unfamiliar API response or config file.',
+	},
+	{
+		question: 'Can it visualize JSON as a tree as well?',
+		answer:
+			'Yes. The graph view is the spatial visualization, and the JSON tree viewer shows the same document as a collapsible, indented outline. Use the graph to understand overall shape and the tree to drill into specific values.',
+	},
+	{
+		question: 'Can it visualize large JSON files without freezing?',
+		answer:
+			'Yes. Child cards are created only for nodes you expand, very wide arrays and objects are windowed with a “show more” control, and the visible graph is capped by a node budget — so even large, deeply nested documents render and pan smoothly.',
+	},
+	{
+		question: 'Can I export the visualization as an image?',
+		answer:
+			'Yes, for free. Export the graph as a crisp SVG vector or a 2× PNG raster. Both are generated locally in your browser — the visualization is never sent to a server to be rendered.',
+	},
+	{
+		question: 'Is the JSON visualizer free and private?',
+		answer:
+			'Completely. There is no account and no upload — your JSON is parsed and drawn entirely in your browser, so it works offline and is safe for sensitive data.',
+	},
+];
+
+const related: RelatedTool[] = [
+	{ name: 'JSON Graph Viewer', href: '/json-graph-viewer', desc: 'The node-diagram view in depth.' },
+	{ name: 'JSON Tree Viewer', href: '/json-tree-viewer', desc: 'Keyboard-first tree navigation.' },
+	{ name: 'JSON Viewer', href: '/json-viewer', desc: 'Collapsible, color-coded tree.' },
+	{ name: 'JSON Table Viewer', href: '/json-table-viewer', desc: 'Arrays as rows and columns.' },
+];
+---
+
+<ToolPage
+	slug="/json-visualizer"
+	title="JSON Visualizer — See JSON as a Graph or Tree Online"
+	description="Free online JSON visualizer. Turn JSON into an interactive, pan-and-zoom node graph to see its structure at a glance — private, in your browser, no upload."
+	breadcrumbLabel="JSON Visualizer"
+	h1="JSON visualizer — see your data’s shape at a glance."
+	intro="Paste JSON and visualize it as an interactive node graph you can pan, zoom, and search — the fastest way to understand unfamiliar or deeply nested data. Nothing you paste leaves your browser."
+	howToTitle="Visualize JSON in four steps."
+	steps={steps}
+	whatIsTitle="A picture of your JSON, built for big files."
+	whatIs={whatIs}
+	faqTitle="JSON visualizer questions."
+	faqs={faqs}
+	related={related}
+>
+	<JsonGraphViewer slot="tool" />
+</ToolPage>

@@ -7,7 +7,7 @@ Sitemap: ${sitemap}
 `;
 
 export const GET: APIRoute = ({ site }) => {
-	const sitemap = new URL('sitemap-index.xml', site).href;
+	const sitemap = new URL('sitemap.xml', site).href;
 	return new Response(body(sitemap), {
 		headers: { 'Content-Type': 'text/plain; charset=utf-8' },
 	});

@@ -1,0 +1,77 @@
+---
+import ToolPage from '../components/ToolPage.astro';
+import JsonConverter from '../components/JsonConverter.astro';
+import type { FaqItem } from '../lib/jsonld';
+import type { RelatedTool } from '../components/ToolPage.astro';
+
+const steps = [
+	{ title: 'Paste your JSON', body: 'An array of objects, a single object, or any JSON. It is parsed entirely in your browser — nothing is ever uploaded.' },
+	{ title: 'Shape the columns', body: 'Flatten nested objects into dot-notation columns, choose how arrays map, and pick a delimiter — comma, semicolon, tab, or pipe.' },
+	{ title: 'Preview as a table', body: 'See a real spreadsheet preview with column headers, or flip to the raw CSV text to check the exact output.' },
+	{ title: 'Copy or download', body: 'Copy the CSV, or download a .csv / .tsv file with an optional Excel-friendly BOM so it opens cleanly in spreadsheets.' },
+];
+
+const whatIs = [
+	'A JSON-to-CSV converter turns hierarchical JSON into the flat, row-and-column shape that spreadsheets, BI tools, and databases expect. The hard part is <strong class="font-medium text-ink">nested data</strong>: objects inside objects, and arrays inside rows. This tool gives you three deterministic strategies instead of one — flatten nested objects into <strong class="font-medium text-ink">dot-notation</strong> columns (<code>address.city</code>), render arrays as a joined cell, as compact JSON, or expanded into indexed columns (<code>tags.0</code>, <code>tags.1</code>).',
+	'The header row is the <strong class="font-medium text-ink">union of every row\'s keys</strong> in first-seen order, so a ragged array where some objects have extra fields still produces a complete, aligned table — no dropped columns. Quoting follows <strong class="font-medium text-ink">RFC 4180</strong>: a cell is quoted only when it contains the delimiter, a quote, or a line break, and embedded quotes are doubled, so the output is correct in Excel, Google Sheets, and every standard CSV parser.',
+	'Everything runs locally in your browser — there is no upload, no size cap beyond your device\'s memory, and no account. The spreadsheet preview renders the first 1,000 rows for speed while the download always contains the full file. Your working document also carries across to the Table Viewer and the other JSON Beam tools, so you never paste twice.',
+];
+
+const faqs: FaqItem[] = [
+	{
+		question: 'How do I convert nested JSON to CSV?',
+		answer:
+			'Turn on "Flatten objects" and nested objects become dot-notation columns — for example {"address":{"city":"London"}} becomes a column named address.city. For arrays inside a row you can choose "Columns" mode to expand them into indexed columns (tags.0, tags.1), "Join" to combine primitive values into one cell, or "JSON" to keep the array as a compact JSON string. This lets you flatten almost any shape into a clean table.',
+	},
+	{
+		question: 'How are arrays inside the JSON handled?',
+		answer:
+			'You choose. Join concatenates primitive array values into a single cell with a separator. JSON keeps the whole array as a compact JSON string in one cell — lossless and re-parseable. Columns expands each array element into its own indexed column, which is ideal when arrays have a fixed length. Arrays of objects fall back to compact JSON in Join mode so no data is lost.',
+	},
+	{
+		question: 'Which delimiter should I use — comma, semicolon, tab, or pipe?',
+		answer:
+			'Use a comma for standard CSV. Choose semicolon if your spreadsheet uses a comma as the decimal separator (common in many European locales), where a comma-delimited file would be misread. Tab produces a TSV file, which is the safest choice when your data itself contains commas. Pipe is handy for ad-hoc pipelines. Whatever you pick, cells that contain the delimiter are automatically quoted.',
+	},
+	{
+		question: 'Will the CSV open correctly in Excel?',
+		answer:
+			'Yes. The output is UTF-8 and RFC 4180-compliant. If your data contains non-ASCII characters (accents, emoji, non-Latin scripts) and you plan to double-click the file open in Excel, enable "Excel BOM" — it prepends a UTF-8 byte-order mark so Excel detects the encoding instead of showing mojibake. Google Sheets and modern tools work with or without it.',
+	},
+	{
+		question: 'Is there a row or file-size limit?',
+		answer:
+			'There is no hard limit — the conversion runs in your browser and is bounded only by available memory. The on-screen table preview renders the first 1,000 rows so the page stays responsive on very large files, but Copy and Download always produce the complete CSV for every row.',
+	},
+	{
+		question: 'Is my data private?',
+		answer:
+			'Completely. The JSON is parsed and converted entirely in your browser using a pure JavaScript engine. Nothing is uploaded, logged, or sent to any server, and there is no account. You can even use the tool offline once the page has loaded.',
+	},
+];
+
+const related: RelatedTool[] = [
+	{ name: 'JSON Table Viewer', href: '/json-table-viewer', desc: 'Browse arrays as sortable, filterable rows.' },
+	{ name: 'JSON → YAML', href: '/json-to-yaml', desc: 'Convert JSON to clean YAML.' },
+	{ name: 'JSON → TypeScript', href: '/json-to-typescript', desc: 'Generate TypeScript interfaces.' },
+	{ name: 'JSON → Go', href: '/json-to-go', desc: 'Generate Go structs from JSON.' },
+];
+---
+
+<ToolPage
+	slug="/json-to-csv"
+	title="JSON to CSV Converter — Free, Private, Online"
+	description="Convert JSON to CSV or TSV in your browser. Flatten nested objects, expand arrays, pick any delimiter, Excel-ready BOM. 100% private — nothing uploaded."
+	breadcrumbLabel="JSON to CSV"
+	h1="JSON to CSV converter."
+	intro="Paste JSON and get a clean, spreadsheet-ready CSV. Flatten nested objects, control how arrays map, choose any delimiter, and preview the result as a real table. Everything runs in your browser — nothing is uploaded."
+	howToTitle="Convert JSON to CSV in four steps."
+	steps={steps}
+	whatIsTitle="Built for messy, nested JSON."
+	whatIs={whatIs}
+	faqTitle="JSON to CSV questions."
+	faqs={faqs}
+	related={related}
+>
+	<JsonConverter slot="tool" target="csv" />
+</ToolPage>

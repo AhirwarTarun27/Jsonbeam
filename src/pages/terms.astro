@@ -1,0 +1,129 @@
+---
+import ContentPage from '../components/ContentPage.astro';
+import type { FaqItem } from '../lib/jsonld';
+
+const faqs: FaqItem[] = [
+	{
+		question: 'Does JSON Beam cost anything?',
+		answer:
+			'No. The core tools are free to use with no account, no signup, and no usage limits. These terms govern that free use.',
+	},
+	{
+		question: 'Can I use JSON Beam for work or commercial data?',
+		answer:
+			'Yes. You can use the tools for personal, internal, and commercial work. Because all processing is client-side, your data never leaves your browser — which is what makes it safe for sensitive or proprietary content.',
+	},
+	{
+		question: 'Do you guarantee the output is correct?',
+		answer:
+			'The tools are provided “as is”. They are built to be accurate and reliable, but you are responsible for verifying any output before relying on it in production or for critical decisions.',
+	},
+];
+---
+
+<ContentPage
+	slug="/terms"
+	title="Terms & Conditions — JSON Beam"
+	description="The terms of use for JSON Beam, the free client-side JSON workbench. Read the rules, disclaimers, and your rights when using our tools."
+	breadcrumbLabel="Terms & Conditions"
+	h1="Terms & conditions."
+	intro="These terms govern your use of JSON Beam. They are written to be readable — the short version is: use the tools freely and responsibly; they are provided as is."
+	lastUpdated="June 22, 2026"
+	faqs={faqs}
+>
+	<h2>1. Acceptance of these terms</h2>
+	<p>
+		By accessing or using JSON Beam (the “Service”), available at
+		<code>jsonbeam.com</code>, you agree to these Terms &amp; Conditions. If you do not agree
+		with them, please do not use the Service.
+	</p>
+
+	<h2>2. The Service</h2>
+	<p>
+		JSON Beam is a collection of free, browser-based tools for working with JSON — including
+		formatting, validation, repair, querying, comparison, visualization, and conversion. All
+		processing happens locally in your browser; the Service does not upload, store, or transmit
+		the content you work with. See our <a href="/privacy">privacy policy</a> for details.
+	</p>
+
+	<h2>3. License to use</h2>
+	<p>
+		We grant you a personal, worldwide, royalty-free, non-exclusive license to use the Service
+		for any lawful purpose, including personal, internal business, and commercial use, subject to
+		these terms. You may use the output you generate with the tools freely.
+	</p>
+
+	<h2>4. Acceptable use</h2>
+	<p>You agree not to:</p>
+	<ul>
+		<li>use the Service for any unlawful purpose or in violation of any applicable law;</li>
+		<li>attempt to disrupt, overload, or compromise the integrity or security of the Service;</li>
+		<li>
+			attempt to gain unauthorized access to any systems, or reverse-engineer the Service in
+			order to harm it or its users;
+		</li>
+		<li>misrepresent the Service as your own or remove proprietary notices.</li>
+	</ul>
+
+	<h2>5. No warranty</h2>
+	<p>
+		The Service is provided <strong>“as is” and “as available”</strong>, without warranties of
+		any kind, whether express or implied, including but not limited to the implied warranties of
+		merchantability, fitness for a particular purpose, and non-infringement. We do not warrant
+		that the Service will be uninterrupted, error-free, or that any output will be accurate or
+		complete. You are responsible for verifying results before relying on them.
+	</p>
+
+	<h2>6. Limitation of liability</h2>
+	<p>
+		To the maximum extent permitted by law, JSON Beam and its operators shall not be liable for
+		any indirect, incidental, special, consequential, or punitive damages, or any loss of data,
+		profits, or revenue, arising out of or related to your use of — or inability to use —
+		the Service. Because the Service runs entirely in your browser and never receives your data,
+		you remain solely responsible for backing up and safeguarding your own content.
+	</p>
+
+	<h2>7. Your data and responsibility</h2>
+	<p>
+		You retain all rights to the data you process with the Service. Since that data stays on your
+		device, you are responsible for its security, lawful use, and retention. Do not use the
+		Service to process data you are not authorized to handle.
+	</p>
+
+	<h2>8. Intellectual property</h2>
+	<p>
+		The JSON Beam name, branding, design, and the wording of the site are the property of their
+		respective owners and are protected by applicable law. These terms do not grant you any right
+		to use our trademarks or branding without prior written permission. Output you create from
+		your own input belongs to you.
+	</p>
+
+	<h2>9. Third-party links and services</h2>
+	<p>
+		The Service may link to third-party websites or rely on third-party hosting and
+		content-delivery providers. We are not responsible for the content, policies, or practices of
+		any third party. Your use of third-party services is governed by their own terms.
+	</p>
+
+	<h2>10. Changes to the Service and these terms</h2>
+	<p>
+		We may modify, suspend, or discontinue any part of the Service at any time, and we may update
+		these terms as the product evolves. When we do, we will revise the “Last updated” date
+		above. Your continued use of the Service after changes take effect constitutes acceptance of
+		the revised terms.
+	</p>
+
+	<h2>11. Governing law</h2>
+	<p>
+		These terms are governed by the laws applicable in the operator’s principal place of
+		business, without regard to conflict-of-law principles. Any disputes will be subject to the
+		competent courts of that jurisdiction, except where applicable consumer-protection law grants
+		you the right to bring proceedings elsewhere.
+	</p>
+
+	<h2>12. Contact</h2>
+	<p>
+		Questions about these terms? Send us a message through the
+		<a href="/contact">contact page</a>.
+	</p>
+</ContentPage>

@@ -1,0 +1,77 @@
+---
+import ToolPage from '../components/ToolPage.astro';
+import JsonConverter from '../components/JsonConverter.astro';
+import type { FaqItem } from '../lib/jsonld';
+import type { RelatedTool } from '../components/ToolPage.astro';
+
+const steps = [
+	{ title: 'Paste your JSON', body: 'Any valid JSON — config, an API response, a manifest. It is parsed in your browser; nothing is uploaded.' },
+	{ title: 'Pick a style', body: 'Choose 2- or 4-space indentation, decide how strings are quoted, and optionally sort keys or add the --- document marker.' },
+	{ title: 'Read the YAML', body: 'Output updates live as block-style YAML — readable, comment-ready, and valid YAML 1.2.' },
+	{ title: 'Copy or download', body: 'Copy the YAML or download a .yaml file, ready to drop into Kubernetes, Docker Compose, or a CI pipeline.' },
+];
+
+const whatIs = [
+	'YAML is the configuration language of modern infrastructure — Kubernetes manifests, Docker Compose, GitHub Actions, Ansible. JSON is a strict <strong class="font-medium text-ink">subset</strong> of YAML, so every JSON document has a clean YAML equivalent; this tool produces the readable, <strong class="font-medium text-ink">block-style</strong> form (indented maps and dash-prefixed sequences) rather than JSON-looking flow style.',
+	'The emitter is correct on the cases that trip naive converters. Strings are quoted <strong class="font-medium text-ink">only when a bare scalar would be misread</strong> — values like <code>true</code>, <code>123</code>, <code>null</code>, dates, or text starting with an indicator character get quoted; ordinary text stays unquoted for readability. Multiline strings become literal <strong class="font-medium text-ink">block scalars</strong> (<code>|-</code>) when clean, and fall back to safe double-quoted escapes when not. Arrays of objects use the canonical dash-merged layout, and empty objects and arrays render inline as <code>{}</code> and <code>[]</code>.',
+	'It is dependency-free and runs entirely in your browser, so there is no upload and no size limit beyond your device. You can sort keys for stable diffs, force a quoting style, and add the explicit <code>---</code> document marker when you need it. The document you are working on carries over from the Formatter and the other tools, so you never paste twice.',
+];
+
+const faqs: FaqItem[] = [
+	{
+		question: 'Is JSON valid YAML?',
+		answer:
+			'Almost — YAML 1.2 is a superset of JSON, so most JSON is already syntactically valid YAML in its "flow" form. But that flow form looks like JSON and misses the point. This converter rewrites your JSON into idiomatic block-style YAML: indented mappings, dash-prefixed sequences, and unquoted scalars where they are safe — the form people actually hand-write and review.',
+	},
+	{
+		question: 'When does the converter quote a string?',
+		answer:
+			'Only when leaving it unquoted would change its meaning. A value is quoted if it would otherwise parse as a boolean (true/false/yes/no), a number, null/~, a date, or if it begins with a YAML indicator character, contains ": " or " #", or has leading/trailing whitespace. Everything else is emitted as a plain scalar so the output stays clean and readable. You can also force single or double quotes for every string.',
+	},
+	{
+		question: 'How are multiline strings handled?',
+		answer:
+			'Clean multiline strings are emitted as literal block scalars using the |- indicator, which preserves line breaks and is the most readable form for descriptions, scripts, and embedded text. If a string has trailing whitespace, tabs, or control characters that a block scalar cannot represent faithfully, the converter falls back to a double-quoted string with proper escape sequences so nothing is lost.',
+	},
+	{
+		question: 'Can I use this for Kubernetes or Docker Compose?',
+		answer:
+			'Yes. The output is standard YAML 1.2 and works anywhere YAML is accepted — Kubernetes, Docker Compose, GitHub Actions, GitLab CI, Ansible, and more. Choose 2-space indentation (the common convention), optionally enable "Sort keys" for stable, review-friendly diffs, and copy the result straight into your manifest.',
+	},
+	{
+		question: 'Does it support comments or anchors?',
+		answer:
+			'JSON has no concept of comments or references, so there is nothing in the source to translate into YAML comments, anchors, or aliases — the conversion is a faithful 1:1 representation of your data. You can add comments and anchors yourself afterward in your editor; the generated YAML is a clean starting point.',
+	},
+	{
+		question: 'Is my data private?',
+		answer:
+			'Completely. The conversion happens in your browser with a self-contained emitter — no third-party library, no upload, no logging, no account. It even works offline once the page has loaded.',
+	},
+];
+
+const related: RelatedTool[] = [
+	{ name: 'JSON → CSV', href: '/json-to-csv', desc: 'Flatten JSON into a spreadsheet.' },
+	{ name: 'JSON → TypeScript', href: '/json-to-typescript', desc: 'Generate types from a JSON sample.' },
+	{ name: 'JSON → Go', href: '/json-to-go', desc: 'Generate Go structs from JSON.' },
+	{ name: 'JSON Formatter', href: '/json-formatter', desc: 'Beautify, minify, validate & repair.' },
+];
+---
+
+<ToolPage
+	slug="/json-to-yaml"
+	title="JSON to YAML Converter — Free & Private Online"
+	description="Convert JSON to clean, block-style YAML in your browser. Smart quoting, multiline block scalars, sort keys, 2/4-space indent. 100% private — no upload."
+	breadcrumbLabel="JSON to YAML"
+	h1="JSON to YAML converter."
+	intro="Paste JSON and get readable, block-style YAML 1.2 — the form you actually hand-write for Kubernetes, Compose, and CI. Smart quoting, block scalars for multiline text, and live output. Everything runs in your browser."
+	howToTitle="Convert JSON to YAML in four steps."
+	steps={steps}
+	whatIsTitle="Idiomatic YAML, not JSON in disguise."
+	whatIs={whatIs}
+	faqTitle="JSON to YAML questions."
+	faqs={faqs}
+	related={related}
+>
+	<JsonConverter slot="tool" target="yaml" />
+</ToolPage>

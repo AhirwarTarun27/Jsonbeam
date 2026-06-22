@@ -1,0 +1,127 @@
+---
+/**
+ * Shared shell for the error routes (404, 500). An on-brand, centered recovery
+ * screen: the mesh atmosphere, a hand-coloured JSON "error object" mockup that
+ * keeps the privacy promise visible (`"uploaded": null`), and clear links back
+ * into the tools.
+ *
+ * Like the content routes, this ships 0 KB of app JS (only inline ld+json is
+ * allowed) — no island, no theme-boot script. Kept out of the index via
+ * `noindex`, and absent from the sitemap by construction (the error routes are
+ * not live links in FOOTER_NAV, which is what sitemap.xml.ts enumerates).
+ *
+ * The JSON mockup is injected via set:html, which Astro's scoped-style hashing
+ * does not reach, so its syntax colours live in a `<style is:global>` block
+ * scoped under `.err-code` (same pattern as the homepage hero mockup).
+ */
+import Layout from '../layouts/Layout.astro';
+import Button from './Button.astro';
+import MeshGradient from './MeshGradient.astro';
+
+interface Props {
+	/** HTTP status, shown in the eyebrow + as the JSON `error` value. */
+	code: number;
+	/** <title> (≤60 chars, keyword first). */
+	title: string;
+	/** <meta description> (≤155 chars). */
+	description: string;
+	/** Visible H1 (sentence case, period-terminated per DESIGN.md). */
+	h1: string;
+	/** Sub-paragraph under the H1. */
+	intro: string;
+	/** Filename shown in the mockup's title bar, e.g. "404.json". */
+	fileName: string;
+	/** Hand-coloured JSON HTML for the mockup (rendered via set:html). */
+	snippet: string;
+}
+
+const { code, title, description, h1, intro, fileName, snippet } = Astro.props;
+
+// A few high-traffic destinations so a lost visitor is one hop from a tool.
+const recover = [
+	{ label: 'JSON Formatter', href: '/json-formatter' },
+	{ label: 'JSON Validator', href: '/json-validator' },
+	{ label: 'JSON Viewer', href: '/json-viewer' },
+	{ label: 'JSON Diff', href: '/json-diff' },
+	{ label: 'JSON Repair', href: '/json-repair' },
+];
+---
+
+<Layout title={title} description={description} noindex>
+	<section class="relative overflow-hidden">
+		<MeshGradient />
+		<div
+			class="container-page relative z-10 flex min-h-[70vh] flex-col items-center justify-center py-20 text-center"
+		>
+			<span
+				class="inline-flex items-center gap-2 rounded-full bg-canvas-soft px-3 py-1 font-mono text-caption text-body shadow-e1"
+			>
+				<span class="inline-block h-1.5 w-1.5 rounded-full bg-error" aria-hidden="true"></span>
+				Error {code}
+			</span>
+
+			<h1 class="mt-6 max-w-2xl text-balance text-display-xl">{h1}</h1>
+
+			<p class="mt-5 max-w-xl text-body-lg text-body">{intro}</p>
+
+			<div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+				<Button href="/">Back to home</Button>
+				<Button href="/json-formatter" variant="secondary">Open the formatter</Button>
+			</div>
+
+			<!-- Recovery chips — one hop to the most-used tools -->
+			<nav
+				aria-label="Popular tools"
+				class="mt-7 flex flex-wrap items-center justify-center gap-2"
+			>
+				{
+					recover.map((t) => (
+						<a
+							href={t.href}
+							class="rounded-pill-sm border border-hairline bg-canvas px-3 py-1.5 font-mono text-caption text-body transition-colors hover:border-hairline-strong hover:text-ink"
+						>
+							{t.label}
+						</a>
+					))
+				}
+			</nav>
+
+			<!-- JSON "error object" mockup -->
+			<div class="mt-14 w-full max-w-md text-left">
+				<div class="overflow-hidden rounded-md bg-ink shadow-e5">
+					<div class="flex items-center gap-2 border-b border-white/10 px-4 py-3">
+						<span class="h-3 w-3 rounded-full bg-white/20" aria-hidden="true"></span>
+						<span class="h-3 w-3 rounded-full bg-white/20" aria-hidden="true"></span>
+						<span class="h-3 w-3 rounded-full bg-white/20" aria-hidden="true"></span>
+						<span class="ml-3 font-mono text-caption text-white/45">{fileName}</span>
+					</div>
+					<pre
+						class="err-code overflow-x-auto p-6 font-mono text-code leading-relaxed"><code set:html={snippet} /></pre>
+				</div>
+			</div>
+
+			<p class="mt-6 font-mono text-caption text-mute">Processed locally · Nothing uploaded</p>
+		</div>
+	</section>
+
+	<style is:global>
+		/* Error-mockup syntax tokens — brand palette on the ink card. Global
+		   (class-scoped) because the spans are injected via set:html, which
+		   Astro's scoped-style hashing does not reach (mirrors .hero-code). */
+		.err-code .k {
+			color: #ededed;
+		}
+		.err-code .s {
+			color: var(--color-cyan);
+		}
+		.err-code .n {
+			color: var(--color-violet-soft);
+		}
+		.err-code .b {
+			color: var(--color-warning);
+		}
+		.err-code .p {
+			color: var(--color-mute);
+		}
+	</style>
+</Layout>
