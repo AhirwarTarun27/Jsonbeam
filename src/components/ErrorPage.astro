@@ -7,7 +7,8 @@
  *
  * Like the content routes, this ships 0 KB of app JS (only inline ld+json is
  * allowed) — no island, no theme-boot script. Kept out of the index via
- * `noindex` and out of the sitemap via the filter in astro.config.mjs.
+ * `noindex`, and absent from the sitemap by construction (the error routes are
+ * not live links in FOOTER_NAV, which is what sitemap.xml.ts enumerates).
  *
  * The JSON mockup is injected via set:html, which Astro's scoped-style hashing
  * does not reach, so its syntax colours live in a `<style is:global>` block
@@ -55,7 +56,7 @@ const recover = [
 			<span
 				class="inline-flex items-center gap-2 rounded-full bg-canvas-soft px-3 py-1 font-mono text-caption text-body shadow-e1"
 			>
-				<span class="inline-block h-1.5 w-1.5 rounded-full bg-error"></span>
+				<span class="inline-block h-1.5 w-1.5 rounded-full bg-error" aria-hidden="true"></span>
 				Error {code}
 			</span>
 
@@ -89,9 +90,9 @@ const recover = [
 			<div class="mt-14 w-full max-w-md text-left">
 				<div class="overflow-hidden rounded-md bg-ink shadow-e5">
 					<div class="flex items-center gap-2 border-b border-white/10 px-4 py-3">
-						<span class="h-3 w-3 rounded-full bg-white/20"></span>
-						<span class="h-3 w-3 rounded-full bg-white/20"></span>
-						<span class="h-3 w-3 rounded-full bg-white/20"></span>
+						<span class="h-3 w-3 rounded-full bg-white/20" aria-hidden="true"></span>
+						<span class="h-3 w-3 rounded-full bg-white/20" aria-hidden="true"></span>
+						<span class="h-3 w-3 rounded-full bg-white/20" aria-hidden="true"></span>
 						<span class="ml-3 font-mono text-caption text-white/45">{fileName}</span>
 					</div>
 					<pre
