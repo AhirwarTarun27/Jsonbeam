@@ -1,0 +1,14 @@
+{
+	// Cloudflare Workers config — serves JSON Beam as a static-assets Worker.
+	// The site is `output: 'static'` (no SSR), so there is no Worker script:
+	// Cloudflare serves ./dist directly from its edge. No @astrojs/cloudflare
+	// adapter is needed. See https://developers.cloudflare.com/workers/static-assets/
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "jsonbeam",
+	"compatibility_date": "2026-06-22",
+	"assets": {
+		"directory": "./dist",
+		// Serve the prebuilt 404.html for unknown paths (custom 404 page).
+		"not_found_handling": "404-page"
+	}
+}
