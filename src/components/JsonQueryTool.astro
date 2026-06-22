@@ -438,6 +438,10 @@
 	tab-size: 2;
 	width: 100%;
 }
+#jb-qt-input:focus-visible {
+	outline: 2px solid var(--color-link);
+	outline-offset: 2px;
+}
 /* ── Result pane ────────────────────────────────────────────────────────────── */
 #jb-qt-result {
 	background-color: var(--color-editor-bg);
@@ -703,6 +707,8 @@ function switchLang(newLang: Lang) {
 	};
 	expr.placeholder = placeholders[lang];
 	renderHistory(lang);
+	// Persist language to URL
+	window.history.replaceState(null, '', `?lang=${lang}`);
 	// Auto-run if there's an expression
 	if (expr.value.trim()) scheduleQuery();
 }
@@ -1014,6 +1020,13 @@ function init() {
 	const stored = loadDoc();
 	input.value = stored ?? sample;
 	validateInput();
+
+	// Restore language from URL if present
+	const urlParams = new URLSearchParams(location.search);
+	const urlLang = urlParams.get('lang');
+	if (urlLang && ['jsonpath', 'jmespath', 'jq'].includes(urlLang)) {
+		switchLang(urlLang as Lang);
+	}
 
 	// Render initial state
 	renderHistory(lang);

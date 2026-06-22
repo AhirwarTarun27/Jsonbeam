@@ -214,6 +214,7 @@ class GoEmitter {
 		// (e.g. `user-id` and `user_id` both → `UserID`); suffix to keep the
 		// struct compilable. The json tag still carries the original key.
 		const usedNames = new Set<string>();
+		const collisions = new Map<string, number>();
 		for (const [key, field] of shape.fields) {
 			const optional = isOptionalField(field, shape.count);
 			const base = this.goType(field.schema, key, depth);
@@ -227,9 +228,9 @@ class GoEmitter {
 				: '';
 			let name = exportedName(key);
 			if (usedNames.has(name)) {
-				let i = 2;
-				while (usedNames.has(name + i)) i++;
-				name += i;
+				const cnt = (collisions.get(name) ?? 1) + 1;
+				collisions.set(name, cnt);
+				name += cnt;
 			}
 			usedNames.add(name);
 			rows.push({ name, type, tag });

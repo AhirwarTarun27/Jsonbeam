@@ -211,7 +211,7 @@ export function jsonToYaml(value: unknown, options: Partial<YamlOptions> = {}): 
 	if (isBlockString(value)) {
 		pushBlockScalar('', value, opts.indent, lines);
 		// pushBlockScalar wrote " |-" with a leading space; trim it at root.
-		lines[0] = lines[0].replace(/^ /, '');
+		lines[0] = lines[0].trimStart();
 	} else if (isInline(value)) {
 		lines.push(formatScalar(value, opts));
 	} else {

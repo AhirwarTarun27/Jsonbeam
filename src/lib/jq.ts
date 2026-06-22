@@ -1305,8 +1305,6 @@ function makeEnv(): Env {
 	reg0('rindex', function*() { err('rindex requires an argument'); });
 	reg0('pow', function*() { err('pow requires an argument'); });
 	reg0('remainder', function*() { err('remainder requires arguments'); });
-	reg0('nan', function*() { yield NaN; });
-	reg0('infinite', function*() { yield Infinity; });
 	reg0('modulemeta', function*() { yield {}; });
 	reg0('path', function*() { err('path requires an argument in parens'); });
 	reg0('getpath', function*() { err('getpath requires an argument'); });
@@ -1326,8 +1324,6 @@ function makeEnv(): Env {
 		if (typeof v !== 'string') err('strip requires a string');
 		yield (v as string).trim();
 	});
-	reg0('debug', function*(v) { console.debug('[jq debug]', v); yield v; });
-	reg0('tojson', function*(v) { yield JSON.stringify(v); });
 	reg0('indices', function*() { err('indices requires an argument'); });
 
 	// 1-arg builtins
@@ -1784,7 +1780,13 @@ function makeEnv(): Env {
 		const re = String(firstOf(evalNode(reArg, v, env)));
 		const flags = String(firstOf(evalNode(flagsArg, v, env)));
 		const m = (v as string).match(compileRegex(re, flags));
-		yield m ? { offset: m.index ?? 0, length: m[0]!.length, string: m[0], captures: [] } : null;
+		if (!m) { yield null; return; }
+		yield {
+			offset: m.index ?? 0,
+			length: m[0]!.length,
+			string: m[0],
+			captures: m.slice(1).map((c) => ({ offset: -1, length: c?.length ?? -1, string: c ?? null, name: null })),
+		};
 	});
 
 	// range/3
@@ -1981,11 +1983,9 @@ function* evalNode(ast: AST, v: JV, env: Env): Iterable<JV> {
 		}
 
 		case 'alt': {
-			const lefts: JV[] = [];
 			let hasValue = false;
 			for (const x of evalNode(ast.l, v, env)) {
 				if (x !== null && x !== false) { yield x; hasValue = true; }
-				else lefts.push(x);
 			}
 			if (!hasValue) yield* evalNode(ast.r, v, env);
 			break;

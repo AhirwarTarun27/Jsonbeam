@@ -117,7 +117,7 @@ function addArray(path: string, arr: unknown[], opts: CsvOptions, out: FlatRow):
 			out.set(path, JSON.stringify(arr));
 			return;
 		case 'columns':
-			arr.forEach((el, i) => addField(`${path}.${i}`, el, opts, out));
+			for (let i = 0; i < arr.length; i++) addField(`${path}.${i}`, arr[i], opts, out);
 			return;
 		case 'join': {
 			const parts = arr.map((el) =>

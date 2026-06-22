@@ -127,7 +127,7 @@
    ========================================================================== */
 @layer base {
   :root {
-    color-scheme: light;
+    color-scheme: light dark;
   }
 
   html {
@@ -156,6 +156,11 @@
     outline: 2px solid var(--color-link);
     outline-offset: 2px;
     border-radius: var(--radius-sm);
+  }
+
+  /* Remove tap highlight on mobile/touch */
+  a, button, [tabindex] {
+    -webkit-tap-highlight-color: transparent;
   }
 
   :where(h1, h2, h3, h4, h5, h6) {
@@ -512,4 +517,12 @@
   .jb-cmdk-opt {
     min-height: 44px;
   }
+}
+
+/* Prevent scroll-bleed on tool output panes. */
+#jb-ktree,
+#jb-tv-wrap,
+#jb-gnodes,
+#jb-qt-result {
+  overscroll-behavior: contain;
 }

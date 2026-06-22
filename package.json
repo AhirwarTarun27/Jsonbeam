@@ -30,7 +30,7 @@
     "astro": "^6.4.7",
     "jmespath": "^0.16.0",
     "jsonpath-plus": "^10.4.0",
-    "jsonrepair": "^3.14.0",
+    "jsonrepair": "3.14.0",
     "tailwindcss": "^4.3.1"
   },
   "devDependencies": {
