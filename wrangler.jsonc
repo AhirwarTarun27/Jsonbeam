@@ -6,6 +6,7 @@
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "jsonbeam",
 	"compatibility_date": "2026-06-22",
+	"workers_dev": false,
 	"assets": {
 		"directory": "./dist",
 		// Serve the prebuilt 404.html for unknown paths (custom 404 page).
