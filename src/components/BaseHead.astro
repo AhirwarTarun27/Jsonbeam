@@ -42,6 +42,19 @@ const serialize = (data: Record<string, unknown>) =>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <meta name="generator" content={Astro.generator} />
 
+<!-- Google Analytics (gtag.js). is:inline keeps Astro from bundling/processing
+     these — they must ship verbatim. Loads a third-party script from Google;
+     it measures page views only and never touches user JSON. -->
+<script is:inline async src="https://www.googletagmanager.com/gtag/js?id=G-Y4L94RDJBB"></script>
+<script is:inline>
+	window.dataLayer = window.dataLayer || [];
+	function gtag() {
+		dataLayer.push(arguments);
+	}
+	gtag('js', new Date());
+	gtag('config', 'G-Y4L94RDJBB');
+</script>
+
 <title>{title}</title>
 <meta name="description" content={description} />
 <link rel="canonical" href={canonical} />
