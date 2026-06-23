@@ -26,7 +26,7 @@
 <div id="jb-qt" class="overflow-hidden rounded-md border border-hairline bg-canvas shadow-e3">
 
 	<!-- Toolbar -->
-	<div class="flex flex-wrap items-center gap-1.5 border-b border-hairline bg-canvas-soft px-3 py-2">
+	<div data-jb-toolbar class="flex flex-wrap items-center gap-1.5 border-b border-hairline bg-canvas-soft px-3 py-2">
 		<button type="button" data-action="sample" class="jb-btn">Sample</button>
 
 		<span class="mx-1 hidden h-5 w-px bg-hairline sm:block" aria-hidden="true"></span>
@@ -71,6 +71,11 @@
 				title="Toggle dark / light"
 			><span data-theme-icon aria-hidden="true"></span></button>
 			<button type="button" data-action="clear" class="jb-btn" title="Clear input">Clear</button>
+			<span class="mx-0.5 hidden h-5 w-px bg-hairline sm:block" aria-hidden="true"></span>
+			<button type="button" data-jb-expand class="jb-btn jb-expand-btn" aria-pressed="false" title="Expand to full screen">
+				<span class="jb-expand-ico" aria-hidden="true"></span>
+				<span class="jb-expand-label">Full screen</span>
+			</button>
 		</div>
 	</div>
 
@@ -113,7 +118,7 @@
 	</div>
 
 	<!-- Main two-pane content -->
-	<div class="grid grid-cols-1 lg:grid-cols-2">
+	<div data-jb-split class="grid grid-cols-1 lg:grid-cols-2">
 		<!-- Left: JSON input -->
 		<div class="border-b border-hairline lg:border-b-0 lg:border-r">
 			<div class="flex items-center gap-2 border-b border-hairline bg-canvas-soft px-3 py-1">
@@ -138,7 +143,7 @@
 				<span id="jb-qt-count" class="font-mono text-caption text-mute" aria-live="polite"></span>
 				<span id="jb-qt-eval-ms" class="ml-auto font-mono text-caption text-mute"></span>
 			</div>
-			<div id="jb-qt-result" class="relative h-[62vh] min-h-[360px] overflow-auto" role="region" aria-label="Query result">
+			<div data-jb-fill id="jb-qt-result" class="relative h-[62vh] min-h-[360px] overflow-auto" role="region" aria-label="Query result">
 				<div id="jb-qt-out"     class="hidden px-3 py-3 font-mono text-code" aria-live="polite"></div>
 				<div id="jb-qt-empty"   class="hidden flex-col items-center justify-center gap-2 px-6 py-12 text-center">
 					<p class="font-mono text-caption text-mute">Enter a query above and press Run.</p>
@@ -573,6 +578,7 @@
 <script>
 import { loadDoc, saveDoc } from '../lib/doc-store';
 import { initThemeToggle } from '../lib/island-theme';
+import { initFullscreen } from '../lib/island-fullscreen';
 import { copyToClipboard } from '../lib/island-clipboard';
 
 const sample = `{
@@ -682,6 +688,11 @@ function renderHistory(l: Lang) {
 // ─── Theme ────────────────────────────────────────────────────────────────────
 
 const themeCtl = initThemeToggle({ root, icon: themeIconEl });
+initFullscreen({
+	root,
+	toolName: 'Query',
+	onChange: () => window.dispatchEvent(new Event('resize')),
+});
 
 // ─── Language switching ────────────────────────────────────────────────────────
 

@@ -526,3 +526,186 @@
 #jb-qt-result {
   overscroll-behavior: contain;
 }
+
+/* ============================================================================
+   Full-screen workbench — the "Expand" mode shared by every tool island
+   (wired by lib/island-fullscreen.ts). Toggling `.jb-expanded` promotes the
+   island's own root to a full-viewport overlay, so the same editor instance
+   fills the screen with no re-mount. Global (islands are Astro-scoped, this
+   class is toggled at runtime). Tokens + the in-app 6px scale only.
+   ========================================================================== */
+
+/* The expand/collapse toggle. A *labelled* button (icon + word) at the toolbar's
+   far edge so the feature is obvious at a glance — never a bare mystery icon. */
+.jb-expand-btn {
+  gap: 6px;
+}
+.jb-expand-btn .jb-expand-ico {
+  display: inline-flex;
+  color: var(--color-body);
+}
+/* Visible shortcut hint on the button (⌘⇧F / Esc) — mirrors the ⌘K trigger. */
+.jb-expand-btn .jb-expand-kbd {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1;
+  padding: 2px 5px;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-xs);
+  background: var(--color-canvas-soft);
+  color: var(--color-body);
+}
+
+/* Promote the island root to a full-viewport overlay. Above the sticky header
+   (z-50); the ⌘K palette is a top-layer <dialog> so it still stacks above. */
+.jb-expanded {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  width: 100vw;
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+/* Single-pane islands: the one main region (a direct child of the root) takes
+   all the freed height; toolbar + status bar keep their natural size. */
+.jb-expanded > [data-jb-fill],
+.jb-expanded > #jb-editor {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+}
+
+/* Two-pane islands (input | output): the split keeps its grid columns (so the
+   desktop ratio is preserved) but fills the freed height — its rows become
+   equal fractions, and the per-pane viewport heights (h-[62vh] …) are dropped.
+   Only panes that hold a <textarea> become flex columns (so a header strip +
+   editor stack correctly); content panes stay as-is and scroll. */
+.jb-expanded [data-jb-split] {
+  flex: 1 1 auto;
+  min-height: 0;
+  grid-auto-rows: minmax(0, 1fr);
+}
+.jb-expanded [data-jb-split] > * {
+  height: auto !important;
+  max-height: none !important;
+  min-height: 0;
+}
+.jb-expanded [data-jb-split] > *:has(> textarea) {
+  display: flex;
+  flex-direction: column;
+}
+.jb-expanded [data-jb-split] > *:has(> textarea) > textarea,
+.jb-expanded [data-jb-split] [data-jb-fill] {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto !important;
+  max-height: none !important;
+}
+
+/* Brand anchor in the slim bar — injected into the toolbar, shown only while
+   expanded. The wordmark mirrors the site header (ink chip, never the mesh,
+   which DESIGN.md reserves for hero scale). */
+.jb-workbench-brand {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  margin-right: 8px;
+}
+.jb-expanded .jb-workbench-brand {
+  display: inline-flex;
+}
+.jb-workbench-logo {
+  display: grid;
+  place-items: center;
+  height: 28px;
+  width: 28px;
+  border-radius: var(--radius-md);
+  background: var(--color-ink);
+  color: var(--color-on-primary);
+  font-family: var(--font-mono);
+  font-size: var(--text-code);
+  line-height: 1;
+}
+.jb-workbench-title {
+  font-size: var(--text-body-sm);
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  white-space: nowrap;
+  color: var(--color-ink);
+}
+
+/* The dimmed, blurred scrim behind the overlay — only visible at the edges
+   during the transition (the overlay is opaque once settled), it gives depth. */
+.jb-workbench-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  background: rgba(23, 23, 23, 0.4);
+  backdrop-filter: blur(3px);
+}
+
+/* Lock the page behind the overlay. */
+.jb-scroll-lock {
+  overflow: hidden;
+}
+
+/* ── Motion — a confident "lift to full screen" (expo-out) and a quicker exit.
+   Carried by transient classes so a session-restore arrival can skip it. The
+   global prefers-reduced-motion rule already flattens these to instant. ────── */
+.jb-opening {
+  animation: jb-wb-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.jb-collapsing {
+  animation: jb-wb-out 0.2s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+.jb-workbench-backdrop.jb-opening {
+  animation: jb-backdrop-in 0.3s ease;
+}
+.jb-workbench-backdrop.jb-closing {
+  animation: jb-backdrop-out 0.2s ease forwards;
+}
+@keyframes jb-wb-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+    transform-origin: 50% 28%;
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes jb-wb-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.97);
+    transform-origin: 50% 28%;
+  }
+}
+@keyframes jb-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes jb-backdrop-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}

@@ -60,7 +60,7 @@ const sampleB = `{
 	class="overflow-hidden rounded-md border border-hairline bg-canvas shadow-e3"
 >
 	<!-- Toolbar -->
-	<div class="flex flex-wrap items-center gap-1.5 border-b border-hairline bg-canvas-soft px-3 py-2">
+	<div data-jb-toolbar class="flex flex-wrap items-center gap-1.5 border-b border-hairline bg-canvas-soft px-3 py-2">
 		<button type="button" data-action="swap" class="jb-btn" title="Swap A and B inputs">
 			<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" class="mr-1">
 				<path d="M3 5h10M10 2l3 3-3 3M13 11H3M6 8l-3 3 3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
@@ -84,6 +84,11 @@ const sampleB = `{
 			<button type="button" data-action="sample" class="jb-btn" title="Load sample A and B">Sample</button>
 			<button type="button" data-action="clear-a" class="jb-btn" title="Clear input A">Clear A</button>
 			<button type="button" data-action="clear-b" class="jb-btn" title="Clear input B">Clear B</button>
+				<span class="mx-0.5 hidden h-5 w-px bg-hairline sm:block" aria-hidden="true"></span>
+				<button type="button" data-jb-expand class="jb-btn jb-expand-btn" aria-pressed="false" title="Expand to full screen">
+					<span class="jb-expand-ico" aria-hidden="true"></span>
+					<span class="jb-expand-label">Full screen</span>
+				</button>
 		</div>
 	</div>
 
@@ -161,6 +166,7 @@ const sampleB = `{
 
 	<!-- Diff output -->
 	<div
+		data-jb-fill
 		id="jb-dv-tree"
 		class="h-[44vh] min-h-[320px] overflow-auto"
 		tabindex="0"
@@ -358,6 +364,7 @@ const sampleB = `{
 	import { checkJson } from '../lib/json';
 	import { loadDoc, saveDoc } from '../lib/doc-store';
 	import { initThemeToggle } from '../lib/island-theme';
+	import { initFullscreen } from '../lib/island-fullscreen';
 
 	// ── Types ───────────────────────────────────────────────────────────────
 	type JsonValue = string | number | boolean | null | JsonValue[] | { [k: string]: JsonValue };
@@ -1138,6 +1145,11 @@ const sampleB = `{
 
 		// ── Theme toggle — shared across every tool island (lib/island-theme). ───
 		const themeCtl = initThemeToggle({ root });
+		initFullscreen({
+			root,
+			toolName: 'Diff',
+			onChange: () => window.dispatchEvent(new Event('resize')),
+		});
 
 		// ── Actions ─────────────────────────────────────────────────────────
 		const actions: Record<string, () => void> = {

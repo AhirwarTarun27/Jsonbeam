@@ -28,7 +28,7 @@ const primaryAction: 'format' | 'minify' | 'validate' | 'repair' =
 	class="overflow-hidden rounded-md border border-hairline bg-canvas shadow-e3"
 >
 	<!-- Toolbar -->
-	<div class="flex flex-wrap items-center gap-1.5 border-b border-hairline bg-canvas-soft px-3 py-2">
+	<div data-jb-toolbar class="flex flex-wrap items-center gap-1.5 border-b border-hairline bg-canvas-soft px-3 py-2">
 		<button type="button" data-action="format" class:list={['jb-btn', { 'jb-btn-primary': primaryAction === 'format' }]} title="Beautify">Format</button>
 		<button type="button" data-action="minify" class:list={['jb-btn', { 'jb-btn-primary': primaryAction === 'minify' }]} title="Strip all whitespace">Minify</button>
 		<button type="button" data-action="repair" class:list={['jb-btn', { 'jb-btn-primary': primaryAction === 'repair' }]} title="Fix common JSON mistakes">Repair</button>
@@ -61,6 +61,11 @@ const primaryAction: 'format' | 'minify' | 'validate' | 'repair' =
 			<button type="button" data-action="copy" class="jb-btn" title="Copy to clipboard">Copy</button>
 			<button type="button" data-action="download" class="jb-btn" title="Download as data.json">Download</button>
 			<button type="button" data-action="clear" class="jb-btn" title="Clear the editor">Clear</button>
+			<span class="mx-0.5 hidden h-5 w-px bg-hairline sm:block" aria-hidden="true"></span>
+			<button type="button" data-jb-expand class="jb-btn jb-expand-btn" aria-pressed="false" title="Expand to full screen">
+				<span class="jb-expand-ico" aria-hidden="true"></span>
+				<span class="jb-expand-label">Full screen</span>
+			</button>
 		</div>
 	</div>
 
@@ -129,6 +134,7 @@ const primaryAction: 'format' | 'minify' | 'validate' | 'repair' =
 	import { loadDoc, saveDoc } from '../lib/doc-store';
 	import { initThemeToggle, getTheme } from '../lib/island-theme';
 	import { copyToClipboard } from '../lib/island-clipboard';
+	import { initFullscreen } from '../lib/island-fullscreen';
 	// jsonrepair is lazy-loaded on first Repair click (kept out of the initial bundle).
 
 	const root = document.getElementById('jb-formatter');
@@ -437,6 +443,24 @@ const primaryAction: 'format' | 'minify' | 'validate' | 'repair' =
 				const fn = actions[action];
 				if (fn) fn();
 			});
+		});
+
+		// ── Full-screen workbench (shared island core). Expand fills the viewport
+		// with the same editor instance; the mode carries across tools. ─────────
+		const TOOL_NAMES: Record<string, string> = {
+			format: 'Formatter',
+			beautify: 'Beautifier',
+			minify: 'Minifier',
+			validate: 'Validator',
+			repair: 'Repair',
+		};
+		initFullscreen({
+			root,
+			toolName: TOOL_NAMES[variant] ?? 'Formatter',
+			onChange: (expanded) => {
+				view.requestMeasure();
+				if (expanded) view.focus();
+			},
 		});
 
 		const indentSel = root.querySelector<HTMLSelectElement>('#jb-indent');

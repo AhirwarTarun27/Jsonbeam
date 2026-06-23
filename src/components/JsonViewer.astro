@@ -29,7 +29,7 @@ const sample = `{
 	class="overflow-hidden rounded-md border border-hairline bg-canvas shadow-e3"
 >
 	<!-- Toolbar -->
-	<div class="flex flex-wrap items-center gap-1.5 border-b border-hairline bg-canvas-soft px-3 py-2">
+	<div data-jb-toolbar class="flex flex-wrap items-center gap-1.5 border-b border-hairline bg-canvas-soft px-3 py-2">
 		<button type="button" data-action="expand" class="jb-btn" title="Expand every node">Expand all</button>
 		<button type="button" data-action="collapse" class="jb-btn" title="Collapse every node">Collapse all</button>
 
@@ -46,11 +46,16 @@ const sample = `{
 			<button type="button" data-action="sample" class="jb-btn" title="Load a sample document">Sample</button>
 			<button type="button" data-action="copy" class="jb-btn" title="Copy formatted JSON">Copy JSON</button>
 			<button type="button" data-action="clear" class="jb-btn" title="Clear the input">Clear</button>
+				<span class="mx-0.5 hidden h-5 w-px bg-hairline sm:block" aria-hidden="true"></span>
+				<button type="button" data-jb-expand class="jb-btn jb-expand-btn" aria-pressed="false" title="Expand to full screen">
+					<span class="jb-expand-ico" aria-hidden="true"></span>
+					<span class="jb-expand-label">Full screen</span>
+				</button>
 		</div>
 	</div>
 
 	<!-- Split: input + tree -->
-	<div class="grid grid-cols-1 lg:grid-cols-2">
+	<div data-jb-split class="grid grid-cols-1 lg:grid-cols-2">
 		<div class="border-b border-hairline lg:border-b-0 lg:border-r">
 			<label class="sr-only" for="jb-input">JSON input</label>
 			<textarea
@@ -268,6 +273,7 @@ const sample = `{
 	import { checkJson } from '../lib/json';
 	import { loadDoc, saveDoc } from '../lib/doc-store';
 	import { initThemeToggle } from '../lib/island-theme';
+	import { initFullscreen } from '../lib/island-fullscreen';
 	import { copyToClipboard } from '../lib/island-clipboard';
 
 	const root = document.getElementById('jb-viewer');
@@ -634,6 +640,11 @@ const sample = `{
 
 		// ── Theme toggle — shared across every tool island (lib/island-theme). ───
 		const themeCtl = initThemeToggle({ root });
+		initFullscreen({
+			root,
+			toolName: 'Viewer',
+			onChange: () => window.dispatchEvent(new Event('resize')),
+		});
 
 		const actions: Record<string, () => void | Promise<void>> = {
 			expand: expandAll,
