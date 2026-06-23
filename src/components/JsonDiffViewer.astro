@@ -201,27 +201,8 @@ const sampleB = `{
 </div>
 
 <style>
-	/* ── Input panes — dark code surface ───────────────────────────────────── */
-	#jb-dv-left,
-	#jb-dv-right {
-		background-color: var(--color-editor-bg);
-		color: var(--color-editor-fg);
-		font-family: var(--font-mono);
-		font-size: 13px;
-		line-height: 1.6;
-		padding: 12px 14px;
-		border: none;
-		outline: none;
-		resize: none;
-		display: block;
-		tab-size: 2;
-		width: 100%;
-	}
-	#jb-dv-left:focus-visible,
-	#jb-dv-right:focus-visible {
-		outline: 2px solid var(--color-link);
-		outline-offset: 2px;
-	}
+	/* The two input panes' surface + syntax highlighting come from the shared
+	   `.jb-hl*` overlay (global.css). */
 
 	/* ── Diff tree ─────────────────────────────────────────────────────────── */
 	#jb-dv-tree {
@@ -319,12 +300,7 @@ const sampleB = `{
 	:global(#jb-dv-b-status.jb-ok)    { color: var(--color-success); }
 	:global(#jb-dv-b-status.jb-err)   { color: var(--color-error); }
 
-	/* ── Light theme ────────────────────────────────────────────────────────── */
-	:global(html.jb-theme-light #jb-dv #jb-dv-left),
-	:global(html.jb-theme-light #jb-dv #jb-dv-right) {
-		background-color: var(--color-canvas);
-		color: var(--color-ink);
-	}
+	/* ── Light theme (input panes handled by .jb-hl) ────────────────────────── */
 	:global(html.jb-theme-light #jb-dv #jb-dv-tree) {
 		background-color: var(--color-canvas);
 		color: var(--color-ink);
@@ -345,15 +321,11 @@ const sampleB = `{
 	:global(html.jb-theme-light #jb-dv #jb-dv-content .jb-dvc-key)     { color: var(--color-ink); }
 	:global(html.jb-theme-light #jb-dv #jb-dv-content .jb-dvc-punct)   { color: var(--color-mute); }
 	:global(html.jb-theme-light #jb-dv #jb-dv-content .jb-dvc-collapse){ color: var(--color-mute); }
-	/* ── Text selection ─────────────────────────────────────────────────────── */
-	:global(#jb-dv-left::selection),
-	:global(#jb-dv-right::selection),
+	/* ── Text selection (input panes handled by .jb-hl) ─────────────────────── */
 	:global(#jb-dv-content *::selection) {
 		background-color: var(--color-editor-sel-dark);
 		color: var(--color-editor-fg);
 	}
-	:global(html.jb-theme-light #jb-dv #jb-dv-left::selection),
-	:global(html.jb-theme-light #jb-dv #jb-dv-right::selection),
 	:global(html.jb-theme-light #jb-dv #jb-dv-content *::selection) {
 		background-color: var(--color-editor-sel-light);
 		color: var(--color-ink);
@@ -365,6 +337,7 @@ const sampleB = `{
 	import { loadDoc, saveDoc } from '../lib/doc-store';
 	import { initThemeToggle } from '../lib/island-theme';
 	import { initFullscreen } from '../lib/island-fullscreen';
+	import { attachHighlight } from '../lib/island-highlight';
 
 	// ── Types ───────────────────────────────────────────────────────────────
 	type JsonValue = string | number | boolean | null | JsonValue[] | { [k: string]: JsonValue };
@@ -418,6 +391,9 @@ const sampleB = `{
 		// Non-null aliases so closures see non-nullable types (TypeScript CFA limitation)
 		const left    = leftEl;
 		const right   = rightEl;
+		// Syntax-highlight both JSON inputs (shared overlay — matches the formatter).
+		const hlLeft  = attachHighlight(left);
+		const hlRight = attachHighlight(right);
 		const content = contentEl;
 		const empty   = emptyEl;
 		const tree    = treeEl;
@@ -1012,6 +988,10 @@ const sampleB = `{
 		let currentDiff: DiffNode | null = null;
 
 		function runDiff(): void {
+			// Keep both highlight overlays in sync (covers init / sample / swap /
+			// clear; live typing is handled by each overlay's own input listener).
+			hlLeft.refresh();
+			hlRight.refresh();
 			const textA = left.value.trim();
 			const textB = right.value.trim();
 

@@ -107,6 +107,13 @@ export function initFullscreen(opts: FullscreenOptions): FullscreenControl {
 	if (toolbar && !toolbar.querySelector('.jb-workbench-brand')) {
 		const brand = document.createElement('div');
 		brand.className = 'jb-workbench-brand';
+		// The logo + wordmark are a single link home: the full-screen overlay hides
+		// the site header, so this is the only way back to the homepage from a
+		// maximised tool (reported as a bug — the brand used to be inert spans).
+		const home = document.createElement('a');
+		home.className = 'jb-workbench-home';
+		home.href = '/';
+		home.setAttribute('aria-label', 'JSON Beam — home');
 		const mark = document.createElement('span');
 		mark.className = 'jb-workbench-logo';
 		mark.textContent = '{}';
@@ -130,7 +137,8 @@ export function initFullscreen(opts: FullscreenOptions): FullscreenControl {
 		search.addEventListener('click', () => {
 			window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true, cancelable: true }));
 		});
-		brand.append(mark, title, search);
+		home.append(mark, title);
+		brand.append(home, search);
 		toolbar.prepend(brand);
 	}
 

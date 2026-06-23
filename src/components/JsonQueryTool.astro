@@ -132,7 +132,7 @@
 				autocomplete="off"
 				autocapitalize="off"
 				aria-label="JSON input document"
-				class="h-[62vh] min-h-[360px] w-full"
+				class="h-[40vh] min-h-[240px] w-full lg:h-[62vh] lg:min-h-[360px]"
 			></textarea>
 		</div>
 
@@ -143,7 +143,7 @@
 				<span id="jb-qt-count" class="font-mono text-caption text-mute" aria-live="polite"></span>
 				<span id="jb-qt-eval-ms" class="ml-auto font-mono text-caption text-mute"></span>
 			</div>
-			<div data-jb-fill id="jb-qt-result" class="relative h-[62vh] min-h-[360px] overflow-auto" role="region" aria-label="Query result">
+			<div data-jb-fill id="jb-qt-result" class="relative h-[54vh] min-h-[320px] overflow-auto lg:h-[62vh] lg:min-h-[360px]" role="region" aria-label="Query result">
 				<div id="jb-qt-out"     class="hidden px-3 py-3 font-mono text-code" aria-live="polite"></div>
 				<div id="jb-qt-empty"   class="hidden flex-col items-center justify-center gap-2 px-6 py-12 text-center">
 					<p class="font-mono text-caption text-mute">Enter a query above and press Run.</p>
@@ -428,25 +428,8 @@
 </div>
 
 <style>
-/* ── Input textarea ─────────────────────────────────────────────────────────── */
-#jb-qt-input {
-	background-color: var(--color-editor-bg);
-	color: var(--color-editor-fg);
-	font-family: var(--font-mono);
-	font-size: 13px;
-	line-height: 1.6;
-	padding: 12px 14px;
-	border: none;
-	outline: none;
-	resize: none;
-	display: block;
-	tab-size: 2;
-	width: 100%;
-}
-#jb-qt-input:focus-visible {
-	outline: 2px solid var(--color-link);
-	outline-offset: 2px;
-}
+/* The JSON input pane's surface + syntax highlighting come from the shared
+   `.jb-hl*` overlay (global.css). */
 /* ── Result pane ────────────────────────────────────────────────────────────── */
 #jb-qt-result {
 	background-color: var(--color-editor-bg);
@@ -539,10 +522,6 @@
 /* ── Snippet arrow animation ─────────────────────────────────────────────────── */
 #jb-qt-snippets[open] #jb-qt-snip-arrow { transform: rotate(90deg); }
 /* ── Light theme overrides ───────────────────────────────────────────────────── */
-:global(html.jb-theme-light #jb-qt #jb-qt-input) {
-	background-color: var(--color-canvas);
-	color: var(--color-ink);
-}
 :global(html.jb-theme-light #jb-qt #jb-qt-result) {
 	background-color: var(--color-canvas);
 	color: var(--color-ink);
@@ -554,21 +533,13 @@
 :global(html.jb-theme-light #jb-qt #jb-qt-out .jb-q-k)  { color: var(--color-ink); }
 :global(html.jb-theme-light #jb-qt #jb-qt-out .jb-q-p)  { color: var(--color-mute); }
 :global(html.jb-theme-light #jb-qt #jb-qt-out .jb-q-sep){ border-top-color: var(--color-hairline); }
-/* ── Text selection in editor panes ─────────────────────────────────────────── */
+/* ── Text selection in the result pane (input selection handled by .jb-hl) ───── */
 /* Dark mode: desaturated-blue tint — visible on the dark editor surface */
-:global(#jb-qt-input::selection) {
-	background-color: var(--color-editor-sel-dark);
-	color: var(--color-editor-fg);
-}
 :global(#jb-qt-out *::selection) {
 	background-color: var(--color-editor-sel-dark);
 	color: var(--color-editor-fg);
 }
 /* Light mode: soft blue tint — visible on the light canvas */
-:global(html.jb-theme-light #jb-qt #jb-qt-input::selection) {
-	background-color: var(--color-editor-sel-light);
-	color: var(--color-ink);
-}
 :global(html.jb-theme-light #jb-qt #jb-qt-out *::selection) {
 	background-color: var(--color-editor-sel-light);
 	color: var(--color-ink);
@@ -580,6 +551,7 @@ import { loadDoc, saveDoc } from '../lib/doc-store';
 import { initThemeToggle } from '../lib/island-theme';
 import { initFullscreen } from '../lib/island-fullscreen';
 import { copyToClipboard } from '../lib/island-clipboard';
+import { attachHighlight } from '../lib/island-highlight';
 
 const sample = `{
   "store": {
@@ -640,6 +612,9 @@ const inputStat  = inputStatusEl;
 const codeMenu   = codeMenuEl;
 const history    = historyEl;
 const historyC   = historyCEl;
+
+// Syntax-highlight the JSON input (shared overlay — matches the formatter).
+const hl = attachHighlight(input);
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
@@ -1030,6 +1005,7 @@ function init() {
 	// Load doc from store or use sample
 	const stored = loadDoc();
 	input.value = stored ?? sample;
+	hl.refresh();
 	validateInput();
 
 	// Restore language from URL if present
@@ -1050,11 +1026,13 @@ function init() {
 			switch (action) {
 				case 'sample':
 					input.value = sample;
+					hl.refresh();
 					validateInput();
 					scheduleQuery();
 					break;
 				case 'clear':
 					input.value = '';
+					hl.refresh();
 					expr.value = '';
 					out.replaceChildren();
 					setPanel('empty');

@@ -165,24 +165,8 @@ const sample = `[
 </div>
 
 <style>
-	/* ── Input pane — dark code surface (matches every other viewer tool) ──── */
-	#jb-tv-input {
-		background-color: var(--color-editor-bg);
-		color: var(--color-editor-fg);
-		font-family: var(--font-mono);
-		font-size: 13px;
-		line-height: 1.6;
-		padding: 14px;
-		border: none;
-		outline: none;
-		resize: none;
-		display: block;
-		tab-size: 2;
-	}
-	#jb-tv-input:focus-visible {
-		outline: 2px solid var(--color-link);
-		outline-offset: 2px;
-	}
+	/* The input pane's surface + syntax highlighting come from the shared
+	   `.jb-hl*` overlay (global.css); the table pane is styled below. */
 	#jb-tv-wrap {
 		background-color: var(--color-editor-bg);
 	}
@@ -283,10 +267,6 @@ const sample = `[
 	}
 
 	/* ── Light theme — toggled by .jb-theme-light on #jb-tv ──────────────── */
-	:global(html.jb-theme-light #jb-tv #jb-tv-input) {
-		background-color: var(--color-canvas);
-		color: var(--color-ink);
-	}
 	:global(html.jb-theme-light #jb-tv #jb-tv-wrap) {
 		background-color: var(--color-canvas);
 	}
@@ -333,21 +313,13 @@ const sample = `[
 		:global(.jb-tv-filter-input) { height: 32px; }
 	}
 
-	/* ── Text selection ─────────────────────────────────────────────────────── */
+	/* ── Text selection (input selection handled by .jb-hl) ─────────────────── */
 	/* Dark mode: blue-tinted selection visible on the dark editor surface */
-	:global(#jb-tv-input::selection) {
-		background-color: var(--color-editor-sel-dark);
-		color: var(--color-editor-fg);
-	}
 	:global(#jb-tv-table *::selection) {
 		background-color: var(--color-editor-sel-dark);
 		color: var(--color-editor-fg);
 	}
 	/* Light mode: soft-blue selection visible on the light canvas */
-	:global(html.jb-theme-light #jb-tv #jb-tv-input::selection) {
-		background-color: var(--color-editor-sel-light);
-		color: var(--color-ink);
-	}
 	:global(html.jb-theme-light #jb-tv #jb-tv-table *::selection) {
 		background-color: var(--color-editor-sel-light);
 		color: var(--color-ink);
@@ -360,6 +332,7 @@ const sample = `[
 	import { initThemeToggle } from '../lib/island-theme';
 	import { initFullscreen } from '../lib/island-fullscreen';
 	import { copyToClipboard } from '../lib/island-clipboard';
+	import { attachHighlight } from '../lib/island-highlight';
 
 	// ── Types ───────────────────────────────────────────────────────────────
 	type JsonValue = string | number | boolean | null | JsonValue[] | { [k: string]: JsonValue };
@@ -419,6 +392,9 @@ const sample = `[
 		const search = searchEl;
 		const spath  = pathEl;
 		const sstat  = statsEl;
+
+		// Syntax-highlight the input JSON (shared overlay — matches the formatter).
+		const hl = attachHighlight(input);
 
 		// ── Data detection ──────────────────────────────────────────────────
 		function isObj(v: JsonValue): v is JsonObject {
@@ -834,6 +810,7 @@ const sample = `[
 		}
 
 		function applyInput(): void {
+			hl.refresh();
 			update();
 			saveDoc(input.value);
 		}
@@ -979,6 +956,7 @@ const sample = `[
 		const carried = loadDoc();
 		if (carried !== null) input.value = carried;
 
+		hl.refresh();
 		update();
 	}
 </script>

@@ -182,42 +182,12 @@ const sample = `{
 </div>
 
 <style>
-	#jb-ginput {
-		background-color: var(--color-editor-bg);
-		color: var(--color-editor-fg);
-		font-family: var(--font-mono);
-		font-size: 13px;
-		line-height: 1.6;
-		padding: 14px;
-		border: none;
-		outline: none;
-		resize: none;
-		display: block;
-		tab-size: 2;
-	}
-	#jb-ginput:focus-visible {
-		outline: 2px solid var(--color-link);
-		outline-offset: 2px;
-	}
+	/* The input pane's surface + syntax highlighting come from the shared
+	   `.jb-hl*` overlay (global.css). The graph canvas is painted from the JS
+	   palette, so it needs no CSS theme override here. */
 	#jb-gsearch:focus-visible {
 		outline: 2px solid var(--color-link);
 		outline-offset: 2px;
-	}
-	:global(#jb-ginput::selection) {
-		color: var(--color-on-primary);
-		background-color: var(--color-editor-sel-dark);
-	}
-
-	/* Light theme — flip the input pane to the canvas surface so it matches the
-	   Viewer / Tree-Viewer (shares the `jb-theme` key). The graph canvas itself is
-	   repainted from the JS palette, so only the textarea needs a CSS override. */
-	:global(html.jb-theme-light #jb-graph-viewer #jb-ginput) {
-		background-color: var(--color-canvas);
-		color: var(--color-ink);
-	}
-	:global(html.jb-theme-light #jb-graph-viewer #jb-ginput::selection) {
-		color: var(--color-ink);
-		background-color: var(--color-editor-sel-light);
 	}
 
 	.jb-gkbd {
@@ -294,6 +264,7 @@ const sample = `{
 	import { initThemeToggle } from '../lib/island-theme';
 	import { initFullscreen } from '../lib/island-fullscreen';
 	import { copyToClipboard } from '../lib/island-clipboard';
+	import { attachHighlight } from '../lib/island-highlight';
 
 	const root = document.getElementById('jb-graph-viewer');
 	const inputEl = document.getElementById('jb-ginput') as HTMLTextAreaElement | null;
@@ -387,6 +358,9 @@ const sample = `{
 		const SAMPLE = input.value;
 		const carried = loadDoc();
 		if (carried !== null) input.value = carried;
+
+		// Syntax-highlight the input JSON (shared overlay — matches the formatter).
+		const hl = attachHighlight(input);
 
 		let dir: Dir = 'LR';
 		let expanded = new Set<string>();
@@ -1565,6 +1539,7 @@ const sample = `{
 			updateTruncationNote();
 		}
 		function applyInput(): void {
+			hl.refresh();
 			update(true);
 			saveDoc(input.value);
 		}

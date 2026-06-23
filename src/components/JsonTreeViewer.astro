@@ -120,25 +120,8 @@ const sample = `{
 </div>
 
 <style>
-	/* Both panes share the dark code-workbench surface (matches the formatter's
-	   default, the viewer, and the homepage mockups). */
-	#jb-kinput {
-		background-color: var(--color-editor-bg);
-		color: var(--color-editor-fg);
-		font-family: var(--font-mono);
-		font-size: 13px;
-		line-height: 1.6;
-		padding: 14px;
-		border: none;
-		outline: none;
-		resize: none;
-		display: block;
-		tab-size: 2;
-	}
-	#jb-kinput:focus-visible {
-		outline: 2px solid var(--color-link);
-		outline-offset: 2px;
-	}
+	/* The input pane's surface + syntax highlighting come from the shared
+	   `.jb-hl*` overlay (global.css); the tree pane is styled below. */
 	#jb-ktree {
 		background-color: var(--color-editor-bg);
 		color: var(--color-editor-fg);
@@ -149,7 +132,6 @@ const sample = `{
 	}
 
 	/* Selection stays readable on the dark surface. */
-	:global(#jb-kinput::selection),
 	:global(#jb-ktree ::selection) {
 		color: var(--color-on-primary);
 		background-color: var(--color-editor-sel-dark);
@@ -269,12 +251,10 @@ const sample = `{
 	/* ── Light theme — flip both panes to the canvas surface + light palette.
 	   Toggled by .jb-theme-light on the #jb-tree-viewer root (shares the
 	   `jb-theme` key with the formatter & viewer). ──────────────────────────── */
-	:global(html.jb-theme-light #jb-tree-viewer #jb-kinput),
 	:global(html.jb-theme-light #jb-tree-viewer #jb-ktree) {
 		background-color: var(--color-canvas);
 		color: var(--color-ink);
 	}
-	:global(html.jb-theme-light #jb-tree-viewer #jb-kinput::selection),
 	:global(html.jb-theme-light #jb-tree-viewer #jb-ktree ::selection) {
 		color: var(--color-ink);
 		background-color: var(--color-editor-sel-light);
@@ -342,6 +322,7 @@ const sample = `{
 	import { initThemeToggle } from '../lib/island-theme';
 	import { initFullscreen } from '../lib/island-fullscreen';
 	import { copyToClipboard } from '../lib/island-clipboard';
+	import { attachHighlight } from '../lib/island-highlight';
 
 	const root = document.getElementById('jb-tree-viewer');
 	const inputEl = document.getElementById('jb-kinput') as HTMLTextAreaElement | null;
@@ -362,6 +343,9 @@ const sample = `{
 		// nothing carried keeps the sample, so the page still demos itself.
 		const carried = loadDoc();
 		if (carried !== null) input.value = carried;
+
+		// Syntax-highlight the input JSON (shared overlay — matches the formatter).
+		const hl = attachHighlight(input);
 
 		const dot = root.querySelector<HTMLElement>('[data-dot]');
 		const label = root.querySelector<HTMLElement>('[data-label]');
@@ -897,6 +881,7 @@ const sample = `{
 		}
 
 		function applyInput(): void {
+			hl.refresh();
 			update();
 			saveDoc(input.value);
 		}

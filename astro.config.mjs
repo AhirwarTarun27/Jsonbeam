@@ -12,11 +12,26 @@ export default defineConfig({
 	vite: {
 		plugins: [tailwindcss()],
 		optimizeDeps: {
-			// Pre-bundle these at server start so they don't trigger re-optimisation
-			// (and the resulting full-page reload) the first time a query is run.
+			// Pre-bundle every third-party dep an island imports — static OR dynamic —
+			// at server start, so Vite never discovers one mid-session and re-optimises
+			// (a re-optimisation forces a full-page reload that aborts the in-flight
+			// dev-toolbar request: the "504 Outdated Optimize Dep" console error).
 			// jmespath is CJS-only; jsonpath-plus has a browser ESM build but Vite
-			// still needs to discover it up front to avoid the "outdated dep" reload.
-			include: ['jsonpath-plus', 'jmespath'],
+			// still needs to discover it up front. The CodeMirror packages + jsonrepair
+			// are imported by the formatter island (static + a lazy Repair import).
+			// jq / the converters are local TypeScript — nothing to pre-bundle there.
+			include: [
+				'jsonpath-plus',
+				'jmespath',
+				'jsonrepair',
+				'@codemirror/state',
+				'@codemirror/view',
+				'@codemirror/commands',
+				'@codemirror/lang-json',
+				'@codemirror/language',
+				'@codemirror/lint',
+				'@lezer/highlight',
+			],
 		},
 	},
 });

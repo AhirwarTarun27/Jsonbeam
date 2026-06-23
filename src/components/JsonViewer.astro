@@ -92,25 +92,8 @@ const sample = `{
 </div>
 
 <style>
-	/* Both panes share the dark code-workbench surface (matches the formatter's
-	   default and the homepage mockups). */
-	#jb-input {
-		background-color: var(--color-editor-bg);
-		color: var(--color-editor-fg);
-		font-family: var(--font-mono);
-		font-size: 13px;
-		line-height: 1.6;
-		padding: 14px;
-		border: none;
-		outline: none;
-		resize: none;
-		display: block;
-		tab-size: 2;
-	}
-	#jb-input:focus-visible {
-		outline: 2px solid var(--color-link);
-		outline-offset: 2px;
-	}
+	/* The input pane's surface + syntax highlighting come from the shared
+	   `.jb-hl*` overlay (global.css); the tree pane is styled below. */
 	#jb-tree {
 		background-color: var(--color-editor-bg);
 		color: var(--color-editor-fg);
@@ -121,7 +104,6 @@ const sample = `{
 	}
 
 	/* Selection stays readable on the dark surface (site default is an ink block). */
-	:global(#jb-input::selection),
 	:global(#jb-tree ::selection) {
 		color: var(--color-on-primary);
 		background-color: var(--color-editor-sel-dark);
@@ -215,12 +197,10 @@ const sample = `{
 	/* ── Light theme — flip both panes to the canvas surface + light palette
 	   (mirrors the formatter's light editor). Toggled by .jb-theme-light on the
 	   #jb-viewer root. ──────────────────────────────────────────────────────── */
-	:global(html.jb-theme-light #jb-viewer #jb-input),
 	:global(html.jb-theme-light #jb-viewer #jb-tree) {
 		background-color: var(--color-canvas);
 		color: var(--color-ink);
 	}
-	:global(html.jb-theme-light #jb-viewer #jb-input::selection),
 	:global(html.jb-theme-light #jb-viewer #jb-tree ::selection) {
 		color: var(--color-ink);
 		background-color: var(--color-editor-sel-light);
@@ -275,6 +255,7 @@ const sample = `{
 	import { initThemeToggle } from '../lib/island-theme';
 	import { initFullscreen } from '../lib/island-fullscreen';
 	import { copyToClipboard } from '../lib/island-clipboard';
+	import { attachHighlight } from '../lib/island-highlight';
 
 	const root = document.getElementById('jb-viewer');
 	const inputEl = document.getElementById('jb-input') as HTMLTextAreaElement | null;
@@ -295,6 +276,9 @@ const sample = `{
 		// nothing carried keeps the sample above, so the page still demos itself.
 		const carried = loadDoc();
 		if (carried !== null) input.value = carried;
+
+		// Syntax-highlight the input JSON (shared overlay — matches the formatter).
+		const hl = attachHighlight(input);
 
 		const dot = root.querySelector<HTMLElement>('[data-dot]');
 		const label = root.querySelector<HTMLElement>('[data-label]');
@@ -613,6 +597,7 @@ const sample = `{
 		// user-driven change (typing, Sample, Clear) — never for the first-load seed,
 		// so a fresh visitor's demo document doesn't follow them around.
 		function applyInput(): void {
+			hl.refresh();
 			update();
 			saveDoc(input.value);
 		}

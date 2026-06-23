@@ -528,12 +528,135 @@
 }
 
 /* ============================================================================
+   Syntax-highlight overlay for <textarea> JSON inputs (lib/island-highlight.ts).
+   A transparent textarea sits over a colour-tokenised <pre> mirror, so the JSON
+   a user types is highlighted to match the formatter — within the lean routes'
+   40 KB budget (no CodeMirror). Global (the wrapper is injected at runtime, so it
+   isn't reached by Astro's scoped hashing). Dark by default; light under
+   `html.jb-theme-light`. The token colours mirror the formatter's palette.
+   ========================================================================== */
+.jb-hl {
+  position: relative;
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  background-color: var(--color-editor-bg);
+}
+
+/* Shared metrics — the textarea and its mirror MUST match every box-affecting
+   property exactly, or the caret drifts off the glyphs. Edit them together. */
+.jb-hl-input,
+.jb-hl-mirror {
+  margin: 0;
+  padding: 12px 14px;
+  border: 0;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+  letter-spacing: 0;
+  tab-size: 2;
+  white-space: pre;
+}
+
+.jb-hl-mirror {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  color: var(--color-editor-fg);
+  background: transparent;
+}
+
+.jb-hl-input {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  resize: none;
+  overflow: auto;
+  background: transparent;
+  /* Glyphs are painted by the mirror beneath — only the caret shows here. */
+  color: transparent;
+  caret-color: var(--color-editor-fg);
+  -webkit-text-fill-color: transparent; /* Safari honours this over `color` */
+}
+.jb-hl-input::placeholder {
+  color: var(--color-mute);
+  -webkit-text-fill-color: var(--color-mute);
+}
+.jb-hl-input:focus-visible {
+  outline: 2px solid var(--color-link);
+  outline-offset: -2px; /* inset, so the wrapper's overflow:hidden never clips it */
+}
+/* A semi-transparent selection band lets the mirror's coloured glyphs show
+   through (the textarea's own text is transparent). */
+.jb-hl-input::selection {
+  background-color: rgba(45, 74, 99, 0.55);
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Large-input fallback (lib caps the mirror): paint the textarea's own text. */
+.jb-hl--plain .jb-hl-input {
+  color: var(--color-editor-fg);
+  -webkit-text-fill-color: var(--color-editor-fg);
+}
+
+/* Tokens — the formatter's dark palette, verbatim. */
+.jb-hl-key { color: var(--color-editor-fg); font-weight: 500; }
+.jb-hl-str { color: var(--color-cyan); }
+.jb-hl-num { color: var(--color-violet-soft); }
+.jb-hl-kw { color: var(--color-warning); }
+.jb-hl-punct { color: var(--color-hairline-strong); }
+
+/* Light theme — flip surface + the formatter's light palette. */
+html.jb-theme-light .jb-hl { background-color: var(--color-canvas); }
+html.jb-theme-light .jb-hl-mirror { color: var(--color-ink); }
+html.jb-theme-light .jb-hl-input { caret-color: var(--color-ink); }
+html.jb-theme-light .jb-hl-input::selection { background-color: rgba(0, 112, 243, 0.22); }
+html.jb-theme-light .jb-hl--plain .jb-hl-input {
+  color: var(--color-ink);
+  -webkit-text-fill-color: var(--color-ink);
+}
+html.jb-theme-light .jb-hl-key { color: var(--color-ink); }
+html.jb-theme-light .jb-hl-str { color: var(--color-link-deep); }
+html.jb-theme-light .jb-hl-num { color: var(--color-violet); }
+html.jb-theme-light .jb-hl-kw { color: var(--color-cyan-deep); }
+html.jb-theme-light .jb-hl-punct { color: var(--color-mute); }
+
+/* ============================================================================
    Full-screen workbench — the "Expand" mode shared by every tool island
    (wired by lib/island-fullscreen.ts). Toggling `.jb-expanded` promotes the
    island's own root to a full-viewport overlay, so the same editor instance
    fills the screen with no re-mount. Global (islands are Astro-scoped, this
    class is toggled at runtime). Tokens + the in-app 6px scale only.
    ========================================================================== */
+
+/* Prevent right-side toolbar groups from overflowing on narrow screens.
+   All button groups are direct non-brand div children of [data-jb-toolbar]. */
+[data-jb-toolbar] > div:not(.jb-workbench-brand) {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: 100%;
+}
+/* Collapse the expand button to icon-only on very narrow screens — icon + title
+   still communicate the action; the text label is decorative at that width. */
+@media (max-width: 639px) {
+  .jb-expand-label {
+    display: none;
+  }
+}
+
+/* Diff viewer fullscreen: on mobile the two inputs stack vertically. Cap their
+   height so the diff output pane below has room to show changes. On desktop the
+   grid switches to 2-column (lg:grid-cols-2) so the cap never fires there. */
+@media (max-width: 1023px) {
+  #jb-dv.jb-expanded textarea {
+    height: 15dvh !important;
+    min-height: 80px !important;
+  }
+}
 
 /* The expand/collapse toggle. A *labelled* button (icon + word) at the toolbar's
    far edge so the feature is obvious at a glance — never a bare mystery icon. */
@@ -585,8 +708,8 @@
 /* Two-pane islands (input | output): the split keeps its grid columns (so the
    desktop ratio is preserved) but fills the freed height — its rows become
    equal fractions, and the per-pane viewport heights (h-[62vh] …) are dropped.
-   Only panes that hold a <textarea> become flex columns (so a header strip +
-   editor stack correctly); content panes stay as-is and scroll. */
+   Only panes that hold a highlighted input (.jb-hl) become flex columns (so a
+   header strip + editor stack correctly); content panes stay as-is and scroll. */
 .jb-expanded [data-jb-split] {
   flex: 1 1 auto;
   min-height: 0;
@@ -597,16 +720,20 @@
   max-height: none !important;
   min-height: 0;
 }
-.jb-expanded [data-jb-split] > *:has(> textarea) {
+.jb-expanded [data-jb-split] > *:has(> .jb-hl) {
   display: flex;
   flex-direction: column;
 }
-.jb-expanded [data-jb-split] > *:has(> textarea) > textarea,
+.jb-expanded [data-jb-split] > *:has(> .jb-hl) > .jb-hl,
 .jb-expanded [data-jb-split] [data-jb-fill] {
   flex: 1 1 auto;
   min-height: 0;
   height: auto !important;
   max-height: none !important;
+}
+/* The textarea fills the now-stretched .jb-hl wrapper (its mirror is inset:0). */
+.jb-expanded [data-jb-split] > *:has(> .jb-hl) > .jb-hl > .jb-hl-input {
+  height: 100% !important;
 }
 
 /* Brand anchor in the slim bar — injected into the toolbar, shown only while
@@ -639,6 +766,22 @@
   letter-spacing: -0.2px;
   white-space: nowrap;
   color: var(--color-ink);
+}
+/* The logo + wordmark are a single link back home — the full-screen overlay
+   hides the site header, so this is the only way out to the homepage. */
+.jb-workbench-home {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  border-radius: var(--radius-md);
+}
+.jb-workbench-home:hover .jb-workbench-title {
+  color: var(--color-body);
+}
+.jb-workbench-home:focus-visible {
+  outline: 2px solid var(--color-link);
+  outline-offset: 3px;
 }
 
 /* The dimmed, blurred scrim behind the overlay — only visible at the edges

@@ -170,7 +170,7 @@ const OUTPUT_LABEL: Record<ConvertTarget, string> = {
 				autocomplete="off"
 				autocapitalize="off"
 				aria-label="JSON input document"
-				class="h-[62vh] min-h-[360px] w-full"
+				class="h-[40vh] min-h-[240px] w-full lg:h-[62vh] lg:min-h-[360px]"
 			></textarea>
 		</div>
 
@@ -186,7 +186,7 @@ const OUTPUT_LABEL: Record<ConvertTarget, string> = {
 				)}
 				<span id="jb-cv-meta" class="ml-auto font-mono text-caption text-mute" aria-live="polite"></span>
 			</div>
-			<div data-jb-fill id="jb-cv-output" class="relative h-[62vh] min-h-[360px] overflow-auto" role="region" aria-label="Conversion output">
+			<div data-jb-fill id="jb-cv-output" class="relative h-[54vh] min-h-[320px] overflow-auto lg:h-[62vh] lg:min-h-[360px]" role="region" aria-label="Conversion output">
 				<pre id="jb-cv-code" class="hidden m-0 px-3 py-3 font-mono text-code" aria-live="polite"></pre>
 				<div id="jb-cv-table-wrap" class="hidden"></div>
 				<div id="jb-cv-empty" class="hidden flex-col items-center justify-center gap-2 px-6 py-12 text-center">
@@ -216,25 +216,8 @@ const OUTPUT_LABEL: Record<ConvertTarget, string> = {
 </div>
 
 <style>
-/* ── Input + code output share the dark editor surface ──────────────────────── */
-#jb-cv-input {
-	background-color: var(--color-editor-bg);
-	color: var(--color-editor-fg);
-	font-family: var(--font-mono);
-	font-size: 13px;
-	line-height: 1.6;
-	padding: 12px 14px;
-	border: none;
-	outline: none;
-	resize: none;
-	display: block;
-	tab-size: 2;
-	width: 100%;
-}
-#jb-cv-input:focus-visible {
-	outline: 2px solid var(--color-link);
-	outline-offset: 2px;
-}
+/* ── Code output shares the dark editor surface (the JSON input pane's surface +
+   syntax highlighting come from the shared `.jb-hl*` overlay in global.css). ─── */
 #jb-cv-output { background-color: var(--color-editor-bg); color: var(--color-editor-fg); }
 #jb-cv-code { white-space: pre; color: var(--color-editor-fg); }
 #jb-cv-empty, #jb-cv-error { display: none; }
@@ -324,20 +307,18 @@ const OUTPUT_LABEL: Record<ConvertTarget, string> = {
 	color: var(--color-on-primary);
 }
 
-/* ── Light theme: input + code on the light canvas ──────────────────────────── */
-:global(html.jb-theme-light #jb-cv #jb-cv-input),
+/* ── Light theme: code output on the light canvas (input handled by .jb-hl) ──── */
 :global(html.jb-theme-light #jb-cv #jb-cv-output),
 :global(html.jb-theme-light #jb-cv #jb-cv-code) {
 	background-color: var(--color-canvas);
 	color: var(--color-ink);
 }
 
-/* ── Text selection in the editor panes ─────────────────────────────────────── */
-:global(#jb-cv-input::selection), :global(#jb-cv-code::selection) {
+/* ── Text selection in the code output pane ─────────────────────────────────── */
+:global(#jb-cv-code::selection) {
 	background-color: var(--color-editor-sel-dark);
 	color: var(--color-editor-fg);
 }
-:global(html.jb-theme-light #jb-cv #jb-cv-input::selection),
 :global(html.jb-theme-light #jb-cv #jb-cv-code::selection) {
 	background-color: var(--color-editor-sel-light);
 	color: var(--color-ink);
@@ -354,6 +335,7 @@ import { loadDoc, saveDoc } from '../lib/doc-store';
 import { initThemeToggle } from '../lib/island-theme';
 import { initFullscreen } from '../lib/island-fullscreen';
 import { copyToClipboard } from '../lib/island-clipboard';
+import { attachHighlight } from '../lib/island-highlight';
 import type { CsvArrayMode, CsvOptions, CsvResult } from '../lib/convert-csv';
 import type { YamlOptions, YamlQuoteStyle } from '../lib/convert-yaml';
 import type { TsOptions } from '../lib/emit-typescript';
@@ -413,6 +395,9 @@ const status = statusEl;
 const inputStat = inputStatusEl;
 
 const target = (root.dataset['target'] as ConvertTarget) ?? 'csv';
+
+// Syntax-highlight the JSON input (shared overlay — matches the formatter).
+const hl = attachHighlight(input);
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
@@ -704,6 +689,7 @@ function download(): void {
 function init(): void {
 	const stored = loadDoc();
 	input.value = stored ?? sample;
+	hl.refresh();
 	convert();
 
 	document.querySelectorAll<HTMLElement>('[data-action]').forEach((btn) => {
@@ -711,10 +697,12 @@ function init(): void {
 			switch (btn.dataset['action']) {
 				case 'sample':
 					input.value = sample;
+					hl.refresh();
 					convert();
 					break;
 				case 'clear':
 					input.value = '';
+					hl.refresh();
 					saveDoc('');
 					convert();
 					break;
