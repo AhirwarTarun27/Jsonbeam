@@ -1,0 +1,177 @@
+---
+/**
+ * Reusable shell for a guide/article (the `guides` content collection). Renders
+ * the SEO-critical chrome — breadcrumb hero, byline + dates, the markdown body
+ * via <slot/>, related-tool CTAs, and links to sibling guides — and builds the
+ * BlogPosting + BreadcrumbList JSON-LD from the same props so structured data
+ * and visible content never drift.
+ *
+ * A content route: 0 KB app JS (only inline ld+json). Prose typography comes
+ * from the shared ../styles/prose.css (also used by ContentPage).
+ */
+import Layout from '../layouts/Layout.astro';
+import { SITE_URL } from '../consts';
+import { article, breadcrumbs } from '../lib/jsonld';
+import '../styles/prose.css';
+
+export interface RelatedTool {
+	name: string;
+	href: string;
+	desc: string;
+}
+
+interface Props {
+	slug: string;
+	title: string;
+	description: string;
+	publishDate: Date;
+	updatedDate?: Date;
+	author: string;
+	tags: string[];
+	relatedTools: RelatedTool[];
+	image?: string;
+	readingMinutes: number;
+	moreGuides: { slug: string; title: string; description: string }[];
+}
+
+const {
+	slug,
+	title,
+	description,
+	publishDate,
+	updatedDate,
+	author,
+	tags,
+	relatedTools,
+	image,
+	readingMinutes,
+	moreGuides,
+} = Astro.props;
+
+const pageUrl = `${SITE_URL}/blog/${slug}`;
+
+const fmt = (d: Date) =>
+	d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+const iso = (d: Date) => d.toISOString().slice(0, 10);
+
+const jsonLd = [
+	article({
+		headline: title,
+		description,
+		url: pageUrl,
+		datePublished: iso(publishDate),
+		dateModified: updatedDate ? iso(updatedDate) : iso(publishDate),
+		authorName: author,
+		image,
+		section: tags[0],
+	}),
+	breadcrumbs([
+		{ name: 'Home', url: SITE_URL },
+		{ name: 'Guides', url: `${SITE_URL}/blog` },
+		{ name: title, url: pageUrl },
+	]),
+];
+---
+
+<Layout title={title} description={description} image={image} jsonLd={jsonLd}>
+	<!-- Hero -->
+	<section class="border-b border-hairline bg-canvas-soft">
+		<div class="container-page py-12">
+			<nav aria-label="Breadcrumb" class="font-mono text-caption text-mute">
+				<a href="/" class="hover:text-ink">Home</a>
+				<span class="px-1.5">/</span>
+				<a href="/blog" class="hover:text-ink">Guides</a>
+				<span class="px-1.5">/</span>
+				<span class="text-body">{title}</span>
+			</nav>
+
+			{
+				tags.length > 0 && (
+					<p class="mt-5 font-mono text-caption uppercase tracking-wide text-mute">
+						{tags.join(' · ')}
+					</p>
+				)
+			}
+
+			<h1 class="mt-3 max-w-3xl text-display-lg">{title}</h1>
+			<p class="mt-4 max-w-2xl text-body-lg text-body">{description}</p>
+
+			<p class="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-caption text-mute">
+				<span>{author}</span>
+				<span aria-hidden="true">·</span>
+				<time datetime={iso(publishDate)}>{fmt(publishDate)}</time>
+				{
+					updatedDate && (
+						<>
+							<span aria-hidden="true">·</span>
+							<span>Updated {fmt(updatedDate)}</span>
+						</>
+					)
+				}
+				<span aria-hidden="true">·</span>
+				<span>{readingMinutes} min read</span>
+			</p>
+		</div>
+	</section>
+
+	<!-- Article body -->
+	<section class="bg-canvas">
+		<div class="container-page py-16">
+			<article class="jb-prose max-w-3xl text-body-md text-body">
+				<slot />
+			</article>
+		</div>
+	</section>
+
+	<!-- Related tools -->
+	{
+		relatedTools.length > 0 && (
+			<section class="bg-canvas-soft">
+				<div class="container-page py-16">
+					<h2 class="text-display-sm">Put this into practice.</h2>
+					<p class="mt-2 max-w-2xl text-body-md text-body">
+						Everything here runs in your browser — your JSON is never uploaded.
+					</p>
+					<div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+						{relatedTools.map((tool) => (
+							<a
+								href={tool.href}
+								class="flex flex-col rounded-md bg-canvas p-5 shadow-e1 transition-shadow hover:shadow-e3"
+							>
+								<h3 class="text-body-md font-medium text-ink">{tool.name}</h3>
+								<p class="mt-1.5 text-body-sm text-body">{tool.desc}</p>
+							</a>
+						))}
+					</div>
+				</div>
+			</section>
+		)
+	}
+
+	<!-- More guides -->
+	{
+		moreGuides.length > 0 && (
+			<section class="bg-canvas">
+				<div class="container-page py-16">
+					<div class="flex items-baseline justify-between gap-4">
+						<h2 class="text-display-sm">More JSON guides.</h2>
+						<a href="/blog" class="text-body-sm font-medium text-link hover:text-link-deep">
+							All guides →
+						</a>
+					</div>
+					<div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+						{moreGuides.map((g) => (
+							<a
+								href={`/blog/${g.slug}`}
+								class="flex flex-col rounded-md bg-canvas-soft p-5 shadow-e1 transition-shadow hover:shadow-e3"
+							>
+								<h3 class="text-body-md font-medium text-ink">{g.title}</h3>
+								<p class="mt-1.5 text-body-sm text-body">{g.description}</p>
+							</a>
+						))}
+					</div>
+				</div>
+			</section>
+		)
+	}
+</Layout>

@@ -16,8 +16,8 @@ import JsonFormatter from './JsonFormatter.astro';
 import ToolSwitcher from './ToolSwitcher.astro';
 import NextSteps from './NextSteps.astro';
 import CommandPalette from './CommandPalette.astro';
-import { SITE_URL, type ToolVariant } from '../consts';
-import { softwareApplication, faqPage, breadcrumbs, type FaqItem } from '../lib/jsonld';
+import { SITE_URL, TOOL_GUIDES, type ToolVariant } from '../consts';
+import { softwareApplication, faqPage, breadcrumbs, howTo, type FaqItem } from '../lib/jsonld';
 
 export interface RelatedTool {
 	name: string;
@@ -74,8 +74,12 @@ const {
 
 const pageUrl = `${SITE_URL}${slug}`;
 
+// The in-depth guide that teaches this tool's topic (see TOOL_GUIDES).
+const guide = TOOL_GUIDES[slug];
+
 const jsonLd = [
 	softwareApplication({ name: `JSON Beam — ${breadcrumbLabel}`, description, url: pageUrl }),
+	howTo({ name: howToTitle, steps, url: pageUrl }),
 	faqPage(faqs),
 	breadcrumbs([
 		{ name: 'Home', url: SITE_URL },
@@ -172,6 +176,19 @@ const jsonLd = [
 	<!-- Related tools -->
 	<section class="bg-canvas">
 		<div class="container-page py-20">
+			{
+				guide && (
+					<p class="mb-8 text-body-md text-body">
+						<span class="font-mono text-caption uppercase tracking-wide text-mute">
+							Related reading
+						</span>
+						<br />
+						<a href={guide.href} class="text-link hover:text-link-deep font-medium">
+							{guide.label}
+						</a>
+					</p>
+				)
+			}
 			<h2 class="text-display-sm">Related tools</h2>
 			<div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 				{

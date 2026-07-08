@@ -15,6 +15,14 @@ export const DEFAULT_OG_IMAGE = '/og-default.png';
 export const DEFAULT_OG_IMAGE_ALT =
 	'JSON Beam — the fast, private, in-browser JSON formatter, validator, and viewer.';
 
+/**
+ * Publisher + author identity for structured data (E-E-A-T signals). `AUTHOR_NAME`
+ * is the byline on guides — change it to a real person's name to strengthen
+ * authorship signals. `SITE_LOGO` is the Organization logo used in JSON-LD.
+ */
+export const SITE_LOGO = '/favicon.svg';
+export const AUTHOR_NAME = 'Tarun Ahirwar';
+
 /** Brand promises — reused across hero, footer, and structured data. */
 export const BRAND_PROMISES = [
 	'Private by design — 100% client-side, nothing uploaded.',
@@ -88,9 +96,11 @@ export const FOOTER_NAV: NavColumn[] = [
 		links: [
 			{ label: 'About', href: '/about' },
 			{ label: 'Contact', href: '/contact' },
-			{ label: 'Blog', href: '/blog', soon: true },
+			{ label: 'Guides', href: '/blog' },
 			{ label: 'Privacy Policy', href: '/privacy' },
+			{ label: 'Cookie Policy', href: '/cookie-policy' },
 			{ label: 'Terms & Conditions', href: '/terms' },
+			{ label: 'Disclaimer', href: '/disclaimer' },
 		],
 	},
 ];
@@ -112,6 +122,32 @@ export interface ToolTabGroup {
 	title: string;
 	items: ToolTab[];
 }
+
+/**
+ * Tool → guide map. Lets each tool landing page auto-link the guide that
+ * teaches its topic (rendered by `ToolPage.astro`), so every tool is one hop
+ * from long-form content and every guide is reachable from a tool. Bidirectional
+ * internal linking is a core ranking + discoverability signal.
+ */
+export const TOOL_GUIDES: Record<string, { href: string; label: string }> = {
+	'/json-formatter': { href: '/blog/json-formatting-best-practices', label: 'JSON formatting & minification: best practices' },
+	'/json-beautifier': { href: '/blog/json-formatting-best-practices', label: 'JSON formatting & minification: best practices' },
+	'/json-minifier': { href: '/blog/json-formatting-best-practices', label: 'JSON formatting & minification: best practices' },
+	'/json-editor': { href: '/blog/what-is-json', label: 'What is JSON? A practical guide' },
+	'/json-validator': { href: '/blog/how-to-validate-json', label: 'How to validate JSON and read the error messages' },
+	'/json-repair': { href: '/blog/common-json-errors', label: 'Common JSON errors and how to fix them' },
+	'/json-viewer': { href: '/blog/what-is-json', label: 'What is JSON? A practical guide' },
+	'/json-tree-viewer': { href: '/blog/what-is-json', label: 'What is JSON? A practical guide' },
+	'/json-visualizer': { href: '/blog/what-is-json', label: 'What is JSON? A practical guide' },
+	'/json-graph-viewer': { href: '/blog/json-syntax-rules', label: 'JSON syntax rules, explained with examples' },
+	'/json-table-viewer': { href: '/blog/convert-json-to-csv', label: 'How to convert JSON to CSV' },
+	'/json-diff': { href: '/blog/how-to-compare-json-files', label: 'How to compare two JSON files' },
+	'/json-query': { href: '/blog/jsonpath-vs-jq-vs-jmespath', label: 'JSONPath vs jq vs JMESPath: which query language?' },
+	'/json-to-csv': { href: '/blog/convert-json-to-csv', label: 'How to convert JSON to CSV' },
+	'/json-to-yaml': { href: '/blog/json-vs-yaml', label: 'JSON vs YAML: differences and when to use each' },
+	'/json-to-typescript': { href: '/blog/json-to-typescript-types', label: 'Generating TypeScript types from JSON' },
+	'/json-to-go': { href: '/blog/json-to-typescript-types', label: 'Generating TypeScript types from JSON' },
+};
 
 export const TOOL_NAV: ToolTabGroup[] = [
 	{

@@ -1,0 +1,97 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+import { SITE_URL } from '../../consts';
+import { webPage, breadcrumbs } from '../../lib/jsonld';
+
+const guides = (await getCollection('guides'))
+	.filter((e) => !e.data.draft)
+	.sort((a, b) => b.data.publishDate.valueOf() - a.data.publishDate.valueOf());
+
+const title = 'JSON Guides & Tutorials — JSON Beam';
+const description =
+	'Practical, in-depth guides to working with JSON: syntax, validation, fixing errors, querying, converting, and comparing. Written for developers, free to read.';
+const pageUrl = `${SITE_URL}/blog`;
+
+const jsonLd = [
+	webPage({ name: 'JSON Guides & Tutorials — JSON Beam', description, url: pageUrl }),
+	breadcrumbs([
+		{ name: 'Home', url: SITE_URL },
+		{ name: 'Guides', url: pageUrl },
+	]),
+];
+
+const fmt = (d: Date) =>
+	d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+---
+
+<Layout title={title} description={description} jsonLd={jsonLd}>
+	<!-- Hero -->
+	<section class="border-b border-hairline bg-canvas-soft">
+		<div class="container-page py-12">
+			<nav aria-label="Breadcrumb" class="font-mono text-caption text-mute">
+				<a href="/" class="hover:text-ink">Home</a>
+				<span class="px-1.5">/</span>
+				<span class="text-body">Guides</span>
+			</nav>
+			<h1 class="mt-4 max-w-3xl text-display-lg">JSON guides &amp; tutorials.</h1>
+			<p class="mt-4 max-w-2xl text-body-lg text-body">
+				Clear, practical explanations of how JSON actually works — from syntax and validation
+				to querying, converting, and comparing data. Every guide is free to read and pairs with
+				a tool you can run right here, privately, in your browser.
+			</p>
+		</div>
+	</section>
+
+	<!-- Guide grid -->
+	<section class="bg-canvas">
+		<div class="container-page py-16">
+			{
+				guides.length === 0 ? (
+					<p class="text-body-md text-body">New guides are coming soon.</p>
+				) : (
+					<div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+						{guides.map((g) => (
+							<a
+								href={`/blog/${g.id}`}
+								class="flex flex-col rounded-lg bg-canvas-soft p-6 shadow-e1 transition-shadow hover:shadow-e3"
+							>
+								{g.data.tags.length > 0 && (
+									<p class="font-mono text-caption uppercase tracking-wide text-mute">
+										{g.data.tags[0]}
+									</p>
+								)}
+								<h2 class="mt-2 text-display-sm text-ink">{g.data.title}</h2>
+								<p class="mt-2 flex-1 text-body-sm text-body">{g.data.description}</p>
+								<p class="mt-4 font-mono text-caption text-mute">
+									<time datetime={g.data.publishDate.toISOString().slice(0, 10)}>
+										{fmt(g.data.publishDate)}
+									</time>
+								</p>
+							</a>
+						))}
+					</div>
+				)
+			}
+		</div>
+	</section>
+
+	<!-- Intro prose / internal linking -->
+	<section class="bg-canvas-soft">
+		<div class="container-page py-16">
+			<div class="max-w-3xl">
+				<h2 class="text-display-sm">Learn JSON, then use the tools.</h2>
+				<p class="mt-4 text-body-md text-body">
+					JSON (JavaScript Object Notation) is the lingua franca of modern APIs, config files,
+					and data interchange. These guides go beyond the basics: how the format is really
+					structured, why parsers reject certain input, how to repair broken data, and how to
+					reshape JSON into CSV, YAML, or typed code. When you are ready to try something, open
+					the <a href="/json-formatter" class="text-link hover:text-link-deep">formatter</a>,
+					<a href="/json-validator" class="text-link hover:text-link-deep">validator</a>, or
+					<a href="/json-diff" class="text-link hover:text-link-deep">diff</a> — each runs
+					entirely on your device, with nothing uploaded.
+				</p>
+			</div>
+		</div>
+	</section>
+</Layout>

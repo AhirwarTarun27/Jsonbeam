@@ -1,0 +1,147 @@
+---
+import ContentPage from '../components/ContentPage.astro';
+import type { FaqItem } from '../lib/jsonld';
+
+const faqs: FaqItem[] = [
+	{
+		question: 'Do any cookies see the JSON I process?',
+		answer:
+			'No. The JSON you paste, type, or open is processed entirely in your browser and is never uploaded. Cookies and analytics operate only on page-level activity — which pages you visit and how the site performs — never the content of your documents.',
+	},
+	{
+		question: 'How do I turn off analytics and advertising cookies?',
+		answer:
+			'In the EEA, UK, and Switzerland a consent prompt lets you refuse non-essential cookies, and you can change your choice later. Anywhere, you can use Google Ads Settings and the Google Analytics opt-out add-on (linked below), the industry opt-out pages, or your browser settings to block or delete cookies.',
+	},
+	{
+		question: 'Will the tools still work if I block cookies?',
+		answer:
+			'Yes. The JSON tools are fully client-side and do not depend on cookies. Blocking analytics and advertising cookies does not affect formatting, validating, repairing, converting, or any other tool — only your theme preference and our aggregate usage measurement may be affected.',
+	},
+];
+---
+
+<ContentPage
+	slug="/cookie-policy"
+	title="Cookie Policy — JSON Beam"
+	description="How JSON Beam uses cookies: preferences, Google Analytics, and Google AdSense. See exactly which cookies are set and how to control or refuse them."
+	breadcrumbLabel="Cookie Policy"
+	h1="Cookie policy."
+	intro="This page lists the cookies JSON Beam uses, why, and how to control them. As always, none of them ever see the JSON you process — that stays in your browser."
+	lastUpdated="July 8, 2026"
+	faqs={faqs}
+>
+	<h2>What cookies are</h2>
+	<p>
+		Cookies are small text files a website stores in your browser. Similar technologies (such as
+		<code>localStorage</code> and pixels) work the same way. We group what JSON Beam uses into
+		three purposes — <strong>preferences</strong>, <strong>analytics</strong>, and
+		<strong>advertising</strong> — described below. This policy accompanies our
+		<a href="/privacy">privacy policy</a>, which explains our approach to data in full.
+	</p>
+	<p>
+		One thing spans all of them: cookies operate on <strong>page-level activity only</strong>.
+		The JSON you format, validate, repair, query, compare, visualize, or convert is processed
+		entirely in your browser and is never read by a cookie, an analytics tag, or an ad tag.
+	</p>
+
+	<h2>1. Preference storage</h2>
+	<p>
+		To remember how you like the app, we store a small preference in your browser’s
+		<code>localStorage</code> (technically not a cookie, but it works similarly and stays on your
+		device):
+	</p>
+	<ul>
+		<li>
+			<strong><code>jb-theme</code></strong> — remembers whether you chose the light or dark
+			editor theme. Set by us, stored locally, never transmitted, and cleared when you clear your
+			site data.
+		</li>
+	</ul>
+
+	<h2>2. Analytics cookies (Google Analytics)</h2>
+	<p>
+		We use <strong>Google Analytics</strong> to understand, in aggregate, how the site is used so
+		we can improve it. It typically sets:
+	</p>
+	<ul>
+		<li>
+			<strong><code>_ga</code></strong> — distinguishes visitors; expires about 2 years after it
+			is set or updated.
+		</li>
+		<li>
+			<strong><code>_ga_&lt;container-id&gt;</code></strong> — persists session state for
+			Google Analytics 4; expires about 2 years after it is set or updated.
+		</li>
+	</ul>
+	<p>
+		Learn more in the <a
+			href="https://policies.google.com/privacy"
+			rel="noopener nofollow"
+			target="_blank">Google Privacy Policy</a
+		>, and opt out across all sites with the
+		<a href="https://tools.google.com/dlpage/gaoptout" rel="noopener nofollow" target="_blank"
+			>Google Analytics Opt-out Browser Add-on</a
+		>.
+	</p>
+
+	<h2>3. Advertising cookies (Google AdSense)</h2>
+	<p>
+		We display ads through <strong>Google AdSense</strong> to keep the tools free. Google and its
+		partners may set advertising cookies to serve, cap, and measure ads, including:
+	</p>
+	<ul>
+		<li>
+			<strong><code>__gads</code></strong> / <strong><code>__eoi</code></strong> — used by
+			Google to serve ads and measure interactions.
+		</li>
+		<li>
+			<strong>DoubleClick cookies</strong> (for example <code>IDE</code> on the
+			<code>doubleclick.net</code> domain) — used to serve ads based on your visits to this and
+			other sites.
+		</li>
+		<li>
+			<strong><code>test_cookie</code></strong> — a short-lived cookie that checks whether your
+			browser supports cookies.
+		</li>
+	</ul>
+	<p>
+		Third-party vendors, including Google, use cookies to serve ads based on your prior visits.
+		You can control personalized advertising at
+		<a href="https://www.google.com/settings/ads" rel="noopener nofollow" target="_blank"
+			>Google Ads Settings</a
+		>, and opt out of many vendors at
+		<a href="https://www.aboutads.info/choices/" rel="noopener nofollow" target="_blank"
+			>aboutads.info/choices</a
+		>
+		or, in the EU, <a
+			href="https://www.youronlinechoices.eu/"
+			rel="noopener nofollow"
+			target="_blank">youronlinechoices.eu</a
+		>.
+	</p>
+
+	<h2>4. Managing your consent and cookies</h2>
+	<p>
+		For visitors in the EEA, the UK, and Switzerland, non-essential analytics and advertising
+		cookies are withheld until you choose, using Google’s certified consent platform and
+		<strong>Google Consent Mode</strong>; you can change your choice at any time. Everywhere, you
+		can:
+	</p>
+	<ul>
+		<li>use the Google and industry opt-out links above;</li>
+		<li>block or delete cookies in your browser’s privacy settings;</li>
+		<li>use your browser’s private/incognito mode.</li>
+	</ul>
+	<p>
+		Because the tools are fully client-side, refusing these cookies does not stop you from using
+		any feature on the site.
+	</p>
+
+	<h2>5. Changes to this policy</h2>
+	<p>
+		We may update this cookie policy as the services we use change. When we do, we will revise the
+		“Last updated” date above. Questions? Reach us through the
+		<a href="/contact">contact page</a>.
+	</p>
+</ContentPage>

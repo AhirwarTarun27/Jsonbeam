@@ -1,0 +1,84 @@
+---
+import ContentPage from '../components/ContentPage.astro';
+import type { FaqItem } from '../lib/jsonld';
+
+const faqs: FaqItem[] = [
+	{
+		question: 'Is the output from the tools guaranteed to be correct?',
+		answer:
+			'The tools are built to be accurate and reliable, but they are provided “as is”. You are responsible for verifying any output — formatted, repaired, converted, or generated — before relying on it in production or for critical decisions.',
+	},
+	{
+		question: 'Can I use JSON Beam for professional or commercial work?',
+		answer:
+			'Yes. You may use the tools for personal, internal, and commercial purposes. Because all processing is client-side, your data never leaves your browser — but you remain responsible for how you use the results.',
+	},
+	{
+		question: 'Are you responsible for third-party sites you link to?',
+		answer:
+			'No. JSON Beam may link to external resources and relies on third-party services such as hosting and advertising. We do not control and are not responsible for the content or practices of those third parties.',
+	},
+];
+---
+
+<ContentPage
+	slug="/disclaimer"
+	title="Disclaimer — JSON Beam"
+	description="The disclaimer for JSON Beam: the tools are provided 'as is', without warranty. Verify all output before relying on it. Read the limits of our liability."
+	breadcrumbLabel="Disclaimer"
+	h1="Disclaimer."
+	intro="JSON Beam is provided free, as a tool to help you work with JSON. This page sets out, plainly, what that does and does not guarantee."
+	lastUpdated="July 8, 2026"
+	faqs={faqs}
+>
+	<h2>General information</h2>
+	<p>
+		The information and tools on JSON Beam (<code>jsonbeam.com</code>) are provided for general
+		use in working with JSON — formatting, validation, repair, querying, comparison,
+		visualization, and conversion. While we work to keep the tools accurate and dependable, we
+		make no representations or warranties of any kind about the completeness, accuracy,
+		reliability, or availability of the site or its output.
+	</p>
+
+	<h2>“As is”, without warranty</h2>
+	<p>
+		The site and all of its tools are provided <strong>“as is” and “as available”</strong>,
+		without warranties of any kind, whether express or implied — including the implied
+		warranties of merchantability, fitness for a particular purpose, and non-infringement. We do
+		not warrant that the tools will be uninterrupted or error-free, or that any result will be
+		accurate or complete.
+	</p>
+
+	<h2>Verify before you rely</h2>
+	<p>
+		Any reliance you place on the tools or their output is strictly at your own risk. Automated
+		formatting, repair, type generation, and conversion can behave unexpectedly on unusual input.
+		<strong>Always review the output</strong> before using it in production systems, in critical
+		decisions, or anywhere correctness matters. You are responsible for validating results and
+		for the lawful and appropriate use of any data you process.
+	</p>
+
+	<h2>Limitation of liability</h2>
+	<p>
+		To the maximum extent permitted by law, JSON Beam and its operators will not be liable for any
+		loss or damage — including, without limitation, indirect or consequential loss, or any loss
+		of data, profits, or revenue — arising from your use of, or inability to use, the site or
+		its tools. Because everything runs in your browser and we never receive your data, you remain
+		solely responsible for backing up and safeguarding your own content.
+	</p>
+
+	<h2>External links and third-party services</h2>
+	<p>
+		The site may contain links to external websites and relies on third-party services such as
+		hosting, analytics, and advertising. We have no control over the content, policies, or
+		practices of those third parties and accept no responsibility for them. Their use is governed
+		by their own terms and policies.
+	</p>
+
+	<h2>Related terms</h2>
+	<p>
+		This disclaimer forms part of, and should be read together with, our
+		<a href="/terms">terms &amp; conditions</a> and <a href="/privacy">privacy policy</a>. If you
+		have questions, reach us through the <a href="/contact">contact page</a>.
+	</p>
+</ContentPage>

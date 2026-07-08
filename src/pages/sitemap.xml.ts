@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { getCollection } from 'astro:content';
 import { FOOTER_NAV } from '../consts';
 
 /**
@@ -17,7 +18,9 @@ import { FOOTER_NAV } from '../consts';
 // the indexable assets, legal/company pages change rarely.
 function meta(path: string): { changefreq: string; priority: string } {
 	if (path === '/') return { changefreq: 'weekly', priority: '1.0' };
-	if (/^\/(about|contact|privacy|terms)\b/.test(path))
+	if (path === '/blog') return { changefreq: 'weekly', priority: '0.7' };
+	if (path.startsWith('/blog/')) return { changefreq: 'monthly', priority: '0.7' };
+	if (/^\/(about|contact|privacy|cookie-policy|terms|disclaimer)\b/.test(path))
 		return { changefreq: 'yearly', priority: '0.5' };
 	return { changefreq: 'monthly', priority: '0.8' };
 }
@@ -26,16 +29,22 @@ function meta(path: string): { changefreq: string; priority: string } {
 // but this keeps a future slug with a query/`&` from emitting invalid XML.
 const escapeLoc = (loc: string) => loc.replace(/&/g, '&amp;');
 
-export const GET: APIRoute = ({ site }) => {
+export const GET: APIRoute = async ({ site }) => {
 	const base = site ?? new URL('https://jsonbeam.com');
 	const lastmod = new Date().toISOString().slice(0, 10);
 
-	// Homepage + every live (non-`soon`) FOOTER_NAV destination, de-duplicated.
+	// Every published guide → /blog/<slug>.
+	const guidePaths = (await getCollection('guides'))
+		.filter((entry) => !entry.data.draft)
+		.map((entry) => `/blog/${entry.id}`);
+
+	// Homepage + every live (non-`soon`) FOOTER_NAV destination + guides, de-duplicated.
 	const paths = [
 		'/',
 		...FOOTER_NAV.flatMap((col) => col.links)
 			.filter((link) => !link.soon)
 			.map((link) => link.href),
+		...guidePaths,
 	];
 
 	const urls = [...new Set(paths)]

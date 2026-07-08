@@ -1,0 +1,43 @@
+---
+import { getCollection, render } from 'astro:content';
+import ArticlePage from '../../components/ArticlePage.astro';
+
+export async function getStaticPaths() {
+	const published = (await getCollection('guides')).filter((e) => !e.data.draft);
+	const sorted = [...published].sort(
+		(a, b) => b.data.publishDate.valueOf() - a.data.publishDate.valueOf(),
+	);
+
+	return sorted.map((entry) => {
+		// Up to three sibling guides for the "More guides" band.
+		const more = sorted
+			.filter((e) => e.id !== entry.id)
+			.slice(0, 3)
+			.map((e) => ({ slug: e.id, title: e.data.title, description: e.data.description }));
+		return { params: { slug: entry.id }, props: { entry, more } };
+	});
+}
+
+const { entry, more } = Astro.props;
+const { Content } = await render(entry);
+
+// Reading time from the raw markdown body (~200 wpm).
+const words = (entry.body ?? '').trim().split(/\s+/).filter(Boolean).length;
+const readingMinutes = Math.max(1, Math.round(words / 200));
+---
+
+<ArticlePage
+	slug={entry.id}
+	title={entry.data.title}
+	description={entry.data.description}
+	publishDate={entry.data.publishDate}
+	updatedDate={entry.data.updatedDate}
+	author={entry.data.author}
+	tags={entry.data.tags}
+	relatedTools={entry.data.relatedTools}
+	image={entry.data.image}
+	readingMinutes={readingMinutes}
+	moreGuides={more}
+>
+	<Content />
+</ArticlePage>
