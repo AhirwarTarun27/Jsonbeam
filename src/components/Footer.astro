@@ -4,7 +4,7 @@
  * Pages not yet shipped render as muted, non-linked "soon" rows so we never
  * publish a dead link.
  */
-import { FOOTER_NAV, SITE_NAME } from '../consts';
+import { FOOTER_NAV, SITE_NAME, withSlash } from '../consts';
 
 const year = new Date().getFullYear();
 ---
@@ -44,7 +44,7 @@ const year = new Date().getFullYear();
 								) : (
 									<li>
 										<a
-											href={link.href}
+											href={withSlash(link.href)}
 											class="text-body-sm text-body transition-colors hover:text-ink"
 										>
 											{link.label}
@@ -61,15 +61,15 @@ const year = new Date().getFullYear();
 		<!-- Bottom bar -->
 		<div class="mt-12 flex flex-col gap-5 border-t border-hairline pt-6 text-body-sm text-mute">
 			<nav aria-label="Legal" class="flex flex-wrap gap-x-5 gap-y-2">
-				<a href="/about" class="transition-colors hover:text-ink">About</a>
-				<a href="/contact" class="transition-colors hover:text-ink">Contact</a>
-				<a href="/privacy" class="transition-colors hover:text-ink">Privacy Policy</a>
-				<a href="/cookie-policy" class="transition-colors hover:text-ink">Cookie Policy</a>
-				<a href="/terms" class="transition-colors hover:text-ink">Terms &amp; Conditions</a>
-				<a href="/disclaimer" class="transition-colors hover:text-ink">Disclaimer</a>
+				<a href="/about/" class="transition-colors hover:text-ink">About</a>
+				<a href="/contact/" class="transition-colors hover:text-ink">Contact</a>
+				<a href="/privacy/" class="transition-colors hover:text-ink">Privacy Policy</a>
+				<a href="/cookie-policy/" class="transition-colors hover:text-ink">Cookie Policy</a>
+				<a href="/terms/" class="transition-colors hover:text-ink">Terms &amp; Conditions</a>
+				<a href="/disclaimer/" class="transition-colors hover:text-ink">Disclaimer</a>
 			</nav>
 			<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-				<p>© {year} {SITE_NAME}. Free &amp; open.</p>
+				<p>© {year} {SITE_NAME}. Free to use, no account required.</p>
 				<p class="flex items-center gap-2">
 				<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
 					<path

@@ -15,7 +15,7 @@ relatedTools:
     desc: Check that your JSON is well-formed.
 ---
 
-JSON is the format that quietly powers most of the modern web. Every time an app loads your profile, a mobile game syncs your progress, or one service talks to another over an API, there is a very good chance the data travels as JSON. Yet a surprising number of developers use it every day without a precise mental model of what it actually is. This guide fixes that — plainly, with examples you can paste into the [JSON formatter](/json-formatter) as you read.
+JSON is the format that quietly powers most of the modern web. Every time an app loads your profile, a mobile game syncs your progress, or one service talks to another over an API, there is a very good chance the data travels as JSON. Yet a surprising number of developers use it every day without a precise mental model of what it actually is. This guide fixes that — plainly, with examples you can paste into the [JSON formatter](/json-formatter/) as you read.
 
 ## JSON in one sentence
 
@@ -46,7 +46,7 @@ Here is a small but realistic example — an API response describing a user:
 }
 ```
 
-Read it top to bottom: the outer `{ }` is an object with six keys. `id` maps to a number, `name` to a string, `active` to a boolean, `roles` to an array of strings, `profile` to a nested object, and `deletedAt` to `null`. That nesting — objects inside objects, arrays inside objects — is how JSON represents data of any depth. Open this in the [JSON viewer](/json-viewer) and you can expand and collapse each branch.
+Read it top to bottom: the outer `{ }` is an object with six keys. `id` maps to a number, `name` to a string, `active` to a boolean, `roles` to an array of strings, `profile` to a nested object, and `deletedAt` to `null`. That nesting — objects inside objects, arrays inside objects — is how JSON represents data of any depth. Open this in the [JSON viewer](/json-viewer/) and you can expand and collapse each branch.
 
 ## The data types JSON supports
 
@@ -72,7 +72,7 @@ Because JSON grew out of JavaScript, people often assume they are interchangeabl
 - Trailing commas are allowed in JavaScript arrays and objects but **forbidden** in JSON.
 - JavaScript-only values like `undefined`, functions, and `Infinity` cannot appear in JSON.
 
-These differences are the source of a huge share of real-world "invalid JSON" errors. If you have ever copied an object out of your code and had a parser reject it, one of these rules is usually why. The dedicated guide on [JSON syntax rules](/blog/json-syntax-rules) walks through each one, and the [common JSON errors](/blog/common-json-errors) guide shows how to fix them fast.
+These differences are the source of a huge share of real-world "invalid JSON" errors. If you have ever copied an object out of your code and had a parser reject it, one of these rules is usually why. The dedicated guide on [JSON syntax rules](/blog/json-syntax-rules/) walks through each one, and the [common JSON errors](/blog/common-json-errors/) guide shows how to fix them fast.
 
 ## Where JSON is used
 
@@ -101,10 +101,10 @@ Every language has an equivalent. The important thing to understand is that pars
 - **A bare value can be valid JSON.** `42`, `"hi"`, and `true` are all legal JSON documents on their own — the top level does not have to be an object.
 - **Key order is not guaranteed to matter.** Objects are conceptually unordered; do not rely on key position for meaning.
 - **Numbers have limits.** Very large integers can lose precision because JSON numbers map to floating point in many languages. When exact big integers matter, encode them as strings.
-- **Whitespace is insignificant.** Indentation makes JSON readable but changes nothing about the data — which is exactly why you can freely [format](/json-formatter) or [minify](/json-minifier) it.
+- **Whitespace is insignificant.** Indentation makes JSON readable but changes nothing about the data — which is exactly why you can freely [format](/json-formatter/) or [minify](/json-minifier/) it.
 
 ## Try it yourself
 
-The fastest way to build intuition is to poke at real JSON. Paste the user example above into the [JSON formatter](/json-formatter) to pretty-print it, open it in the [JSON viewer](/json-viewer) to explore the tree, or run it through the [validator](/json-validator) to see how errors are reported when you deliberately break a rule. Everything happens locally in your browser — the data you experiment with is never uploaded.
+The fastest way to build intuition is to poke at real JSON. Paste the user example above into the [JSON formatter](/json-formatter/) to pretty-print it, open it in the [JSON viewer](/json-viewer/) to explore the tree, or run it through the [validator](/json-validator/) to see how errors are reported when you deliberately break a rule. Everything happens locally in your browser — the data you experiment with is never uploaded.
 
-Once the shape and the six types feel natural, JSON stops being something you fight and becomes something you barely think about. From here, the [JSON syntax rules](/blog/json-syntax-rules) guide is the natural next step.
+Once the shape and the six types feel natural, JSON stops being something you fight and becomes something you barely think about. From here, the [JSON syntax rules](/blog/json-syntax-rules/) guide is the natural next step.

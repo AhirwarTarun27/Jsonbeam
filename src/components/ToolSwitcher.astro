@@ -21,13 +21,17 @@
  *
  * In-app 6px control scale (.jb-tab in global.css) — never the marketing pill.
  */
-import { TOOL_NAV } from '../consts';
+import { TOOL_NAV, withSlash } from '../consts';
 
 interface Props {
 	/** The current page's route, e.g. "/json-validator" — marks the active tab. */
 	current: string;
 }
 const { current } = Astro.props;
+
+// Compare on the normalised (served) form so the active tab still matches
+// whether the caller passes "/json-validator" or "/json-validator/".
+const currentPath = withSlash(current);
 ---
 
 <nav
@@ -45,12 +49,12 @@ const { current } = Astro.props;
 								{item.label}
 								<span class="sr-only"> (coming soon)</span>
 							</span>
-						) : item.href === current ? (
-							<a href={item.href} class="jb-tab jb-tab-active" aria-current="page">
+						) : withSlash(item.href) === currentPath ? (
+							<a href={withSlash(item.href)} class="jb-tab jb-tab-active" aria-current="page">
 								{item.label}
 							</a>
 						) : (
-							<a href={item.href} class="jb-tab">
+							<a href={withSlash(item.href)} class="jb-tab">
 								{item.label}
 							</a>
 						)

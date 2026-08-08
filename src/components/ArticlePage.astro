@@ -10,7 +10,7 @@
  * from the shared ../styles/prose.css (also used by ContentPage).
  */
 import Layout from '../layouts/Layout.astro';
-import { SITE_URL } from '../consts';
+import { SITE_URL, withSlash } from '../consts';
 import { article, breadcrumbs } from '../lib/jsonld';
 import '../styles/prose.css';
 
@@ -48,7 +48,8 @@ const {
 	moreGuides,
 } = Astro.props;
 
-const pageUrl = `${SITE_URL}/blog/${slug}`;
+// Trailing slash: must match the canonical tag and the sitemap byte-for-byte.
+const pageUrl = `${SITE_URL}/blog/${slug}/`;
 
 const fmt = (d: Date) =>
 	d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -67,7 +68,7 @@ const jsonLd = [
 	}),
 	breadcrumbs([
 		{ name: 'Home', url: SITE_URL },
-		{ name: 'Guides', url: `${SITE_URL}/blog` },
+		{ name: 'Guides', url: `${SITE_URL}/blog/` },
 		{ name: title, url: pageUrl },
 	]),
 ];
@@ -80,7 +81,7 @@ const jsonLd = [
 			<nav aria-label="Breadcrumb" class="font-mono text-caption text-mute">
 				<a href="/" class="hover:text-ink">Home</a>
 				<span class="px-1.5">/</span>
-				<a href="/blog" class="hover:text-ink">Guides</a>
+				<a href="/blog/" class="hover:text-ink">Guides</a>
 				<span class="px-1.5">/</span>
 				<span class="text-body">{title}</span>
 			</nav>
@@ -135,7 +136,7 @@ const jsonLd = [
 					<div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
 						{relatedTools.map((tool) => (
 							<a
-								href={tool.href}
+								href={withSlash(tool.href)}
 								class="flex flex-col rounded-md bg-canvas p-5 shadow-e1 transition-shadow hover:shadow-e3"
 							>
 								<h3 class="text-body-md font-medium text-ink">{tool.name}</h3>
@@ -155,14 +156,14 @@ const jsonLd = [
 				<div class="container-page py-16">
 					<div class="flex items-baseline justify-between gap-4">
 						<h2 class="text-display-sm">More JSON guides.</h2>
-						<a href="/blog" class="text-body-sm font-medium text-link hover:text-link-deep">
+						<a href="/blog/" class="text-body-sm font-medium text-link hover:text-link-deep">
 							All guides →
 						</a>
 					</div>
 					<div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
 						{moreGuides.map((g) => (
 							<a
-								href={`/blog/${g.slug}`}
+								href={`/blog/${g.slug}/`}
 								class="flex flex-col rounded-md bg-canvas-soft p-5 shadow-e1 transition-shadow hover:shadow-e3"
 							>
 								<h3 class="text-body-md font-medium text-ink">{g.title}</h3>

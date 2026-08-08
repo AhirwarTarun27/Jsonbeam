@@ -14,6 +14,12 @@ interface Props {
 	/** Plain objects serialised into <script type="application/ld+json">. */
 	jsonLd?: Record<string, unknown>[];
 	noindex?: boolean;
+	/**
+	 * Whether this page may carry ads. Trust/legal pages set `false`, which drops
+	 * the AdSense loader entirely — AdSense policy is that an ad-free page must
+	 * not ship the ad library either, not merely omit the slots.
+	 */
+	ads?: boolean;
 }
 
 const {
@@ -23,6 +29,7 @@ const {
 	imageAlt = DEFAULT_OG_IMAGE_ALT,
 	jsonLd = [],
 	noindex = false,
+	ads = true,
 } = Astro.props;
 
 const canonical = new URL(Astro.url.pathname, Astro.site).href;
@@ -83,12 +90,19 @@ const serialize = (data: Record<string, unknown>) =>
 
 <!-- Google AdSense. is:inline ships it verbatim (no Astro bundling). Loads a
      third-party script from Google for ad serving; it never touches user JSON,
-     which is processed entirely client-side and never uploaded. -->
-<script
-	is:inline
-	async
-	src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6296837849054919"
-	crossorigin="anonymous"></script>
+     which is processed entirely client-side and never uploaded.
+     Omitted entirely on trust/legal pages (ads={false}) — those must carry no
+     ads *and* no ad library. -->
+{
+	ads && (
+		<script
+			is:inline
+			async
+			src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6296837849054919"
+			crossorigin="anonymous"
+		/>
+	)
+}
 
 <title>{title}</title>
 <meta name="description" content={description} />

@@ -12,7 +12,7 @@ relatedTools:
     desc: Normalise both files before comparing.
 ---
 
-Comparing two JSON documents — a config before and after a change, two API responses, an expected vs actual test fixture — is something developers do constantly. The trap is reaching for a plain text diff, which reports dozens of "changes" that are not changes at all. A **semantic** diff, one that understands JSON's structure, gives you the answer you actually want. This guide explains the difference and the standards involved, and the [JSON diff tool](/json-diff) does the comparison in your browser.
+Comparing two JSON documents — a config before and after a change, two API responses, an expected vs actual test fixture — is something developers do constantly. The trap is reaching for a plain text diff, which reports dozens of "changes" that are not changes at all. A **semantic** diff, one that understands JSON's structure, gives you the answer you actually want. This guide explains the difference and the standards involved, and the [JSON diff tool](/json-diff/) does the comparison in your browser.
 
 ## Why a text diff misleads
 
@@ -54,9 +54,9 @@ Understanding these helps you read change payloads from APIs and choose the righ
 
 ## A practical comparison workflow
 
-1. **[Format both documents](/json-formatter)** — or better, let the diff tool normalise them so formatting differences never enter the picture.
-2. **Run the [JSON diff](/json-diff)** to get a structural comparison that highlights added, removed, and changed values.
+1. **[Format both documents](/json-formatter/)** — or better, let the diff tool normalise them so formatting differences never enter the picture.
+2. **Run the [JSON diff](/json-diff/)** to get a structural comparison that highlights added, removed, and changed values.
 3. **Focus on the classified findings**, not raw lines. Confirm each change is intended.
 4. For lists of records, check whether the tool matches array elements by index or by id, so you interpret array changes correctly.
 
-Everything runs locally in your browser, so comparing two production configs or two responses full of customer data never uploads either file. Once you are comparing by structure instead of by text, reviewing JSON changes becomes fast and reliable. To make both sides directly comparable in the first place, a consistent formatting habit helps — see [JSON formatting best practices](/blog/json-formatting-best-practices).
+Everything runs locally in your browser, so comparing two production configs or two responses full of customer data never uploads either file. Once you are comparing by structure instead of by text, reviewing JSON changes becomes fast and reliable. To make both sides directly comparable in the first place, a consistent formatting habit helps — see [JSON formatting best practices](/blog/json-formatting-best-practices/).

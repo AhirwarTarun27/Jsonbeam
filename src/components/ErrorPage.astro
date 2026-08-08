@@ -17,6 +17,7 @@
 import Layout from '../layouts/Layout.astro';
 import Button from './Button.astro';
 import MeshGradient from './MeshGradient.astro';
+import { withSlash } from '../consts';
 
 interface Props {
 	/** HTTP status, shown in the eyebrow + as the JSON `error` value. */
@@ -66,7 +67,7 @@ const recover = [
 
 			<div class="mt-8 flex flex-wrap items-center justify-center gap-3">
 				<Button href="/">Back to home</Button>
-				<Button href="/json-formatter" variant="secondary">Open the formatter</Button>
+				<Button href="/json-formatter/" variant="secondary">Open the formatter</Button>
 			</div>
 
 			<!-- Recovery chips — one hop to the most-used tools -->
@@ -77,7 +78,7 @@ const recover = [
 				{
 					recover.map((t) => (
 						<a
-							href={t.href}
+							href={withSlash(t.href)}
 							class="rounded-pill-sm border border-hairline bg-canvas px-3 py-1.5 font-mono text-caption text-body transition-colors hover:border-hairline-strong hover:text-ink"
 						>
 							{t.label}

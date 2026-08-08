@@ -15,7 +15,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "ci": "astro check && astro build && node scripts/check-budget.mjs && vitest run",
-    "deploy": "astro build && wrangler deploy",
+    "check:env": "node scripts/check-deploy-env.mjs",
+    "deploy": "npm run check:env && astro build && wrangler deploy",
     "cf:preview": "astro build && wrangler dev"
   },
   "dependencies": {

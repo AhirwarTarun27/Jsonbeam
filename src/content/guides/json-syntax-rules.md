@@ -15,7 +15,7 @@ relatedTools:
     desc: Beautify valid JSON to read it clearly.
 ---
 
-JSON has a reputation for being simple, and it is — but "simple" is not the same as "forgiving". The parser follows a short, strict set of rules, and breaking any one of them makes the entire document invalid. This guide lists those rules with a valid and an invalid example for each, so you can recognise a problem on sight. To watch the rules enforced in real time, paste any snippet below into the [JSON validator](/json-validator).
+JSON has a reputation for being simple, and it is — but "simple" is not the same as "forgiving". The parser follows a short, strict set of rules, and breaking any one of them makes the entire document invalid. This guide lists those rules with a valid and an invalid example for each, so you can recognise a problem on sight. To watch the rules enforced in real time, paste any snippet below into the [JSON validator](/json-validator/).
 
 ## Rule 1: The top level is a single value
 
@@ -73,7 +73,7 @@ Commas separate items, so a comma before a closing `}` or `]` has nothing after 
 [ 1, 2, 3, ]          ← invalid: trailing comma
 ```
 
-This one bites constantly because most programming languages *do* allow trailing commas. If you have a stray comma, the [JSON repair](/json-repair) tool removes it automatically.
+This one bites constantly because most programming languages *do* allow trailing commas. If you have a stray comma, the [JSON repair](/json-repair/) tool removes it automatically.
 
 ## Rule 5: Numbers follow a strict format
 
@@ -123,7 +123,7 @@ If you need annotated config, add a normal string field (for example `"_comment"
 
 ## Rule 8: Whitespace between tokens is ignored
 
-Spaces, tabs, and newlines **between** tokens carry no meaning. That is why the same data can be written as a dense single line or an indented block, and why you can freely [format](/json-formatter) or [minify](/json-minifier) a document without changing what it represents.
+Spaces, tabs, and newlines **between** tokens carry no meaning. That is why the same data can be written as a dense single line or an indented block, and why you can freely [format](/json-formatter/) or [minify](/json-minifier/) a document without changing what it represents.
 
 ```json
 {"a":1,"b":2}
@@ -142,8 +142,8 @@ is identical, as data, to:
 
 Because the parser stops at the first violation, a single misplaced character can produce a confusing message pointing at a line that looks fine. The practical workflow is:
 
-1. Run the document through the [JSON validator](/json-validator) to get the exact line and column of the first error.
+1. Run the document through the [JSON validator](/json-validator/) to get the exact line and column of the first error.
 2. Fix that one issue — it is almost always one of the rules above.
 3. Re-validate, because a repair can reveal the *next* error that the parser never reached.
 
-For messy input with many small mistakes at once, the [JSON repair](/json-repair) tool applies these rules for you and returns clean, valid JSON. When you understand *why* each fix was made, you will start writing valid JSON by habit. The [common JSON errors](/blog/common-json-errors) guide catalogues the specific messages you are most likely to see and what each one means.
+For messy input with many small mistakes at once, the [JSON repair](/json-repair/) tool applies these rules for you and returns clean, valid JSON. When you understand *why* each fix was made, you will start writing valid JSON by habit. The [common JSON errors](/blog/common-json-errors/) guide catalogues the specific messages you are most likely to see and what each one means.

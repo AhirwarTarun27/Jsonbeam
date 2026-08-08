@@ -15,7 +15,7 @@ relatedTools:
     desc: Reformat once the JSON is valid again.
 ---
 
-Parsers reject invalid JSON with a terse, sometimes cryptic message and refuse to go further. The good news is that the same handful of mistakes account for the overwhelming majority of real errors. Learn to recognise them and most "invalid JSON" problems become a ten-second fix. Below are the usual suspects, the messages they produce, and how to fix each — and for anything messy, the [JSON repair](/json-repair) tool applies these fixes automatically.
+Parsers reject invalid JSON with a terse, sometimes cryptic message and refuse to go further. The good news is that the same handful of mistakes account for the overwhelming majority of real errors. Learn to recognise them and most "invalid JSON" problems become a ten-second fix. Below are the usual suspects, the messages they produce, and how to fix each — and for anything messy, the [JSON repair](/json-repair/) tool applies these fixes automatically.
 
 ## Trailing commas
 
@@ -86,7 +86,7 @@ Copying JSON out of a word processor, chat app, or PDF can silently replace stra
 { “name”: “Ada” }   ← curly quotes, not valid JSON
 ```
 
-Message: *"Unexpected token"* pointing at a character that looks correct. **Fix:** retype the quotes as straight double quotes, or run the text through the [repair tool](/json-repair), which normalises these characters for you.
+Message: *"Unexpected token"* pointing at a character that looks correct. **Fix:** retype the quotes as straight double quotes, or run the text through the [repair tool](/json-repair/), which normalises these characters for you.
 
 ## JavaScript-only values
 
@@ -96,7 +96,7 @@ Message: *"Unexpected token"* pointing at a character that looks correct. **Fix:
 { "ratio": NaN, "note": undefined /* pending */ }
 ```
 
-**Fix:** replace `NaN`/`Infinity` with `null` or a string, drop `undefined` keys entirely, and remove comments. See the [JSON syntax rules](/blog/json-syntax-rules) guide for why these are excluded.
+**Fix:** replace `NaN`/`Infinity` with `null` or a string, drop `undefined` keys entirely, and remove comments. See the [JSON syntax rules](/blog/json-syntax-rules/) guide for why these are excluded.
 
 ## Malformed numbers
 
@@ -120,9 +120,9 @@ This is technically parseable — most parsers silently keep the **last** value 
 
 Because a parser stops at the *first* error, fixing one problem often reveals the next. Work iteratively:
 
-1. Paste the document into the [JSON validator](/json-validator) to get the precise line and column of the first error.
+1. Paste the document into the [JSON validator](/json-validator/) to get the precise line and column of the first error.
 2. Apply the matching fix from above.
 3. Re-validate — repeat until it is clean.
-4. Once valid, [format it](/json-formatter) so it is easy to read and review.
+4. Once valid, [format it](/json-formatter/) so it is easy to read and review.
 
-When there are many small mistakes at once — the typical result of hand-editing or a bad export — skip the manual loop and run the [JSON repair](/json-repair) tool, which corrects quotes, commas, brackets, and stray characters in a single pass and returns valid JSON. Everything runs locally in your browser, so even broken files containing secrets never leave your device. To go deeper on reading the messages themselves, continue with [how to validate JSON](/blog/how-to-validate-json).
+When there are many small mistakes at once — the typical result of hand-editing or a bad export — skip the manual loop and run the [JSON repair](/json-repair/) tool, which corrects quotes, commas, brackets, and stray characters in a single pass and returns valid JSON. Everything runs locally in your browser, so even broken files containing secrets never leave your device. To go deeper on reading the messages themselves, continue with [how to validate JSON](/blog/how-to-validate-json/).

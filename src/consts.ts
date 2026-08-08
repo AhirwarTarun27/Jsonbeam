@@ -38,6 +38,22 @@ export const BRAND_PROMISES = [
  */
 export type ToolVariant = 'format' | 'beautify' | 'minify' | 'validate' | 'repair';
 
+/**
+ * Normalise a route to the URL it is actually served at.
+ *
+ * The static build uses Astro's default `build.format: 'directory'`, so every
+ * route below the homepage is served at a trailing-slash URL (/json-formatter/)
+ * and that is what the canonical tag carries. Sitemap <loc>, canonical, JSON-LD
+ * `url`, and every internal <a href> must agree byte-for-byte — otherwise each
+ * page has two addresses, Google picks one, and the signals split between them.
+ *
+ * Route data below stays slash-less: it doubles as the internal identity used
+ * for lookups (TOOL_GUIDES) and active-tab comparison (ToolSwitcher). Apply this
+ * at render time, on both sides of any comparison.
+ */
+export const withSlash = (path: string) =>
+	path === '/' || path.endsWith('/') || path.includes('#') ? path : `${path}/`;
+
 /** Footer mega-nav model — every tool is an indexable landing page. */
 export interface NavLink {
 	label: string;
@@ -55,7 +71,6 @@ export const FOOTER_NAV: NavColumn[] = [
 		title: 'Format & validate',
 		links: [
 			{ label: 'JSON Formatter', href: '/json-formatter' },
-			{ label: 'JSON Editor', href: '/json-editor' },
 			{ label: 'JSON Beautifier', href: '/json-beautifier' },
 			{ label: 'JSON Minifier', href: '/json-minifier' },
 			{ label: 'JSON Validator', href: '/json-validator' },
@@ -68,7 +83,6 @@ export const FOOTER_NAV: NavColumn[] = [
 			{ label: 'JSON Viewer', href: '/json-viewer' },
 			{ label: 'JSON Visualizer', href: '/json-visualizer' },
 			{ label: 'Tree Viewer', href: '/json-tree-viewer' },
-			{ label: 'Graph Viewer', href: '/json-graph-viewer' },
 			{ label: 'Table Viewer', href: '/json-table-viewer' },
 			{ label: 'JSON Diff', href: '/json-diff' },
 		],
@@ -133,13 +147,11 @@ export const TOOL_GUIDES: Record<string, { href: string; label: string }> = {
 	'/json-formatter': { href: '/blog/json-formatting-best-practices', label: 'JSON formatting & minification: best practices' },
 	'/json-beautifier': { href: '/blog/json-formatting-best-practices', label: 'JSON formatting & minification: best practices' },
 	'/json-minifier': { href: '/blog/json-formatting-best-practices', label: 'JSON formatting & minification: best practices' },
-	'/json-editor': { href: '/blog/what-is-json', label: 'What is JSON? A practical guide' },
 	'/json-validator': { href: '/blog/how-to-validate-json', label: 'How to validate JSON and read the error messages' },
 	'/json-repair': { href: '/blog/common-json-errors', label: 'Common JSON errors and how to fix them' },
 	'/json-viewer': { href: '/blog/what-is-json', label: 'What is JSON? A practical guide' },
 	'/json-tree-viewer': { href: '/blog/what-is-json', label: 'What is JSON? A practical guide' },
-	'/json-visualizer': { href: '/blog/what-is-json', label: 'What is JSON? A practical guide' },
-	'/json-graph-viewer': { href: '/blog/json-syntax-rules', label: 'JSON syntax rules, explained with examples' },
+	'/json-visualizer': { href: '/blog/json-syntax-rules', label: 'JSON syntax rules, explained with examples' },
 	'/json-table-viewer': { href: '/blog/convert-json-to-csv', label: 'How to convert JSON to CSV' },
 	'/json-diff': { href: '/blog/how-to-compare-json-files', label: 'How to compare two JSON files' },
 	'/json-query': { href: '/blog/jsonpath-vs-jq-vs-jmespath', label: 'JSONPath vs jq vs JMESPath: which query language?' },
@@ -154,7 +166,6 @@ export const TOOL_NAV: ToolTabGroup[] = [
 		title: 'Format',
 		items: [
 			{ label: 'Format', href: '/json-formatter' },
-			{ label: 'Editor', href: '/json-editor' },
 			{ label: 'Beautify', href: '/json-beautifier' },
 			{ label: 'Minify', href: '/json-minifier' },
 			{ label: 'Validate', href: '/json-validator' },
@@ -167,7 +178,6 @@ export const TOOL_NAV: ToolTabGroup[] = [
 			{ label: 'Viewer', href: '/json-viewer' },
 			{ label: 'Visualizer', href: '/json-visualizer' },
 			{ label: 'Tree', href: '/json-tree-viewer' },
-			{ label: 'Graph', href: '/json-graph-viewer' },
 			{ label: 'Table', href: '/json-table-viewer' },
 			{ label: 'Diff', href: '/json-diff' },
 		],

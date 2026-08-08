@@ -13,7 +13,7 @@
  * (same pattern as the homepage hero mockup).
  */
 import Layout from '../layouts/Layout.astro';
-import { SITE_URL } from '../consts';
+import { SITE_URL, withSlash } from '../consts';
 import { webPage, faqPage, breadcrumbs, type FaqItem } from '../lib/jsonld';
 import '../styles/prose.css';
 
@@ -39,6 +39,12 @@ interface Props {
 	faqTitle?: string;
 	/** Keep utility pages (e.g. the contact thank-you screen) out of the index. */
 	noindex?: boolean;
+	/**
+	 * Trust/legal pages carry no ads *and* no ad library — every current consumer
+	 * of this shell (About, Contact, Privacy, Cookie Policy, Terms, Disclaimer)
+	 * is one, so the default is off. An editorial content page can opt back in.
+	 */
+	ads?: boolean;
 }
 
 const {
@@ -53,9 +59,11 @@ const {
 	faqs = [],
 	faqTitle = 'Frequently asked questions.',
 	noindex = false,
+	ads = false,
 } = Astro.props;
 
-const pageUrl = `${SITE_URL}${slug}`;
+// Must match the canonical tag byte-for-byte (the served URL carries a slash).
+const pageUrl = `${SITE_URL}${withSlash(slug)}`;
 
 const jsonLd = [
 	webPage({ type: schemaType, name: `${breadcrumbLabel} — JSON Beam`, description, url: pageUrl }),
@@ -75,7 +83,7 @@ const explore = [
 ];
 ---
 
-<Layout title={title} description={description} jsonLd={jsonLd} noindex={noindex}>
+<Layout title={title} description={description} jsonLd={jsonLd} noindex={noindex} ads={ads}>
 	<!-- Hero -->
 	<section class="border-b border-hairline bg-canvas-soft">
 		<div class="container-page py-12">
@@ -141,7 +149,7 @@ const explore = [
 				{
 					explore.map((tool) => (
 						<a
-							href={tool.href}
+							href={withSlash(tool.href)}
 							class="flex flex-col rounded-md bg-canvas-soft p-5 shadow-e1 transition-shadow hover:shadow-e3"
 						>
 							<h3 class="text-body-md font-medium text-ink">{tool.name}</h3>

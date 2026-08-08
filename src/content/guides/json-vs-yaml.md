@@ -12,7 +12,7 @@ relatedTools:
     desc: Clean up JSON before converting.
 ---
 
-JSON and YAML are the two formats you meet most often for configuration and data interchange, and they are close cousins — in fact, every JSON document is also valid YAML. But they optimise for different things: JSON for unambiguous machine exchange, YAML for human-friendly configuration. Knowing where each shines (and where each bites) helps you pick well and avoid subtle bugs. When you need to move between them, the [JSON to YAML converter](/json-to-yaml) does it in your browser.
+JSON and YAML are the two formats you meet most often for configuration and data interchange, and they are close cousins — in fact, every JSON document is also valid YAML. But they optimise for different things: JSON for unambiguous machine exchange, YAML for human-friendly configuration. Knowing where each shines (and where each bites) helps you pick well and avoid subtle bugs. When you need to move between them, the [JSON to YAML converter](/json-to-yaml/) does it in your browser.
 
 ## The same data in both
 
@@ -85,4 +85,4 @@ Many teams use both: YAML for the config a person maintains, JSON for the data t
 
 ## Converting between them
 
-Because YAML is a superset of JSON, converting JSON to YAML is lossless, and converting well-behaved YAML back to JSON is straightforward. The [JSON to YAML converter](/json-to-yaml) handles both directions locally in your browser, so even config containing secrets stays on your machine. Tidy the JSON first with the [formatter](/json-formatter) if it is minified, and if you are weighing formats more broadly, the [what is JSON](/blog/what-is-json) guide covers JSON's data model in depth.
+Because YAML is a superset of JSON, converting JSON to YAML is lossless, and converting well-behaved YAML back to JSON is straightforward. The [JSON to YAML converter](/json-to-yaml/) handles both directions locally in your browser, so even config containing secrets stays on your machine. Tidy the JSON first with the [formatter](/json-formatter/) if it is minified, and if you are weighing formats more broadly, the [what is JSON](/blog/what-is-json/) guide covers JSON's data model in depth.

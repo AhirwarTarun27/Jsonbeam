@@ -15,7 +15,7 @@ relatedTools:
     desc: Tidy the sample before generating.
 ---
 
-If you consume JSON APIs in a TypeScript codebase, hand-writing the interfaces for every response is tedious and error-prone. Generating them from a real sample is faster and more accurate — the shape comes straight from actual data. But inference has limits worth understanding, so the generated types are a strong starting point rather than a finished contract. This guide covers both, and the [JSON to TypeScript converter](/json-to-typescript) produces the types instantly in your browser.
+If you consume JSON APIs in a TypeScript codebase, hand-writing the interfaces for every response is tedious and error-prone. Generating them from a real sample is faster and more accurate — the shape comes straight from actual data. But inference has limits worth understanding, so the generated types are a strong starting point rather than a finished contract. This guide covers both, and the [JSON to TypeScript converter](/json-to-typescript/) produces the types instantly in your browser.
 
 ## Why typed JSON boundaries matter
 
@@ -73,15 +73,15 @@ A generated type is only as complete as the sample it came from. Keep three limi
 
 1. **One sample = one shape.** If the API omits `phone` for some users, a sample that happens to include it will mark `phone` as required. Generate from a representative record — ideally one with every field — and then relax fields to optional by hand.
 2. **No constraints.** Inference gives you `string`, not `"admin" | "editor"`. If a field is really an enum, tighten it manually to a string-literal union for extra safety.
-3. **Numbers are just `number`.** TypeScript has no integer type, so `id: number` is as precise as it gets; encode big integers as strings if precision matters (see [what is JSON](/blog/what-is-json)).
+3. **Numbers are just `number`.** TypeScript has no integer type, so `id: number` is as precise as it gets; encode big integers as strings if precision matters (see [what is JSON](/blog/what-is-json/)).
 
 The pragmatic workflow is: **generate, then refine.** Let the tool do the 90% of mechanical work, then spend a minute marking optional fields, narrowing enums, and fixing dates.
 
 ## A quick workflow
 
 1. Grab a **complete, representative** JSON response from the API.
-2. **[Format it](/json-formatter)** and skim it so you know which fields are optional in practice.
-3. Paste it into the [JSON to TypeScript converter](/json-to-typescript) to get interfaces — locally, with nothing uploaded, which matters when the sample contains tokens or personal data.
+2. **[Format it](/json-formatter/)** and skim it so you know which fields are optional in practice.
+3. Paste it into the [JSON to TypeScript converter](/json-to-typescript/) to get interfaces — locally, with nothing uploaded, which matters when the sample contains tokens or personal data.
 4. **Refine** the output: optional markers, enums, and date types.
 
-Need the same thing in another language? The [JSON to Go converter](/json-to-go) applies the identical idea to Go structs with JSON tags. Understanding how a sample maps to a type also makes you better at reading unfamiliar APIs — a skill that pays off every time you integrate a new service.
+Need the same thing in another language? The [JSON to Go converter](/json-to-go/) applies the identical idea to Go structs with JSON tags. Understanding how a sample maps to a type also makes you better at reading unfamiliar APIs — a skill that pays off every time you integrate a new service.

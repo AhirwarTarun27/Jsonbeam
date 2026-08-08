@@ -1,0 +1,19 @@
+# Cloudflare Workers static-assets redirects. Copied verbatim into dist/ by
+# Astro's public/ handling, and evaluated at the edge before asset serving.
+#
+# Real 301s, deliberately not Astro's static `redirects:` config — that emits a
+# meta-refresh HTML page, which is not a server redirect and does not pass
+# ranking signals.
+#
+# Doorway consolidation: each of these routes rendered the *same island with the
+# same props* as its target, so it was a second address for one tool rather than
+# a distinct tool. Both source forms are listed because Cloudflare may normalise
+# the slash-less path to the directory form before redirects are matched.
+#
+#   /json-editor       === /json-formatter  (both ToolPage variant="format")
+#   /json-graph-viewer === /json-visualizer (both <JsonGraphViewer />, no props)
+
+/json-editor          /json-formatter/    301
+/json-editor/         /json-formatter/    301
+/json-graph-viewer    /json-visualizer/   301
+/json-graph-viewer/   /json-visualizer/   301

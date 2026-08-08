@@ -12,7 +12,7 @@ relatedTools:
     desc: Explore the structure before you query it.
 ---
 
-When a JSON document gets big, you stop wanting to *read* it and start wanting to *ask questions of it* — "give me the names of every active user", "sum these line items", "find the record with this id". Three query languages dominate that job: **JSONPath**, **jq**, and **JMESPath**. They overlap, but they are not interchangeable, and picking the right one saves real time. This guide compares them on the same data, which you can run yourself in the [JSON query tool](/json-query).
+When a JSON document gets big, you stop wanting to *read* it and start wanting to *ask questions of it* — "give me the names of every active user", "sum these line items", "find the record with this id". Three query languages dominate that job: **JSONPath**, **jq**, and **JMESPath**. They overlap, but they are not interchangeable, and picking the right one saves real time. This guide compares them on the same data, which you can run yourself in the [JSON query tool](/json-query/).
 
 ## The sample data
 
@@ -99,4 +99,4 @@ JSONPath, by design, mostly *selects* values and leaves math to your host langua
 
 ## Try all three on your own data
 
-The fastest way to feel the differences is to run the same question three ways on data you actually care about. The [JSON query tool](/json-query) supports JSONPath, JMESPath, and jq side by side, entirely in your browser — paste a document, switch languages, and compare the results. Before you query, it often helps to [view the structure as a tree](/json-viewer) so you know exactly what paths exist. And if the document is not valid yet, [validate](/json-validator) it first — a query engine needs well-formed input.
+The fastest way to feel the differences is to run the same question three ways on data you actually care about. The [JSON query tool](/json-query/) supports JSONPath, JMESPath, and jq side by side, entirely in your browser — paste a document, switch languages, and compare the results. Before you query, it often helps to [view the structure as a tree](/json-viewer/) so you know exactly what paths exist. And if the document is not valid yet, [validate](/json-validator/) it first — a query engine needs well-formed input.

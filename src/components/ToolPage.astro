@@ -16,7 +16,7 @@ import JsonFormatter from './JsonFormatter.astro';
 import ToolSwitcher from './ToolSwitcher.astro';
 import NextSteps from './NextSteps.astro';
 import CommandPalette from './CommandPalette.astro';
-import { SITE_URL, TOOL_GUIDES, type ToolVariant } from '../consts';
+import { SITE_URL, TOOL_GUIDES, withSlash, type ToolVariant } from '../consts';
 import { softwareApplication, faqPage, breadcrumbs, howTo, type FaqItem } from '../lib/jsonld';
 
 export interface RelatedTool {
@@ -72,9 +72,12 @@ const {
 	related,
 } = Astro.props;
 
-const pageUrl = `${SITE_URL}${slug}`;
+// Must match the canonical tag byte-for-byte — the served URL carries a
+// trailing slash, so the JSON-LD `url` and breadcrumb do too.
+const pageUrl = `${SITE_URL}${withSlash(slug)}`;
 
 // The in-depth guide that teaches this tool's topic (see TOOL_GUIDES).
+// Keyed by the slash-less route identity.
 const guide = TOOL_GUIDES[slug];
 
 const jsonLd = [
@@ -183,7 +186,7 @@ const jsonLd = [
 							Related reading
 						</span>
 						<br />
-						<a href={guide.href} class="text-link hover:text-link-deep font-medium">
+						<a href={withSlash(guide.href)} class="text-link hover:text-link-deep font-medium">
 							{guide.label}
 						</a>
 					</p>
@@ -203,7 +206,7 @@ const jsonLd = [
 							</div>
 						) : (
 							<a
-								href={tool.href}
+								href={withSlash(tool.href)}
 								class="flex flex-col rounded-md bg-canvas-soft p-5 shadow-e1 transition-shadow hover:shadow-e3"
 							>
 								<h3 class="text-body-md font-medium text-ink">{tool.name}</h3>

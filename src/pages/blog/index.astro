@@ -11,7 +11,8 @@ const guides = (await getCollection('guides'))
 const title = 'JSON Guides & Tutorials — JSON Beam';
 const description =
 	'Practical, in-depth guides to working with JSON: syntax, validation, fixing errors, querying, converting, and comparing. Written for developers, free to read.';
-const pageUrl = `${SITE_URL}/blog`;
+// Trailing slash: must match the canonical tag and the sitemap byte-for-byte.
+const pageUrl = `${SITE_URL}/blog/`;
 
 const jsonLd = [
 	webPage({ name: 'JSON Guides & Tutorials — JSON Beam', description, url: pageUrl }),
@@ -53,7 +54,7 @@ const fmt = (d: Date) =>
 					<div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
 						{guides.map((g) => (
 							<a
-								href={`/blog/${g.id}`}
+								href={`/blog/${g.id}/`}
 								class="flex flex-col rounded-lg bg-canvas-soft p-6 shadow-e1 transition-shadow hover:shadow-e3"
 							>
 								{g.data.tags.length > 0 && (
@@ -86,9 +87,9 @@ const fmt = (d: Date) =>
 					and data interchange. These guides go beyond the basics: how the format is really
 					structured, why parsers reject certain input, how to repair broken data, and how to
 					reshape JSON into CSV, YAML, or typed code. When you are ready to try something, open
-					the <a href="/json-formatter" class="text-link hover:text-link-deep">formatter</a>,
-					<a href="/json-validator" class="text-link hover:text-link-deep">validator</a>, or
-					<a href="/json-diff" class="text-link hover:text-link-deep">diff</a> — each runs
+					the <a href="/json-formatter/" class="text-link hover:text-link-deep">formatter</a>,
+					<a href="/json-validator/" class="text-link hover:text-link-deep">validator</a>, or
+					<a href="/json-diff/" class="text-link hover:text-link-deep">diff</a> — each runs
 					entirely on your device, with nothing uploaded.
 				</p>
 			</div>

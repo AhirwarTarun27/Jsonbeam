@@ -17,6 +17,8 @@ interface Props {
 	image?: string;
 	jsonLd?: Record<string, unknown>[];
 	noindex?: boolean;
+	/** Pass through to BaseHead — trust/legal pages ship no ad library. */
+	ads?: boolean;
 	/**
 	 * Tool pages opt in to the theme boot script so a persisted light theme is
 	 * applied before first paint (no dark→light flash). Marketing/content pages
@@ -25,7 +27,7 @@ interface Props {
 	themed?: boolean;
 }
 
-const { title, description, image, jsonLd, noindex, themed } = Astro.props;
+const { title, description, image, jsonLd, noindex, ads, themed } = Astro.props;
 
 // Apply the persisted editor theme on <html> before the body paints. The class
 // only drives island styles (lib/island-theme); page chrome has no dark rules,
@@ -43,6 +45,7 @@ const THEME_BOOT =
 			image={image}
 			jsonLd={jsonLd}
 			noindex={noindex}
+			ads={ads}
 		/>
 		{themed && <script is:inline set:html={THEME_BOOT} />}
 	</head>

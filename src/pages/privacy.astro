@@ -21,7 +21,7 @@ const faqs: FaqItem[] = [
 	{
 		question: 'Do you run ads or analytics?',
 		answer:
-			'Yes. We run Google Analytics to understand aggregate traffic and Google AdSense to show ads, which keeps the tools free. Both are standard third-party Google services that see page-level activity only — never the content of the JSON you work with, which is never transmitted, sold, or shared.',
+			'Yes. We run Google Analytics to understand aggregate traffic, Google AdSense to show ads (which keeps the tools free), and Cloudflare Web Analytics, a cookieless page-view counter from our host. All three see page-level activity only — never the content of the JSON you work with, which is never transmitted, sold, or shared.',
 	},
 ];
 ---
@@ -33,7 +33,7 @@ const faqs: FaqItem[] = [
 	breadcrumbLabel="Privacy Policy"
 	h1="Privacy policy."
 	intro="Two things are true at once: the JSON you process never leaves your browser, and — like most free sites — we use cookies for analytics and ads. This page explains exactly what each of those means."
-	lastUpdated="July 8, 2026"
+	lastUpdated="July 20, 2026"
 	faqs={faqs}
 >
 	<h2>The short version</h2>
@@ -49,15 +49,15 @@ const faqs: FaqItem[] = [
 		<strong>advertising</strong> (Google AdSense), which is how we keep the tools free. These
 		operate at the level of ordinary page visits and <strong>never touch the content of the
 		JSON you work with</strong>. This page explains both sides in plain language, and our
-		<a href="/cookie-policy">cookie policy</a> lists the specific cookies and how to control them.
+		<a href="/cookie-policy/">cookie policy</a> lists the specific cookies and how to control them.
 	</p>
 
 	<h2>1. The data you process stays on your device</h2>
 	<p>
 		Formatting, validating, repairing, querying, comparing, visualizing, and converting all
 		happen locally, on your machine, using JavaScript that runs in your browser. When you
-		<a href="/json-formatter">format JSON</a>, <a href="/json-validator">validate it</a>, or
-		<a href="/json-diff">compare two documents</a>, that content is never sent anywhere. There
+		<a href="/json-formatter/">format JSON</a>, <a href="/json-validator/">validate it</a>, or
+		<a href="/json-diff/">compare two documents</a>, that content is never sent anywhere. There
 		is no upload step, no API call carrying your payload, and no copy kept on our side —
 		because there is no “our side” in the loop. This is why you can safely work with API keys,
 		customer records, access tokens, and proprietary configuration files.
@@ -145,7 +145,7 @@ const faqs: FaqItem[] = [
 		the EEA or UK — see the next section), ads may still be shown on a non-personalized basis.
 		As with analytics, ad serving operates on page-level signals and <strong>never receives the
 		JSON you process</strong>. For the full list of cookies, see the
-		<a href="/cookie-policy">cookie policy</a>.
+		<a href="/cookie-policy/">cookie policy</a>.
 	</p>
 
 	<h2>6. Your consent choices</h2>
@@ -156,19 +156,26 @@ const faqs: FaqItem[] = [
 		<strong>withheld until you make a choice</strong>, and you can grant or refuse them, and
 		change your decision later. Elsewhere, these cookies may be set by default, and you can still
 		opt out using the links in the sections above and in our
-		<a href="/cookie-policy">cookie policy</a>. You can also block or delete cookies at any time
+		<a href="/cookie-policy/">cookie policy</a>. You can also block or delete cookies at any time
 		through your browser settings.
 	</p>
 
 	<h2>7. Third-party services</h2>
 	<p>
-		Beyond Google Analytics and AdSense (described above), the site relies on a hosting/CDN
-		provider that serves the static files, as described in section 3. We self-host our fonts, so
-		no external font network requests are made.
+		Beyond Google Analytics and AdSense (described above), the site is hosted and served by
+		<a href="https://www.cloudflare.com/privacypolicy/" rel="noopener nofollow" target="_blank"
+			>Cloudflare</a
+		>, which delivers the static files from its global network and processes connection data
+		(such as your IP address) to route and secure the request, as described in section 3. We also
+		use <strong>Cloudflare Web Analytics</strong>, which loads a small measurement script on each
+		page to count page views and referrers. It is privacy-preserving by design: it sets no
+		cookies, does not use client-side state, and does not fingerprint or track you across sites.
+		Like the Google tags, it sees page-level activity only — never the content of the JSON you
+		work with. We self-host our fonts, so no external font network requests are made.
 	</p>
 	<p>
 		If — and only if — you choose to send us a message through our
-		<a href="/contact">contact form</a>, that message is delivered to us by email through
+		<a href="/contact/">contact form</a>, that message is delivered to us by email through
 		Web3Forms, a third-party form-to-email provider. Web3Forms processes the details you enter
 		(such as your name, email address, and message) solely to deliver them to us. We receive only
 		what you type, and only when you press Send; we use it to reply to you, and we do not sell or
@@ -210,6 +217,6 @@ const faqs: FaqItem[] = [
 	<h2>12. Contact us</h2>
 	<p>
 		If you have any questions about this privacy policy or how JSON Beam handles data, send us a
-		message through the <a href="/contact">contact page</a>.
+		message through the <a href="/contact/">contact page</a>.
 	</p>
 </ContentPage>
