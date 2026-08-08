@@ -1,0 +1,64 @@
+/* ============================================================================
+   Graph island — the node/edge canvas at /json-visualizer.
+   ----------------------------------------------------------------------------
+   The SVG's own colours are NOT set here. They are resolved from the design
+   tokens in JS (`makePal()` reads them via getComputedStyle) and written as
+   literal attributes, because PNG/SVG export has to be faithful without our
+   stylesheet travelling with it. What lives here is only what the exported
+   image must NOT carry: interaction affordances — cursors and focus rings.
+   ========================================================================== */
+
+@layer workbench {
+	#jb-gsearch:focus-visible {
+		outline: 2px solid var(--color-link);
+		outline-offset: 2px;
+	}
+
+	/* ── Stage ──────────────────────────────────────────────────────────────── */
+	#jb-gsvg {
+		display: block;
+		cursor: grab;
+	}
+	#jb-gsvg.is-panning {
+		cursor: grabbing;
+	}
+
+	#jb-gnodes .jb-gnode {
+		cursor: pointer;
+	}
+	#jb-gnodes .jb-gnode:focus {
+		outline: none;
+	}
+	#jb-gnodes .jb-gnode:focus-visible .jb-card {
+		stroke: var(--color-link);
+		stroke-width: 2;
+	}
+	#jb-gnodes text {
+		pointer-events: none;
+		white-space: pre;
+	}
+
+	/* ── Minimap viewport rectangle ─────────────────────────────────────────── */
+	#jb-gmini-view {
+		fill: var(--graph-mini-fill);
+		stroke: var(--color-cyan-deep);
+		stroke-width: 1;
+	}
+
+	/* ── Empty / error overlay ──────────────────────────────────────────────── */
+	#jb-gempty.is-shown {
+		display: grid;
+	}
+	#jb-gempty .jb-gempty-card {
+		max-width: 30rem;
+		color: var(--color-mute);
+		font-size: var(--text-body-sm);
+		line-height: 1.6;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		#jb-gviewport {
+			transition: none !important;
+		}
+	}
+}

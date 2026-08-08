@@ -1,0 +1,162 @@
+/* ============================================================================
+   Layer 1 — SEMANTIC TOKENS (the workbench surface)
+   ----------------------------------------------------------------------------
+   This file is the ONLY place a theme decides a value.
+
+   The primitives in `primitive.css` are the brand palette — fixed, absolute,
+   theme-agnostic. This file maps them onto *roles* ("the surface a tool renders
+   on", "the colour of a JSON string") and swaps those roles between dark and
+   light.
+
+   Why it exists: before this file, the `@theme` block described only the light
+   marketing palette. The dark workbench — the surface eight tool islands
+   actually render on — had no token layer at all, so every island hand-rolled
+   its own and then hand-rolled a `html.jb-theme-light` override for each rule.
+   That produced 87 four-level override chains across 10 files, and they drifted:
+   `JsonQueryTool` shipped light-mode strings in teal (instead of blue) and
+   booleans in brown (instead of teal) because its copy fell out of sync.
+
+   Consequence of the design: an island writes `color: var(--syntax-string)`
+   ONCE. There is no light-theme twin to write, so there is none to drift.
+
+   Rules for editing:
+     • Only put a token here if it genuinely CHANGES between themes. A value
+       that is identical in both belongs in `primitive.css` and should be
+       referenced directly.
+     • Dark is the default (`:root`) — see the theme-model decision: the editor
+       is dark-first, marketing is light, and `.jb-theme-light` is the opt-in
+       signal set on <html> before paint by the layout's boot script.
+     • Never reference these from marketing/content pages. They describe the
+       in-product surface only; `DESIGN.md` keeps marketing on the light canvas.
+   ========================================================================== */
+
+:root {
+	/* ── Surface — the dark code workbench (DESIGN.md `code-editor-mockup`) ─── */
+	--surface-bg: var(--color-editor-bg);
+	--surface-bg-head: var(--color-editor-line);
+	--surface-bg-inset: rgba(255, 255, 255, 0.02);
+	--surface-bg-raised: rgba(255, 255, 255, 0.04);
+	--surface-bg-raised-hover: rgba(255, 255, 255, 0.1);
+	--surface-bg-row-hover: rgba(255, 255, 255, 0.04);
+	/* The keyboard cursor in the tree — `aria-selected` roving focus. */
+	--surface-bg-selected: rgba(255, 255, 255, 0.07);
+
+	--surface-fg: var(--color-editor-fg);
+	--surface-fg-muted: var(--color-hairline-strong);
+
+	/* Focus outline *inside* a pane. The site-wide focus ring (base layer) is
+	   `--color-link`, which disappears against the dark surface. */
+	--surface-focus: var(--color-cyan);
+
+	/* Hairlines inside a pane. `grid` rules a table; `faint` is the quieter
+	   secondary column rule; `strong` outlines chips sitting on the surface. */
+	--surface-line: rgba(255, 255, 255, 0.08);
+	--surface-line-grid: rgba(255, 255, 255, 0.06);
+	--surface-line-faint: rgba(255, 255, 255, 0.04);
+	--surface-line-strong: rgba(255, 255, 255, 0.16);
+
+	/* Text selection on the workbench surface. The site-wide `::selection` is an
+	   ink block (base.css) — unreadable on a dark pane, hence the override. */
+	--surface-sel-bg: var(--color-editor-sel-dark);
+	--surface-sel-fg: var(--color-editor-fg);
+	/* Translucent variant for the textarea highlight overlay: the <textarea>'s
+	   own glyphs are transparent, so its selection band must let the coloured
+	   mirror underneath show through. */
+	--surface-sel-bg-soft: rgba(45, 74, 99, 0.55);
+
+	/* Inputs that live *inside* a pane (table column filters). */
+	--surface-field-bg: rgba(255, 255, 255, 0.06);
+	--surface-field-line: rgba(255, 255, 255, 0.1);
+
+	/* Search-match highlight + the "this column is sorted" accent. */
+	--surface-match-bg: rgba(80, 227, 194, 0.15);
+	--surface-accent: var(--color-cyan);
+
+	/* ── JSON syntax — one palette, shared by all six rendering islands ─────
+	   Consumed by the tree, table, diff, query result, converter output and the
+	   textarea highlight overlay. `null` is deliberately NOT here: table/diff/
+	   query render it muted gray in both themes (absence), while tree/overlay
+	   group it with `--syntax-bool` (a value keyword). Both are intentional. */
+	--syntax-key: var(--color-editor-fg);
+	--syntax-string: var(--color-cyan);
+	--syntax-number: var(--color-violet-soft);
+	--syntax-bool: var(--color-warning);
+	--syntax-punct: var(--color-hairline-strong);
+
+	/* ── Diff line tints — the added/removed/changed row washes ────────────── */
+	--diff-added-bg: rgba(0, 112, 243, 0.08);
+	--diff-removed-bg: rgba(238, 0, 0, 0.08);
+	--diff-changed-bg: rgba(245, 166, 35, 0.08);
+	/* Strike-through rule on removed values. Same in both themes — it sits on
+	   an already-red-washed row, so it needs no polarity flip. */
+	--diff-strike: rgba(238, 0, 0, 0.5);
+
+	/* ── Graph canvas — its own surface variant: nodes are cards that must read
+	   as raised ABOVE the canvas, so the canvas sits one step back from the
+	   plain workbench surface and the node fill takes the lighter value.
+	   Read from JS (getComputedStyle) as well as CSS, because the graph paints
+	   to SVG and exports PNG — see JsonGraphViewer's `makePal`. ───────────── */
+	--graph-bg: var(--color-editor-bg);
+	--graph-dot: rgba(255, 255, 255, 0.06);
+	--graph-node-fill: rgba(255, 255, 255, 0.04);
+	--graph-node-stroke: rgba(255, 255, 255, 0.14);
+	--graph-edge: rgba(255, 255, 255, 0.24);
+	--graph-match: var(--color-warning);
+	/* Minimap viewport rectangle. CSS-only (the minimap is never exported). */
+	--graph-mini-fill: rgba(80, 227, 194, 0.12);
+}
+
+/* ============================================================================
+   Light theme — the polarity flip.
+   `DESIGN.md` describes the dark surface as a polarity-flipped variant of the
+   same system, not a separate design, so every role below is the light-canvas
+   answer to the same question. Set on <html> by lib/island-theme.ts.
+   ========================================================================== */
+html.jb-theme-light {
+	--surface-bg: var(--color-canvas);
+	--surface-bg-head: var(--color-canvas-soft);
+	--surface-bg-inset: var(--color-canvas-soft-2);
+	--surface-bg-raised: var(--color-canvas-soft);
+	--surface-bg-raised-hover: var(--color-canvas-soft-2);
+	--surface-bg-row-hover: var(--color-canvas-soft);
+	--surface-bg-selected: var(--color-canvas-soft-2);
+
+	--surface-fg: var(--color-ink);
+	--surface-fg-muted: var(--color-mute);
+
+	--surface-focus: var(--color-cyan-deep);
+
+	--surface-line: var(--color-hairline);
+	--surface-line-grid: var(--color-hairline);
+	--surface-line-faint: rgba(0, 0, 0, 0.03);
+	--surface-line-strong: var(--color-hairline);
+
+	--surface-sel-bg: var(--color-editor-sel-light);
+	--surface-sel-fg: var(--color-ink);
+	--surface-sel-bg-soft: rgba(0, 112, 243, 0.22);
+
+	--surface-field-bg: var(--color-canvas);
+	--surface-field-line: var(--color-hairline);
+
+	--surface-match-bg: var(--color-link-bg-soft);
+	--surface-accent: var(--color-link);
+
+	--syntax-key: var(--color-ink);
+	--syntax-string: var(--color-link-deep);
+	--syntax-number: var(--color-violet);
+	--syntax-bool: var(--color-cyan-deep);
+	--syntax-punct: var(--color-mute);
+
+	--diff-added-bg: rgba(211, 229, 255, 0.5);
+	--diff-removed-bg: rgba(247, 212, 214, 0.5);
+	--diff-changed-bg: rgba(255, 239, 207, 0.6);
+	--diff-strike: rgba(238, 0, 0, 0.5);
+
+	--graph-bg: var(--color-canvas-soft-2);
+	--graph-dot: rgba(0, 0, 0, 0.07);
+	--graph-node-fill: var(--color-canvas);
+	--graph-node-stroke: var(--color-hairline);
+	--graph-edge: var(--color-hairline-strong);
+	--graph-match: var(--color-warning-deep);
+	--graph-mini-fill: rgba(41, 188, 155, 0.16);
+}

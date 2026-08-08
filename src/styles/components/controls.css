@@ -1,0 +1,192 @@
+/* ============================================================================
+   In-app controls — shared by every interactive island (formatter, viewer, …).
+   The 6px radius scale (DESIGN.md in-app controls, NOT the marketing pill).
+   ========================================================================== */
+@layer components {
+  .jb-btn {
+    display: inline-flex;
+    align-items: center;
+    height: 32px;
+    padding: 0 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-hairline);
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-size: var(--text-body-sm);
+    font-weight: 500;
+    line-height: 1;
+    touch-action: manipulation;
+    transition: background-color 0.12s ease;
+  }
+  .jb-btn:hover {
+    background: var(--color-canvas-soft-2);
+  }
+  .jb-btn-primary {
+    background: var(--color-ink);
+    color: var(--color-on-primary);
+    border-color: var(--color-ink);
+  }
+  .jb-btn-primary:hover {
+    background: var(--color-ink-hover);
+  }
+  .jb-btn-icon {
+    width: 32px;
+    padding: 0;
+    justify-content: center;
+    color: var(--color-body);
+  }
+
+  /* Tool-switcher tab — a quieter nav chip than .jb-btn (no border at rest).
+     Active tab is filled ink (the only primary color); "soon" tabs are inert. */
+  .jb-tab {
+    display: inline-flex;
+    align-items: center;
+    height: 30px;
+    padding: 0 10px;
+    border-radius: var(--radius-sm);
+    font-size: var(--text-body-sm);
+    font-weight: 500;
+    line-height: 1;
+    color: var(--color-body);
+    white-space: nowrap;
+    touch-action: manipulation;
+    transition:
+      background-color 0.12s ease,
+      color 0.12s ease,
+      box-shadow 0.12s ease;
+  }
+  .jb-tab:hover {
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    box-shadow: var(--shadow-e1);
+  }
+  .jb-tab-active {
+    background: var(--color-ink);
+    color: var(--color-on-primary);
+    box-shadow: none;
+  }
+  /* Solid ink at rest; on hover it only lightens — same #2a2a2a as
+     .jb-btn-primary:hover and the header "Format JSON" CTA — and keeps its white
+     label. This MUST stay more specific than (or win source-order over) the
+     in-well hover fill below, or the active tab loses its ink and renders white
+     text on pale gray (the washed-out bug). */
+  .jb-tab-active:hover {
+    background: var(--color-ink-hover);
+    color: var(--color-on-primary);
+    box-shadow: none;
+  }
+  .jb-tab-soon,
+  .jb-tab-soon:hover {
+    color: var(--color-mute);
+    background: transparent;
+    box-shadow: none;
+    cursor: default;
+  }
+
+  /* Tool-switcher group well — each Format/View/Query/Convert group is a quiet
+     segmented card (lighter bg-canvas + inset hairline) sitting on the rail's
+     bg-canvas-soft, so its tabs read as one unit. Wraps as a whole on narrow
+     rails; chips reflow inside if a single group can't fit one row. */
+  .jb-tab-rail {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 2px;
+    padding: 3px;
+    border-radius: var(--radius-md);
+    background: var(--color-canvas);
+    box-shadow: var(--shadow-e1);
+  }
+  /* Group label bound *inside* the well, divided from its chips by a hairline
+     tick (stretches to the chip row via the well's align-items: stretch). */
+  .jb-tab-rail-label {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 4px;
+    padding: 0 8px 0 4px;
+    border-right: 1px solid var(--color-hairline);
+    font-family: var(--font-mono);
+    font-size: var(--text-caption);
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-mute);
+    white-space: nowrap;
+    user-select: none;
+  }
+  /* Hover fill for the *idle* tabs only. Scoped with :not() so it can never
+     override the active tab (ink) or an inert "soon" tab — without the guard it
+     out-specifies both and washes their labels out. Inside the white well a
+     canvas-soft-2 fill is only ~5 levels off white and reads as a ghost, so use
+     the stronger hairline gray for a clear highlight; drop the base .jb-tab
+     inset ring (shadow-e1) so it reads as a fill, not a boxed outline. */
+  .jb-tab-rail .jb-tab:not(.jb-tab-active):not(.jb-tab-soon):hover {
+    background: var(--color-hairline);
+    box-shadow: none;
+  }
+
+  /* ── Command palette (⌘K) trigger — the quiet affordance in the switcher rail.
+     The dialog itself is built + styled lazily below (.jb-cmdk-*). ──────────── */
+  .jb-cmdk-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 30px;
+    padding: 0 8px 0 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-hairline);
+    background: var(--color-canvas);
+    color: var(--color-mute);
+    font-size: var(--text-body-sm);
+    line-height: 1;
+    white-space: nowrap;
+    touch-action: manipulation;
+    transition:
+      color 0.12s ease,
+      background-color 0.12s ease,
+      box-shadow 0.12s ease;
+  }
+  .jb-cmdk-trigger:hover {
+    color: var(--color-ink);
+    box-shadow: var(--shadow-e1);
+  }
+  .jb-cmdk-trigger kbd {
+    font-family: var(--font-mono);
+    font-size: var(--text-micro);
+    line-height: 1;
+    padding: 2px 5px;
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--radius-xs);
+    background: var(--color-canvas-soft);
+    color: var(--color-body);
+  }
+}
+
+/* Inflate dense in-app controls to the 44 px touch floor on coarse pointers.
+   Layered into `workbench` (the last layer) so it beats any utility height
+   such as `h-8`. It was previously unlayered for exactly this reason — the
+   layer makes that intent declared rather than accidental. */
+@layer workbench {
+	@media (pointer: coarse) {
+	  .jb-btn {
+	    height: 44px;
+	  }
+	  .jb-btn-icon {
+	    width: 44px;
+	  }
+	  .jb-tab {
+	    height: 44px;
+	  }
+	  .jb-cmdk-trigger {
+	    height: 44px;
+	  }
+	  /* No physical keyboard — the ⌘K hint is noise; the button still taps open. */
+	  .jb-cmdk-trigger kbd {
+	    display: none;
+	  }
+	  /* Palette rows to the 44px touch floor. */
+	  .jb-cmdk-opt {
+	    min-height: 44px;
+	  }
+	}
+}

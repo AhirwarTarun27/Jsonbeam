@@ -1,0 +1,29 @@
+/* ============================================================================
+   Project utilities
+   ========================================================================== */
+
+/* Page container — centred, max 1200px, responsive gutters (24px → 16px). */
+@utility container-page {
+  width: 100%;
+  max-width: var(--container-page);
+  margin-inline: auto;
+  padding-inline: 1.5rem;
+}
+@media (max-width: 600px) {
+  .container-page {
+    padding-inline: 1rem;
+  }
+}
+
+/* Visually-hidden helper for skip links and screen-reader-only labels. */
+@utility sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}

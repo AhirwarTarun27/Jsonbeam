@@ -14,10 +14,10 @@
  * does not reach, so its syntax colours live in a `<style is:global>` block
  * scoped under `.err-code` (same pattern as the homepage hero mockup).
  */
-import Layout from '../layouts/Layout.astro';
-import Button from './Button.astro';
-import MeshGradient from './MeshGradient.astro';
-import { withSlash } from '../consts';
+import Layout from '../../layouts/Layout.astro';
+import Button from '../ui/Button.astro';
+import MeshGradient from '../ui/MeshGradient.astro';
+import { withSlash } from '../../consts';
 
 interface Props {
 	/** HTTP status, shown in the eyebrow + as the JSON `error` value. */

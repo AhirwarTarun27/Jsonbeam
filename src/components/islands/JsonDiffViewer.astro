@@ -1,4 +1,10 @@
 ---
+// Surface + syntax tokens for the workbench. Imported per-island (not from
+// global.css) so content routes never ship them. See styles/workbench.css.
+import '../../styles/workbench.css';
+import '../../styles/components/controls.css';
+import PrivacyNote from '../ui/PrivacyNote.astro';
+import '../../styles/workbench/diff.css';
 /**
  * JSON Diff Viewer island — semantic, structure-aware diff for two JSON documents.
  *
@@ -191,153 +197,20 @@ const sampleB = `{
 			<span data-label>Ready</span>
 		</span>
 		<span data-stats class="font-mono text-caption text-mute"></span>
-		<span class="ml-auto inline-flex items-center gap-1.5 text-caption text-mute">
-			<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-				<path d="M8 1.5 3 3.5v3.2c0 3 2.1 5.8 5 6.8 2.9-1 5-3.8 5-6.8V3.5L8 1.5Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"></path>
-			</svg>
-			Processed locally — nothing uploaded
-		</span>
+		<PrivacyNote />
 	</div>
 </div>
 
-<style>
-	/* The two input panes' surface + syntax highlighting come from the shared
-	   `.jb-hl*` overlay (global.css). */
-
-	/* ── Diff tree ─────────────────────────────────────────────────────────── */
-	#jb-dv-tree {
-		background-color: var(--color-editor-bg);
-		color: var(--color-editor-fg);
-	}
-
-	/* Diff line — base */
-	:global(#jb-dv-content .jb-dl) {
-		display: flex;
-		align-items: flex-start;
-		padding: 1px 0 1px 4px;
-		border-left: 2px solid transparent;
-		line-height: 1.65;
-		white-space: pre;
-	}
-
-	/* Prefix badge */
-	:global(#jb-dv-content .jb-dl-prefix) {
-		flex: 0 0 18px;
-		font-weight: 600;
-		margin-right: 2px;
-		user-select: none;
-	}
-
-	/* Unchanged — dimmed; objects/arrays collapsed */
-	:global(#jb-dv-content .jb-dl-unchanged) {
-		opacity: 0.38;
-	}
-
-	/* Added — brand accent (success token is #0070f3; the palette has no green) */
-	:global(#jb-dv-content .jb-dl-added) {
-		border-left-color: var(--color-success);
-		background: rgba(0, 112, 243, 0.08);
-	}
-	:global(#jb-dv-content .jb-dl-added .jb-dl-prefix) {
-		color: var(--color-success);
-	}
-
-	/* Removed — red */
-	:global(#jb-dv-content .jb-dl-removed) {
-		border-left-color: var(--color-error);
-		background: rgba(238, 0, 0, 0.08);
-	}
-	:global(#jb-dv-content .jb-dl-removed .jb-dl-prefix) {
-		color: var(--color-error);
-	}
-	:global(#jb-dv-content .jb-dl-removed .jb-dl-body) {
-		text-decoration: line-through;
-		text-decoration-color: rgba(238, 0, 0, 0.5);
-	}
-
-	/* Changed — orange */
-	:global(#jb-dv-content .jb-dl-changed) {
-		border-left-color: var(--color-warning);
-		background: rgba(245, 166, 35, 0.08);
-	}
-	:global(#jb-dv-content .jb-dl-changed .jb-dl-prefix) {
-		color: var(--color-warning);
-	}
-
-	/* Colour-key swatches for the summary legend */
-	:global(#jb-dv .jb-dv-key) {
-		width: 9px;
-		height: 9px;
-		border-radius: var(--radius-xs);
-		flex: none;
-	}
-	:global(#jb-dv .jb-dv-key-add) { background: var(--color-success); }
-	:global(#jb-dv .jb-dv-key-rem) { background: var(--color-error); }
-	:global(#jb-dv .jb-dv-key-chg) { background: var(--color-warning); }
-
-	/* Value type colours — dark */
-	:global(#jb-dv-content .jb-dvc-string)  { color: var(--color-cyan); }
-	:global(#jb-dv-content .jb-dvc-number)  { color: var(--color-violet-soft); }
-	:global(#jb-dv-content .jb-dvc-bool)    { color: var(--color-warning); }
-	:global(#jb-dv-content .jb-dvc-null)    { color: var(--color-mute); }
-	:global(#jb-dv-content .jb-dvc-key)     { color: var(--color-editor-fg); font-weight: 500; }
-	:global(#jb-dv-content .jb-dvc-punct)   { color: var(--color-hairline-strong); }
-	:global(#jb-dv-content .jb-dvc-arrow)   { color: var(--color-warning); padding: 0 4px; }
-	:global(#jb-dv-content .jb-dvc-from)    { text-decoration: line-through; text-decoration-color: rgba(238,0,0,0.5); }
-	:global(#jb-dv-content .jb-dvc-collapse){ color: var(--color-hairline-strong); font-style: italic; cursor: pointer; }
-	:global(#jb-dv-content .jb-dvc-collapse:hover){ color: var(--color-editor-fg); }
-
-	/* Scroll target highlight */
-	:global(#jb-dv-content .jb-dl-nav-focus) {
-		outline: 1px solid var(--color-link);
-		outline-offset: -1px;
-		border-radius: var(--radius-xs);
-	}
-
-	/* A/B status badges */
-	:global(#jb-dv-a-status.jb-ok)    { color: var(--color-success); }
-	:global(#jb-dv-a-status.jb-err)   { color: var(--color-error); }
-	:global(#jb-dv-b-status.jb-ok)    { color: var(--color-success); }
-	:global(#jb-dv-b-status.jb-err)   { color: var(--color-error); }
-
-	/* ── Light theme (input panes handled by .jb-hl) ────────────────────────── */
-	:global(html.jb-theme-light #jb-dv #jb-dv-tree) {
-		background-color: var(--color-canvas);
-		color: var(--color-ink);
-	}
-	:global(html.jb-theme-light #jb-dv #jb-dv-content .jb-dl-added) {
-		background: rgba(211, 229, 255, 0.5);
-	}
-	:global(html.jb-theme-light #jb-dv #jb-dv-content .jb-dl-removed) {
-		background: rgba(247, 212, 214, 0.5);
-	}
-	:global(html.jb-theme-light #jb-dv #jb-dv-content .jb-dl-changed) {
-		background: rgba(255, 239, 207, 0.6);
-	}
-	:global(html.jb-theme-light #jb-dv #jb-dv-content .jb-dvc-string)  { color: var(--color-link-deep); }
-	:global(html.jb-theme-light #jb-dv #jb-dv-content .jb-dvc-number)  { color: var(--color-violet); }
-	:global(html.jb-theme-light #jb-dv #jb-dv-content .jb-dvc-bool)    { color: var(--color-cyan-deep); }
-	:global(html.jb-theme-light #jb-dv #jb-dv-content .jb-dvc-null)    { color: var(--color-mute); }
-	:global(html.jb-theme-light #jb-dv #jb-dv-content .jb-dvc-key)     { color: var(--color-ink); }
-	:global(html.jb-theme-light #jb-dv #jb-dv-content .jb-dvc-punct)   { color: var(--color-mute); }
-	:global(html.jb-theme-light #jb-dv #jb-dv-content .jb-dvc-collapse){ color: var(--color-mute); }
-	/* ── Text selection (input panes handled by .jb-hl) ─────────────────────── */
-	:global(#jb-dv-content *::selection) {
-		background-color: var(--color-editor-sel-dark);
-		color: var(--color-editor-fg);
-	}
-	:global(html.jb-theme-light #jb-dv #jb-dv-content *::selection) {
-		background-color: var(--color-editor-sel-light);
-		color: var(--color-ink);
-	}
-</style>
 
 <script>
-	import { checkJson } from '../lib/json';
-	import { loadDoc, saveDoc } from '../lib/doc-store';
-	import { initThemeToggle } from '../lib/island-theme';
-	import { initFullscreen } from '../lib/island-fullscreen';
-	import { attachHighlight } from '../lib/island-highlight';
+	import { checkJson } from '../../lib/json/parse';
+	import { loadDoc, saveDoc } from '../../lib/doc-store';
+	import { initThemeToggle } from '../../lib/workbench/theme';
+	import { initFullscreen } from '../../lib/workbench/fullscreen';
+	import { attachHighlight } from '../../lib/workbench/highlight';
+	import { downloadText } from '../../lib/workbench/download';
+	import { createStatusBar } from '../../lib/workbench/status-bar';
+	import { debounce } from '../../lib/workbench/timing';
 
 	// ── Types ───────────────────────────────────────────────────────────────
 	type JsonValue = string | number | boolean | null | JsonValue[] | { [k: string]: JsonValue };
@@ -383,8 +256,6 @@ const sampleB = `{
 		treeEl && summaryEl && navLabelEl && statusEl && statsEl &&
 		aStatusEl && bStatusEl
 	) {
-		const dot   = statusEl.querySelector<HTMLElement>('[data-dot]')!;
-		const label = statusEl.querySelector<HTMLElement>('[data-label]')!;
 		const prevBtn = root.querySelector<HTMLButtonElement>('[data-action="prev"]')!;
 		const nextBtn = root.querySelector<HTMLButtonElement>('[data-action="next"]')!;
 
@@ -399,7 +270,6 @@ const sampleB = `{
 		const tree    = treeEl;
 		const summary = summaryEl;
 		const navLbl  = navLabelEl;
-		const sstats  = statsEl;
 		const aStat   = aStatusEl;
 		const bStat   = bStatusEl;
 
@@ -1013,7 +883,7 @@ const sampleB = `{
 				changeIdx = -1;
 				updateNavButtons();
 				setStatus('idle', 'Empty');
-				sstats.textContent = '';
+				statusBar.stats('');
 				return;
 			}
 
@@ -1089,21 +959,16 @@ const sampleB = `{
 
 			const totalChanges = counts.added + counts.removed + counts.changed;
 			setStatus(totalChanges === 0 ? 'ok' : 'ok', totalChanges === 0 ? 'Identical' : `${totalChanges} difference${totalChanges !== 1 ? 's' : ''}`);
-			sstats.textContent = `A: ${textA.length.toLocaleString()} chars · B: ${textB.length.toLocaleString()} chars`;
+			statusBar.stats(`A: ${textA.length.toLocaleString()} chars · B: ${textB.length.toLocaleString()} chars`);
 
 			updateNavButtons();
 		}
 
-		// ── Status ──────────────────────────────────────────────────────────
-		type StatusState = 'ok' | 'error' | 'idle';
-		const statusColors: Record<StatusState, string> = {
-			ok: 'var(--color-success)', error: 'var(--color-error)', idle: 'var(--color-mute)',
-		};
-		function setStatus(state: StatusState, text: string): void {
-			dot.style.backgroundColor = statusColors[state];
-			label.textContent = text;
-			label.style.color = state === 'error' ? 'var(--color-error-deep)' : 'var(--color-ink)';
-		}
+		// ── Status (lib/workbench/status-bar) ────────────────────────────────
+		const statusBar = createStatusBar(root);
+		// No `refresh`: the diff has no cheap "what is the document now" answer
+		// to revert to, so it sets durable states only and never flashes.
+		const setStatus = statusBar.set;
 
 		// ── Merge Patch download ─────────────────────────────────────────────
 		function downloadPatch(): void {
@@ -1113,13 +978,7 @@ const sampleB = `{
 				setStatus('idle', 'Documents are identical — no patch needed');
 				return;
 			}
-			const json = JSON.stringify(patch, null, 2);
-			const blob = new Blob([json], { type: 'application/json' });
-			const url = URL.createObjectURL(blob);
-			const a = document.createElement('a');
-			a.href = url; a.download = 'merge-patch.json';
-			document.body.appendChild(a); a.click(); a.remove();
-			URL.revokeObjectURL(url);
+			downloadText(JSON.stringify(patch, null, 2), 'merge-patch.json', 'application/json');
 			setStatus('ok', 'Downloaded merge-patch.json');
 		}
 
@@ -1162,11 +1021,7 @@ const sampleB = `{
 		});
 
 		// ── Input debounce ───────────────────────────────────────────────────
-		let diffTimer = 0;
-		function scheduleDiff(): void {
-			clearTimeout(diffTimer);
-			diffTimer = window.setTimeout(runDiff, 300);
-		}
+		const scheduleDiff = debounce(runDiff);
 
 		left.addEventListener('input', () => { saveDoc(left.value); scheduleDiff(); });
 		right.addEventListener('input', scheduleDiff);

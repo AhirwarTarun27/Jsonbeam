@@ -1,0 +1,43 @@
+/* ============================================================================
+   Layer 2 — THEME REGISTRATION
+   ----------------------------------------------------------------------------
+   Publishes the semantic surface roles from `semantic.css` to Tailwind, so the
+   workbench can be styled from markup (`bg-surface`, `text-syntax-string`) as
+   well as from CSS (`var(--surface-bg)`).
+
+   `inline` IS LOAD-BEARING — do not remove it.
+
+   Without `inline`, Tailwind resolves a token's value at *definition* time and
+   emits `--color-surface: var(--surface-bg)` into `:root`. The reference is
+   then frozen to whatever `:root` said, and `html.jb-theme-light` re-declaring
+   `--surface-bg` further down has no effect — the light theme silently stops
+   working for every utility. With `inline`, the generated utility contains
+   `var(--surface-bg)` directly, so the browser resolves it at render time and
+   the cascade does the theming for us.
+
+   (Tailwind v4 docs, "Referencing other variables": use `inline` whenever a
+   theme variable references another CSS variable.)
+
+   Only roles that are genuinely useful from markup are registered. The rest
+   stay plain custom properties in `semantic.css` — registering an unused token
+   buys nothing and invites `bg-*` utilities that contradict `DESIGN.md`.
+   ========================================================================== */
+
+@theme inline {
+	/* Workbench surface */
+	--color-surface: var(--surface-bg);
+	--color-surface-head: var(--surface-bg-head);
+	--color-surface-raised: var(--surface-bg-raised);
+	--color-surface-fg: var(--surface-fg);
+	--color-surface-fg-muted: var(--surface-fg-muted);
+	--color-surface-line: var(--surface-line);
+	--color-surface-line-strong: var(--surface-line-strong);
+	--color-surface-accent: var(--surface-accent);
+
+	/* JSON syntax */
+	--color-syntax-key: var(--syntax-key);
+	--color-syntax-string: var(--syntax-string);
+	--color-syntax-number: var(--syntax-number);
+	--color-syntax-bool: var(--syntax-bool);
+	--color-syntax-punct: var(--syntax-punct);
+}

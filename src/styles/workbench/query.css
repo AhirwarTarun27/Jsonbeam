@@ -1,0 +1,153 @@
+/* ============================================================================
+   Query island — result pane, snippet cards, history chips (/json-query).
+   ----------------------------------------------------------------------------
+   The result pane is rendered at runtime, so these were `:global()` escapes
+   inside a scoped block. External CSS is global by construction; `#jb-qt` and
+   the `jb-q`/`jb-snip` prefixes do the isolating.
+   ========================================================================== */
+
+@layer workbench {
+	/* ── Result pane ────────────────────────────────────────────────────────── */
+	#jb-qt-result {
+		background-color: var(--surface-bg);
+		color: var(--surface-fg);
+	}
+	#jb-qt-empty,
+	#jb-qt-loading {
+		display: flex;
+		height: 100%;
+		align-items: center;
+		justify-content: center;
+	}
+	#jb-qt-out *::selection {
+		background-color: var(--surface-sel-bg);
+		color: var(--surface-sel-fg);
+	}
+
+	/* ── Result syntax colours — shared tokens, no light-theme twin.
+	   The hand-written light block this replaced had drifted: it painted strings
+	   with the boolean colour and booleans with `--color-warning-deep`, making
+	   this the only pane in the app whose light palette disagreed with every
+	   other tool. Sharing the tokens makes that class of bug unrepresentable. ─ */
+	#jb-qt-out .jb-q-s {
+		color: var(--syntax-string);
+	}
+	#jb-qt-out .jb-q-n {
+		color: var(--syntax-number);
+	}
+	#jb-qt-out .jb-q-b {
+		color: var(--syntax-bool);
+	}
+	#jb-qt-out .jb-q-nl {
+		color: var(--color-mute);
+	}
+	#jb-qt-out .jb-q-k {
+		color: var(--syntax-key);
+		font-weight: 500;
+	}
+	#jb-qt-out .jb-q-p {
+		color: var(--syntax-punct);
+	}
+	#jb-qt-out .jb-q-idx {
+		color: var(--color-mute);
+		user-select: none;
+		font-size: var(--text-micro);
+		padding-right: 8px;
+	}
+	#jb-qt-out .jb-q-sep {
+		display: block;
+		border-top: 1px solid var(--surface-line-grid);
+		margin: 2px 0;
+	}
+
+	/* ── Snippet cards (toolbar chrome — light in both themes) ──────────────── */
+	.jb-snip {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 2px;
+		padding: 8px 10px;
+		border-radius: var(--radius-sm);
+		border: 1px solid var(--color-hairline);
+		background: var(--color-canvas-soft);
+		cursor: pointer;
+		text-align: left;
+		transition:
+			background-color 0.1s ease,
+			border-color 0.1s ease;
+	}
+	.jb-snip:hover {
+		background: var(--color-canvas-soft-2);
+		border-color: var(--color-link);
+	}
+	.jb-snip code {
+		display: block;
+		font-family: var(--font-mono);
+		font-size: var(--text-caption);
+		color: var(--color-link);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		max-width: 100%;
+	}
+	.jb-snip span {
+		font-size: var(--text-caption);
+		color: var(--color-mute);
+	}
+	#jb-qt-snippets[open] #jb-qt-snip-arrow {
+		transform: rotate(90deg);
+	}
+
+	/* ── "Copy as code" menu ────────────────────────────────────────────────── */
+	.jb-code-opt {
+		display: block;
+		width: 100%;
+		padding: 6px 12px;
+		text-align: left;
+		font-size: var(--text-body-sm);
+		color: var(--color-ink);
+		transition: background-color 0.1s;
+	}
+	.jb-code-opt:hover {
+		background: var(--color-canvas-soft);
+	}
+
+	/* ── Recent-query chips ─────────────────────────────────────────────────── */
+	.jb-qt-chip {
+		display: inline-flex;
+		align-items: center;
+		height: 22px;
+		padding: 0 8px;
+		border-radius: var(--radius-pill);
+		border: 1px solid var(--color-hairline);
+		background: var(--color-canvas);
+		font-family: var(--font-mono);
+		font-size: var(--text-micro);
+		color: var(--color-body);
+		cursor: pointer;
+		max-width: 180px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		transition: border-color 0.1s;
+	}
+	.jb-qt-chip:hover {
+		border-color: var(--color-link);
+		color: var(--color-link);
+	}
+
+	/* Language tabs. Selected state is the ink fill, matching in-app controls. */
+	#jb-qt [role='tab'][aria-selected='true'] {
+		background: var(--color-ink);
+		color: var(--color-on-primary);
+		border-color: var(--color-ink);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.jb-snip,
+		.jb-code-opt,
+		.jb-qt-chip {
+			transition: none;
+		}
+	}
+}

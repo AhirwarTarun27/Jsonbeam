@@ -12,10 +12,10 @@
  * typography lives in a `<style is:global>` block scoped under `.jb-prose`
  * (same pattern as the homepage hero mockup).
  */
-import Layout from '../layouts/Layout.astro';
-import { SITE_URL, withSlash } from '../consts';
-import { webPage, faqPage, breadcrumbs, type FaqItem } from '../lib/jsonld';
-import '../styles/prose.css';
+import Layout from '../../layouts/Layout.astro';
+import { SITE_URL, withSlash } from '../../consts';
+import { webPage, faqPage, breadcrumbs, type FaqItem } from '../../lib/seo/jsonld';
+import '../../styles/prose.css';
 
 interface Props {
 	/** Route this page lives at, e.g. "/privacy". */

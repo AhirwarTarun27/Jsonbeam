@@ -1,8 +1,8 @@
 ---
-import ToolPage from '../components/ToolPage.astro';
-import JsonDiffViewer from '../components/JsonDiffViewer.astro';
-import type { FaqItem } from '../lib/jsonld';
-import type { RelatedTool } from '../components/ToolPage.astro';
+import ToolPage from '../components/layout/ToolPage.astro';
+import JsonDiffViewer from '../components/islands/JsonDiffViewer.astro';
+import type { FaqItem } from '../lib/seo/jsonld';
+import type { RelatedTool } from '../components/layout/ToolPage.astro';
 
 const steps = [
 	{ title: 'Paste your two documents', body: 'Drop the original JSON in the A (left) panel and the modified version in the B (right) panel.' },

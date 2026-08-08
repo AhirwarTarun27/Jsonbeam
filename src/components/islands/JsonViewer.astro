@@ -1,4 +1,10 @@
 ---
+// Surface + syntax tokens for the workbench. Imported per-island (not from
+// global.css) so content routes never ship them. See styles/workbench.css.
+import '../../styles/workbench.css';
+import '../../styles/workbench/tree.css';
+import '../../styles/components/controls.css';
+import PrivacyNote from '../ui/PrivacyNote.astro';
 /**
  * The /json-viewer island — an interactive, collapsible JSON tree explorer.
  * Framework-free: HTML + one typed client module that parses the textarea and
@@ -69,6 +75,7 @@ const sample = `{
 		</div>
 		<div
 			id="jb-tree"
+			data-jb-tree
 			role="tree"
 			aria-label="JSON tree"
 			class="h-[54vh] min-h-[320px] overflow-auto lg:h-[74vh]"
@@ -82,167 +89,23 @@ const sample = `{
 			<span data-label>Ready</span>
 		</span>
 		<span data-stats class="font-mono text-caption text-mute">0 chars</span>
-		<span class="ml-auto inline-flex items-center gap-1.5 text-caption text-mute">
-			<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-				<path d="M8 1.5 3 3.5v3.2c0 3 2.1 5.8 5 6.8 2.9-1 5-3.8 5-6.8V3.5L8 1.5Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"></path>
-			</svg>
-			Processed locally — nothing uploaded
-		</span>
+		<PrivacyNote />
 	</div>
 </div>
 
 <style>
-	/* The input pane's surface + syntax highlighting come from the shared
-	   `.jb-hl*` overlay (global.css); the tree pane is styled below. */
+	/* The tree pane's surface, rows, carets and syntax palette all come from the
+	   shared `styles/workbench/tree.css` (scoped on [data-jb-tree]). Only this
+	   island's own spacing is left here. */
 	#jb-tree {
-		background-color: var(--color-editor-bg);
-		color: var(--color-editor-fg);
-		font-family: var(--font-mono);
-		font-size: 13px;
-		line-height: 1.7;
 		padding: 12px 14px;
 	}
-
-	/* Selection stays readable on the dark surface (site default is an ink block). */
-	:global(#jb-tree ::selection) {
-		color: var(--color-on-primary);
-		background-color: var(--color-editor-sel-dark);
-	}
-
-	/* ── Tree rows ─────────────────────────────────────────────────────────── */
 	:global(#jb-tree .jb-row) {
-		display: flex;
-		align-items: flex-start;
-		gap: 4px;
-		white-space: pre;
 		padding: 1px 0;
 	}
-	:global(#jb-tree .jb-children) {
-		margin-left: 7px;
-		padding-left: 14px;
-		border-left: 1px solid rgba(255, 255, 255, 0.08);
-	}
 
-	/* Caret / leaf spacer — fixed width so keys align across rows. */
-	:global(#jb-tree .jb-toggle) {
-		flex: 0 0 auto;
-		width: 16px;
-		height: 20px;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		padding: 0;
-		border: none;
-		background: none;
-		color: var(--color-hairline-strong);
-		cursor: pointer;
-	}
-	:global(#jb-tree .jb-toggle--leaf) {
-		cursor: default;
-	}
-	:global(#jb-tree .jb-toggle svg) {
-		transition: transform 0.12s ease;
-	}
-	:global(#jb-tree [role='treeitem'][aria-expanded='true'] > .jb-row > .jb-toggle svg) {
-		transform: rotate(90deg);
-	}
-
-	/* Tokens — reuse the dark syntax palette from the editor. */
-	:global(#jb-tree .jb-key) {
-		color: var(--color-editor-fg);
-		font-weight: 500;
-		cursor: pointer;
-	}
-	:global(#jb-tree .jb-key:hover) {
-		text-decoration: underline;
-	}
-	:global(#jb-tree .jb-punct),
-	:global(#jb-tree .jb-summary) {
-		color: var(--color-hairline-strong);
-	}
-	:global(#jb-tree .jb-summary) {
-		cursor: pointer;
-	}
-	:global(#jb-tree .jb-string) {
-		color: var(--color-cyan);
-	}
-	:global(#jb-tree .jb-number) {
-		color: var(--color-violet-soft);
-	}
-	:global(#jb-tree .jb-bool),
-	:global(#jb-tree .jb-null) {
-		color: var(--color-warning);
-	}
-	:global(#jb-tree .jb-placeholder) {
-		color: var(--color-mute);
-		padding: 6px 2px;
-		white-space: normal;
-	}
-	:global(#jb-tree .jb-more) {
-		display: inline-block;
-		margin: 4px 0 4px 16px;
-		padding: 2px 10px;
-		border-radius: var(--radius-sm);
-		border: 1px solid rgba(255, 255, 255, 0.16);
-		background: rgba(255, 255, 255, 0.04);
-		color: var(--color-editor-fg);
-		font-family: var(--font-mono);
-		font-size: 12px;
-		cursor: pointer;
-	}
-	:global(#jb-tree .jb-more:hover) {
-		background: rgba(255, 255, 255, 0.1);
-	}
-
-	/* ── Light theme — flip both panes to the canvas surface + light palette
-	   (mirrors the formatter's light editor). Toggled by .jb-theme-light on the
-	   #jb-viewer root. ──────────────────────────────────────────────────────── */
-	:global(html.jb-theme-light #jb-viewer #jb-tree) {
-		background-color: var(--color-canvas);
-		color: var(--color-ink);
-	}
-	:global(html.jb-theme-light #jb-viewer #jb-tree ::selection) {
-		color: var(--color-ink);
-		background-color: var(--color-editor-sel-light);
-	}
-	:global(html.jb-theme-light #jb-viewer #jb-tree .jb-children) {
-		border-left-color: var(--color-hairline);
-	}
-	:global(html.jb-theme-light #jb-viewer #jb-tree .jb-toggle) {
-		color: var(--color-mute);
-	}
-	:global(html.jb-theme-light #jb-viewer #jb-tree .jb-key) {
-		color: var(--color-ink);
-	}
-	:global(html.jb-theme-light #jb-viewer #jb-tree .jb-punct),
-	:global(html.jb-theme-light #jb-viewer #jb-tree .jb-summary) {
-		color: var(--color-mute);
-	}
-	:global(html.jb-theme-light #jb-viewer #jb-tree .jb-string) {
-		color: var(--color-link-deep);
-	}
-	:global(html.jb-theme-light #jb-viewer #jb-tree .jb-number) {
-		color: var(--color-violet);
-	}
-	:global(html.jb-theme-light #jb-viewer #jb-tree .jb-bool),
-	:global(html.jb-theme-light #jb-viewer #jb-tree .jb-null) {
-		color: var(--color-cyan-deep);
-	}
-	:global(html.jb-theme-light #jb-viewer #jb-tree .jb-more) {
-		border-color: var(--color-hairline);
-		background: var(--color-canvas-soft);
-		color: var(--color-body);
-	}
-	:global(html.jb-theme-light #jb-viewer #jb-tree .jb-more:hover) {
-		background: var(--color-canvas-soft-2);
-	}
-
-	/* Coarse pointers: bigger touch targets for the carets + roomier rows. */
+	/* Coarse pointers: roomier rows to go with the bigger carets. */
 	@media (pointer: coarse) {
-		:global(#jb-tree .jb-toggle) {
-			width: 28px;
-			height: 28px;
-		}
 		:global(#jb-tree .jb-row) {
 			padding: 3px 0;
 		}
@@ -250,12 +113,14 @@ const sample = `{
 </style>
 
 <script>
-	import { checkJson } from '../lib/json';
-	import { loadDoc, saveDoc } from '../lib/doc-store';
-	import { initThemeToggle } from '../lib/island-theme';
-	import { initFullscreen } from '../lib/island-fullscreen';
-	import { copyToClipboard } from '../lib/island-clipboard';
-	import { attachHighlight } from '../lib/island-highlight';
+	import { checkJson } from '../../lib/json/parse';
+	import { loadDoc, saveDoc } from '../../lib/doc-store';
+	import { initThemeToggle } from '../../lib/workbench/theme';
+	import { initFullscreen } from '../../lib/workbench/fullscreen';
+	import { copyToClipboard } from '../../lib/workbench/clipboard';
+	import { attachHighlight } from '../../lib/workbench/highlight';
+	import { createStatusBar } from '../../lib/workbench/status-bar';
+	import { debounce } from '../../lib/workbench/timing';
 
 	const root = document.getElementById('jb-viewer');
 	const inputEl = document.getElementById('jb-input') as HTMLTextAreaElement | null;
@@ -280,9 +145,12 @@ const sample = `{
 		// Syntax-highlight the input JSON (shared overlay — matches the formatter).
 		const hl = attachHighlight(input);
 
-		const dot = root.querySelector<HTMLElement>('[data-dot]');
-		const label = root.querySelector<HTMLElement>('[data-label]');
-		const statsEl = root.querySelector<HTMLElement>('[data-stats]');
+		// Status bar + stats readout (lib/workbench/status-bar). `refresh` is
+		// wrapped in an arrow so it resolves at call time — refreshStatus is a
+		// hoisted declaration further down.
+		const statusBar = createStatusBar(root, { refresh: () => refreshStatus() });
+		const setStatus = statusBar.set;
+		const flashStatus = statusBar.flash;
 
 		// Per-container build closures — children are materialised lazily on first
 		// expand (the large-file safety valve).
@@ -503,19 +371,6 @@ const sample = `{
 			}
 		}
 
-		// ── Status bar ────────────────────────────────────────────────────────
-		function setStatus(state: 'ok' | 'error' | 'idle', text: string): void {
-			if (!dot || !label) return;
-			const colors: Record<string, string> = {
-				ok: 'var(--color-success)',
-				error: 'var(--color-error)',
-				idle: 'var(--color-mute)',
-			};
-			dot.style.backgroundColor = colors[state] ?? colors.idle;
-			label.textContent = text;
-			label.style.color = state === 'error' ? 'var(--color-error-deep)' : 'var(--color-ink)';
-		}
-
 		function topSummary(value: JsonValue): string {
 			if (isArray(value)) {
 				const n = value.length;
@@ -529,10 +384,9 @@ const sample = `{
 		}
 
 		function setStats(chars: number, summary: string | null): void {
-			if (!statsEl) return;
 			const parts = [`${chars.toLocaleString()} chars`];
 			if (summary) parts.unshift(summary);
-			statsEl.textContent = parts.join(' · ');
+			statusBar.stats(parts.join(' · '));
 		}
 
 		// Refresh only the status/stats from the current input (no re-render).
@@ -555,13 +409,6 @@ const sample = `{
 			} catch {
 				setStats(text.length, null);
 			}
-		}
-
-		let flashTimer = 0;
-		function flashStatus(state: 'ok' | 'error', text: string): void {
-			setStatus(state, text);
-			clearTimeout(flashTimer);
-			flashTimer = window.setTimeout(refreshStatus, 1300);
 		}
 
 		// ── Parse + render ──────────────────────────────────────────────────────
@@ -670,11 +517,7 @@ const sample = `{
 			if (item) toggleItem(item);
 		});
 
-		let inputTimer = 0;
-		input.addEventListener('input', () => {
-			clearTimeout(inputTimer);
-			inputTimer = window.setTimeout(applyInput, 300);
-		});
+		input.addEventListener('input', debounce(applyInput));
 
 		update();
 	}

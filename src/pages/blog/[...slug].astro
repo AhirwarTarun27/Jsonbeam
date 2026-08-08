@@ -1,6 +1,6 @@
 ---
 import { getCollection, render } from 'astro:content';
-import ArticlePage from '../../components/ArticlePage.astro';
+import ArticlePage from '../../components/layout/ArticlePage.astro';
 
 export async function getStaticPaths() {
 	const published = (await getCollection('guides')).filter((e) => !e.data.draft);

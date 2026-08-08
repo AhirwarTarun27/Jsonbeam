@@ -33,14 +33,12 @@ const LEAN = 40 * KB;
 const WARN_RATIO = 0.92;
 const ISLAND_BUDGETS = {
 	'json-formatter': EDITOR,
-	'json-editor': EDITOR, // hosts the formatter island (ToolPage variant="format")
 	'json-beautifier': EDITOR,
 	'json-minifier': EDITOR,
 	'json-validator': EDITOR,
 	'json-repair': EDITOR,
 	'json-viewer': LEAN,
 	'json-tree-viewer': LEAN,
-	'json-graph-viewer': LEAN,
 	'json-visualizer': LEAN, // hosts the graph-viewer island
 	'json-table-viewer': LEAN,
 	'json-diff': LEAN,

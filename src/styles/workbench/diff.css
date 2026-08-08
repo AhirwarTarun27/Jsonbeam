@@ -1,0 +1,141 @@
+/* ============================================================================
+   Diff island — the unified change tree at /json-diff.
+   ----------------------------------------------------------------------------
+   Every diff line is built at runtime, so these rules were all `:global()`
+   escapes inside a scoped block. External CSS is global by construction; the
+   `#jb-dv` anchor does the isolating.
+
+   The row washes (`--diff-*-bg`) are the only themed values and they live in
+   tokens/semantic.css — a 0.08 tint reads on the dark surface but vanishes on
+   white, so light mode needs a stronger, opaquer wash.
+   ========================================================================== */
+
+@layer workbench {
+	#jb-dv-tree {
+		background-color: var(--surface-bg);
+		color: var(--surface-fg);
+	}
+	#jb-dv-content *::selection {
+		background-color: var(--surface-sel-bg);
+		color: var(--surface-sel-fg);
+	}
+
+	/* ── Diff line ──────────────────────────────────────────────────────────── */
+	#jb-dv-content .jb-dl {
+		display: flex;
+		align-items: flex-start;
+		padding: 1px 0 1px 4px;
+		border-left: 2px solid transparent;
+		line-height: 1.65;
+		white-space: pre;
+	}
+	#jb-dv-content .jb-dl-prefix {
+		flex: 0 0 18px;
+		font-weight: 600;
+		margin-right: 2px;
+		user-select: none;
+	}
+
+	/* Unchanged context is dimmed rather than hidden, so structure stays legible. */
+	#jb-dv-content .jb-dl-unchanged {
+		opacity: 0.38;
+	}
+
+	/* Added — brand accent. `--color-success` is #0070f3; the palette has no
+	   green, and DESIGN.md forbids adding a sixth accent. */
+	#jb-dv-content .jb-dl-added {
+		border-left-color: var(--color-success);
+		background: var(--diff-added-bg);
+	}
+	#jb-dv-content .jb-dl-added .jb-dl-prefix {
+		color: var(--color-success);
+	}
+
+	#jb-dv-content .jb-dl-removed {
+		border-left-color: var(--color-error);
+		background: var(--diff-removed-bg);
+	}
+	#jb-dv-content .jb-dl-removed .jb-dl-prefix {
+		color: var(--color-error);
+	}
+	#jb-dv-content .jb-dl-removed .jb-dl-body,
+	#jb-dv-content .jb-dvc-from {
+		text-decoration: line-through;
+		text-decoration-color: var(--diff-strike);
+	}
+
+	#jb-dv-content .jb-dl-changed {
+		border-left-color: var(--color-warning);
+		background: var(--diff-changed-bg);
+	}
+	#jb-dv-content .jb-dl-changed .jb-dl-prefix {
+		color: var(--color-warning);
+	}
+
+	/* ── Value type colours — shared syntax tokens, no light-theme twin ─────── */
+	#jb-dv-content .jb-dvc-string {
+		color: var(--syntax-string);
+	}
+	#jb-dv-content .jb-dvc-number {
+		color: var(--syntax-number);
+	}
+	#jb-dv-content .jb-dvc-bool {
+		color: var(--syntax-bool);
+	}
+	#jb-dv-content .jb-dvc-null {
+		color: var(--color-mute);
+	}
+	#jb-dv-content .jb-dvc-key {
+		color: var(--syntax-key);
+		font-weight: 500;
+	}
+	#jb-dv-content .jb-dvc-punct {
+		color: var(--syntax-punct);
+	}
+	#jb-dv-content .jb-dvc-arrow {
+		color: var(--color-warning);
+		padding: 0 4px;
+	}
+	#jb-dv-content .jb-dvc-collapse {
+		color: var(--syntax-punct);
+		font-style: italic;
+		cursor: pointer;
+	}
+	#jb-dv-content .jb-dvc-collapse:hover {
+		color: var(--surface-fg);
+	}
+
+	/* Scroll target when jumping between changes. */
+	#jb-dv-content .jb-dl-nav-focus {
+		outline: 1px solid var(--color-link);
+		outline-offset: -1px;
+		border-radius: var(--radius-xs);
+	}
+
+	/* ── Summary legend swatches ────────────────────────────────────────────── */
+	#jb-dv .jb-dv-key {
+		width: 9px;
+		height: 9px;
+		border-radius: var(--radius-xs);
+		flex: none;
+	}
+	#jb-dv .jb-dv-key-add {
+		background: var(--color-success);
+	}
+	#jb-dv .jb-dv-key-rem {
+		background: var(--color-error);
+	}
+	#jb-dv .jb-dv-key-chg {
+		background: var(--color-warning);
+	}
+
+	/* ── Per-pane parse status ──────────────────────────────────────────────── */
+	#jb-dv-a-status.jb-ok,
+	#jb-dv-b-status.jb-ok {
+		color: var(--color-success);
+	}
+	#jb-dv-a-status.jb-err,
+	#jb-dv-b-status.jb-err {
+		color: var(--color-error);
+	}
+}

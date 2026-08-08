@@ -1,0 +1,149 @@
+/* ============================================================================
+   JSON tree pane — shared by JsonViewer (#jb-tree) and JsonTreeViewer
+   (#jb-ktree).
+   ----------------------------------------------------------------------------
+   These two islands render the same tree; they differ only in interaction
+   (JsonTreeViewer adds full roving-tabindex keyboard navigation). Their style
+   blocks used to be separate near-identical copies — same rows, same carets,
+   same palette, twice, with a full light-theme twin each. Both copies shipped
+   on every page that rendered either island.
+
+   Scoped on `[data-jb-tree]` rather than either ID so one rule serves both.
+   Add the attribute to any future tree surface and it inherits all of this.
+
+   Layered into `workbench` so it holds over utility classes on the same
+   element (both panes carry `h-[54vh] overflow-auto` utilities).
+   ========================================================================== */
+
+@layer workbench {
+	[data-jb-tree] {
+		background-color: var(--surface-bg);
+		color: var(--surface-fg);
+		font-family: var(--font-mono);
+		font-size: var(--text-code);
+		line-height: 1.7;
+	}
+
+	/* Selection stays readable on the workbench surface (the site default is an
+	   ink block, which disappears against the dark pane). */
+	[data-jb-tree] ::selection {
+		color: var(--surface-sel-fg);
+		background-color: var(--surface-sel-bg);
+	}
+
+	/* ── Rows ──────────────────────────────────────────────────────────────── */
+	[data-jb-tree] .jb-row {
+		display: flex;
+		align-items: flex-start;
+		gap: 4px;
+		white-space: pre;
+	}
+	[data-jb-tree] .jb-children {
+		margin-left: 7px;
+		padding-left: 14px;
+		border-left: 1px solid var(--surface-line);
+	}
+
+	/* Caret / leaf spacer — fixed width so keys align across rows. */
+	[data-jb-tree] .jb-toggle {
+		flex: 0 0 auto;
+		width: 16px;
+		height: 20px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0;
+		border: none;
+		background: none;
+		color: var(--surface-fg-muted);
+		cursor: pointer;
+	}
+	[data-jb-tree] .jb-toggle--leaf {
+		cursor: default;
+	}
+	[data-jb-tree] .jb-toggle svg {
+		transition: transform 0.12s ease;
+	}
+	[data-jb-tree] [role='treeitem'][aria-expanded='true'] > .jb-row > .jb-toggle svg {
+		transform: rotate(90deg);
+	}
+
+	/* ── Tokens — the shared JSON syntax palette. `null` sits with `bool`
+	   because in a tree both read as value keywords. There is no light-theme
+	   twin: the tokens swap themselves (styles/tokens/semantic.css). ──────── */
+	[data-jb-tree] .jb-key {
+		color: var(--syntax-key);
+		font-weight: 500;
+		cursor: pointer;
+	}
+	[data-jb-tree] .jb-key:hover {
+		text-decoration: underline;
+	}
+	[data-jb-tree] .jb-punct,
+	[data-jb-tree] .jb-summary {
+		color: var(--syntax-punct);
+	}
+	[data-jb-tree] .jb-summary {
+		cursor: pointer;
+	}
+	[data-jb-tree] .jb-string {
+		color: var(--syntax-string);
+	}
+	[data-jb-tree] .jb-number {
+		color: var(--syntax-number);
+	}
+	[data-jb-tree] .jb-bool,
+	[data-jb-tree] .jb-null {
+		color: var(--syntax-bool);
+	}
+	[data-jb-tree] .jb-placeholder {
+		color: var(--color-mute);
+		padding: 6px 2px;
+		white-space: normal;
+	}
+
+	/* "Show more" chip that materialises the next chunk of a large array. */
+	[data-jb-tree] .jb-more {
+		display: inline-block;
+		margin: 4px 0 4px 16px;
+		padding: 2px 10px;
+		border-radius: var(--radius-sm);
+		border: 1px solid var(--surface-line-strong);
+		background: var(--surface-bg-raised);
+		color: var(--surface-fg);
+		font-family: var(--font-mono);
+		font-size: var(--text-caption);
+		cursor: pointer;
+	}
+	[data-jb-tree] .jb-more:hover {
+		background: var(--surface-bg-raised-hover);
+	}
+
+	/* ── Keyboard navigation (JsonTreeViewer only; inert without the JS that
+	   sets aria-selected / tabindex, so it costs the plain viewer nothing) ── */
+	[data-jb-tree] [role='treeitem'] {
+		outline: none;
+	}
+	[data-jb-tree] [role='treeitem'][aria-selected='true'] > .jb-row {
+		background: var(--surface-bg-selected);
+	}
+	[data-jb-tree] [role='treeitem']:focus-visible > .jb-row {
+		outline: 2px solid var(--surface-focus);
+		outline-offset: -2px;
+		background: var(--surface-bg-raised-hover);
+	}
+
+	/* Coarse pointers: bigger caret targets + roomier rows. */
+	@media (pointer: coarse) {
+		[data-jb-tree] .jb-toggle {
+			width: 28px;
+			height: 28px;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		[data-jb-tree] .jb-toggle svg {
+			transition: none;
+		}
+	}
+}

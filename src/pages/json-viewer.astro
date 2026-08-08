@@ -1,8 +1,8 @@
 ---
-import ToolPage from '../components/ToolPage.astro';
-import JsonViewer from '../components/JsonViewer.astro';
-import type { FaqItem } from '../lib/jsonld';
-import type { RelatedTool } from '../components/ToolPage.astro';
+import ToolPage from '../components/layout/ToolPage.astro';
+import JsonViewer from '../components/islands/JsonViewer.astro';
+import type { FaqItem } from '../lib/seo/jsonld';
+import type { RelatedTool } from '../components/layout/ToolPage.astro';
 
 const steps = [
 	{ title: 'Paste or type your JSON', body: 'Drop it into the editor on the left. It stays in your browser.' },

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { runJq } from '../src/lib/jq';
+import { runJq } from '../src/lib/json/jq';
 
 // A broad behavioral fixture suite for the hand-rolled jq interpreter (F2).
 // Each expectation is the canonical jq output for the filter, hand-verified

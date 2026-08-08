@@ -1,0 +1,130 @@
+/* ----------------------------------------------------------------------------
+   Layered into `workbench`, the last layer declared in global.css. That is
+   deliberate: these rules must win over Tailwind utilities (a full-screen
+   island has to beat `h-[62vh]`; the coarse-pointer touch floor has to beat
+   `h-8`). Before the split they achieved this by being UNLAYERED, which
+   worked by accident. The layer makes the intent explicit and keeps them
+   overridable by anything later.
+   -------------------------------------------------------------------------- */
+
+@layer workbench {
+	/* ============================================================================
+	   Command palette dialog (⌘K) — DOM is built lazily by lib/command-palette.ts,
+	   so it is styled here (global, not Astro-scoped). Tokens only; matches the
+	   in-app 6px control scale and DESIGN.md elevation.
+	   ========================================================================== */
+	.jb-cmdk {
+	  width: min(560px, calc(100vw - 32px));
+	  margin: 12vh auto auto;
+	  padding: 0;
+	  border: 1px solid var(--color-hairline);
+	  border-radius: var(--radius-lg);
+	  background: var(--color-canvas);
+	  box-shadow: var(--shadow-e5);
+	  color: var(--color-ink);
+	  overflow: hidden;
+	}
+	.jb-cmdk::backdrop {
+	  background: rgba(23, 23, 23, 0.32);
+	  backdrop-filter: blur(2px);
+	}
+	.jb-cmdk-box {
+	  display: flex;
+	  flex-direction: column;
+	}
+	.jb-cmdk-field {
+	  display: flex;
+	  align-items: center;
+	  gap: 8px;
+	  padding: 12px 14px;
+	  border-bottom: 1px solid var(--color-hairline);
+	}
+	.jb-cmdk-search-icon {
+	  flex: 0 0 auto;
+	  color: var(--color-mute);
+	}
+	.jb-cmdk-input {
+	  flex: 1;
+	  min-width: 0;
+	  border: none;
+	  outline: none;
+	  background: transparent;
+	  color: var(--color-ink);
+	  font-size: var(--text-body-md);
+	  line-height: 1.5;
+	}
+	.jb-cmdk-input::placeholder {
+	  color: var(--color-mute);
+	}
+	.jb-cmdk-list {
+	  list-style: none;
+	  margin: 0;
+	  padding: 6px;
+	  max-height: 46vh;
+	  overflow-y: auto;
+	  overscroll-behavior: contain;
+	}
+	.jb-cmdk-opt {
+	  display: flex;
+	  align-items: center;
+	  justify-content: space-between;
+	  gap: 12px;
+	  padding: 8px 10px;
+	  border-radius: var(--radius-sm);
+	  font-size: var(--text-body-sm);
+	  cursor: pointer;
+	  user-select: none;
+	}
+	.jb-cmdk-opt-label {
+	  color: var(--color-ink);
+	  font-weight: 500;
+	}
+	.jb-cmdk-opt-tag {
+	  font-family: var(--font-mono);
+	  font-size: var(--text-caption);
+	  color: var(--color-mute);
+	  text-transform: uppercase;
+	  letter-spacing: 0.02em;
+	}
+	.jb-cmdk-opt.is-active {
+	  background: var(--color-canvas-soft-2);
+	}
+	.jb-cmdk-opt.is-active .jb-cmdk-opt-tag {
+	  color: var(--color-body);
+	}
+	.jb-cmdk-opt[aria-disabled='true'] {
+	  cursor: default;
+	}
+	.jb-cmdk-opt[aria-disabled='true'] .jb-cmdk-opt-label {
+	  color: var(--color-mute);
+	  font-weight: 400;
+	}
+	.jb-cmdk-empty {
+	  padding: 20px 16px;
+	  color: var(--color-mute);
+	  font-size: var(--text-body-sm);
+	}
+	.jb-cmdk-footer {
+	  display: flex;
+	  flex-wrap: wrap;
+	  gap: 16px;
+	  padding: 8px 14px;
+	  border-top: 1px solid var(--color-hairline);
+	  color: var(--color-mute);
+	  font-size: var(--text-caption);
+	}
+	.jb-cmdk-footer .jb-cmdk-foot-note {
+	  margin-left: auto;
+	  color: var(--color-body);
+	}
+	.jb-cmdk-footer kbd {
+	  font-family: var(--font-mono);
+	  font-size: var(--text-micro);
+	  padding: 1px 5px;
+	  margin-right: 2px;
+	  border: 1px solid var(--color-hairline);
+	  border-radius: var(--radius-xs);
+	  background: var(--color-canvas-soft);
+	}
+
+}

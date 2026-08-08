@@ -1,4 +1,11 @@
 ---
+// Surface + syntax tokens for the workbench. Imported per-island (not from
+// global.css) so content routes never ship them. See styles/workbench.css.
+import '../../styles/workbench.css';
+import '../../styles/components/controls.css';
+import PrivacyNote from '../ui/PrivacyNote.astro';
+import '../../styles/workbench/graph.css';
+import '../../styles/components/kbd.css';
 /**
  * The /json-graph-viewer island — a node-link JSON graph explorer.
  *
@@ -165,106 +172,28 @@ const sample = `{
 	<!-- Status bar -->
 	<div class="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-hairline bg-canvas-soft px-3 py-2 text-body-sm">
 		<span id="jb-gstatus" class="inline-flex items-center gap-1.5 font-medium" role="status" aria-live="polite">
-			<span class="h-2 w-2 rounded-full bg-mute" data-dot-status></span>
+			<span class="h-2 w-2 rounded-full bg-mute" data-dot></span>
 			<span data-label>Ready</span>
 		</span>
 		<span data-stats class="font-mono text-caption text-mute">0 chars</span>
-		<span class="hidden items-center gap-1 font-mono text-caption text-mute md:inline-flex" aria-hidden="true">
-			<kbd class="jb-gkbd">drag</kbd> pan · <kbd class="jb-gkbd">scroll</kbd> zoom · <kbd class="jb-gkbd">Tab</kbd> nodes
+		<span class="hidden items-center gap-1 font-mono text-caption text-mute md:inline-flex" data-jb-hints aria-hidden="true">
+			<kbd class="jb-kbd">drag</kbd> pan · <kbd class="jb-kbd">scroll</kbd> zoom · <kbd class="jb-kbd">Tab</kbd> nodes
 		</span>
-		<span class="ml-auto inline-flex items-center gap-1.5 text-caption text-mute">
-			<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-				<path d="M8 1.5 3 3.5v3.2c0 3 2.1 5.8 5 6.8 2.9-1 5-3.8 5-6.8V3.5L8 1.5Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"></path>
-			</svg>
-			Processed locally — nothing uploaded
-		</span>
+		<PrivacyNote />
 	</div>
 </div>
 
-<style>
-	/* The input pane's surface + syntax highlighting come from the shared
-	   `.jb-hl*` overlay (global.css). The graph canvas is painted from the JS
-	   palette, so it needs no CSS theme override here. */
-	#jb-gsearch:focus-visible {
-		outline: 2px solid var(--color-link);
-		outline-offset: 2px;
-	}
-
-	.jb-gkbd {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		min-width: 16px;
-		padding: 0 4px;
-		border: 1px solid var(--color-hairline);
-		border-radius: var(--radius-xs);
-		background: var(--color-canvas);
-		font-size: 11px;
-		line-height: 1.4;
-	}
-
-	/* The graph stage. The SVG colours are driven from JS (resolved design tokens)
-	   so PNG/SVG export is faithful without our stylesheet — but interaction
-	   affordances (cursor, focus ring) live here. */
-	#jb-gsvg {
-		cursor: grab;
-		display: block;
-	}
-	#jb-gsvg.is-panning {
-		cursor: grabbing;
-	}
-	:global(#jb-gnodes .jb-gnode) {
-		cursor: pointer;
-	}
-	:global(#jb-gnodes .jb-gnode:focus) {
-		outline: none;
-	}
-	:global(#jb-gnodes .jb-gnode:focus-visible .jb-card) {
-		stroke: var(--color-link);
-		stroke-width: 2;
-	}
-	:global(#jb-gnodes text) {
-		pointer-events: none;
-		white-space: pre;
-	}
-
-	#jb-gmini-view {
-		fill: rgba(80, 227, 194, 0.12);
-		stroke: var(--color-cyan-deep);
-		stroke-width: 1;
-	}
-
-	/* Empty / error overlay text. */
-	:global(#jb-gempty.is-shown) {
-		display: grid;
-	}
-	:global(#jb-gempty .jb-gempty-card) {
-		max-width: 30rem;
-		color: var(--color-mute);
-		font-size: var(--text-body-sm);
-		line-height: 1.6;
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		:global(#jb-gviewport) {
-			transition: none !important;
-		}
-	}
-
-	@media (pointer: coarse) {
-		.jb-gkbd {
-			display: none;
-		}
-	}
-</style>
 
 <script>
-	import { checkJson } from '../lib/json';
-	import { loadDoc, saveDoc } from '../lib/doc-store';
-	import { initThemeToggle } from '../lib/island-theme';
-	import { initFullscreen } from '../lib/island-fullscreen';
-	import { copyToClipboard } from '../lib/island-clipboard';
-	import { attachHighlight } from '../lib/island-highlight';
+	import { checkJson } from '../../lib/json/parse';
+	import { loadDoc, saveDoc } from '../../lib/doc-store';
+	import { initThemeToggle } from '../../lib/workbench/theme';
+	import { initFullscreen } from '../../lib/workbench/fullscreen';
+	import { copyToClipboard } from '../../lib/workbench/clipboard';
+	import { attachHighlight } from '../../lib/workbench/highlight';
+	import { downloadBlob } from '../../lib/workbench/download';
+	import { createStatusBar } from '../../lib/workbench/status-bar';
+	import { debounce } from '../../lib/workbench/timing';
 
 	const root = document.getElementById('jb-graph-viewer');
 	const inputEl = document.getElementById('jb-ginput') as HTMLTextAreaElement | null;
@@ -280,7 +209,6 @@ const sample = `{
 		type ValueType = 'string' | 'number' | 'boolean' | 'null';
 		type RowKind = 'scalar' | 'object' | 'array' | 'more';
 		type Dir = 'LR' | 'TB';
-		type Mode = 'dark' | 'light';
 
 		interface GRow {
 			kind: RowKind;
@@ -392,9 +320,12 @@ const sample = `{
 		const dirLabel = root.querySelector<HTMLElement>('[data-dir-label]');
 		const searchInput = document.getElementById('jb-gsearch') as HTMLInputElement | null;
 		const searchCount = root.querySelector<HTMLElement>('[data-search-count]');
-		const dotStatus = root.querySelector<HTMLElement>('[data-dot-status]');
-		const statusLabel = root.querySelector<HTMLElement>('[data-label]');
-		const statsEl = root.querySelector<HTMLElement>('[data-stats]');
+		// Status bar (lib/workbench/status-bar). It scopes its lookup to the
+		// [role="status"] region, so the minimap's own dot cannot be hit — which
+		// is why this island no longer needs a separate attribute for its dot.
+		const statusBar = createStatusBar(root, { refresh: () => refreshStatus() });
+		const setStatus = statusBar.set;
+		const flashStatus = statusBar.flash;
 
 		const nodeEls = new Map<number, SVGGElement>();
 		const edgeEls = new Map<number, SVGPathElement>(); // keyed by childId
@@ -690,45 +621,41 @@ const sample = `{
 		function resolve(name: string): string {
 			return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#000';
 		}
-		function makePal(m: Mode): Pal {
-			if (m === 'dark') {
-				return {
-					bg: resolve('--color-editor-bg'),
-					dot: 'rgba(255,255,255,0.06)',
-					nodeFill: 'rgba(255,255,255,0.04)',
-					nodeStroke: 'rgba(255,255,255,0.14)',
-					fg: resolve('--color-editor-fg'),
-					key: resolve('--color-editor-fg'),
-					index: resolve('--color-hairline-strong'),
-					badge: resolve('--color-hairline-strong'),
-					str: resolve('--color-cyan'),
-					num: resolve('--color-violet-soft'),
-					bool: resolve('--color-warning'),
-					nul: resolve('--color-warning'),
-					edge: 'rgba(255,255,255,0.24)',
-					sel: resolve('--color-cyan'),
-					match: resolve('--color-warning'),
-				};
-			}
+		/**
+		 * One palette, not two. Every name below is a *semantic* token that swaps
+		 * itself in `styles/tokens/semantic.css` — and `getComputedStyle` on
+		 * <html> resolves custom properties after `var()` substitution, so this
+		 * returns the active theme's literal colors without branching on mode.
+		 *
+		 * That matters here specifically: the graph paints to SVG and exports
+		 * PNG, so it needs real color values, and the exported image must match
+		 * what the user sees. Previously this function carried a hand-maintained
+		 * copy of the light palette that had to be kept in sync with the CSS by
+		 * hand — the same duplication the stylesheets had.
+		 *
+		 * Call it after the theme class changes (see `onApply`), never cache it
+		 * across a toggle.
+		 */
+		function makePal(): Pal {
 			return {
-				bg: resolve('--color-canvas-soft-2'),
-				dot: 'rgba(0,0,0,0.07)',
-				nodeFill: resolve('--color-canvas'),
-				nodeStroke: resolve('--color-hairline'),
-				fg: resolve('--color-ink'),
-				key: resolve('--color-ink'),
-				index: resolve('--color-mute'),
-				badge: resolve('--color-mute'),
-				str: resolve('--color-link-deep'),
-				num: resolve('--color-violet'),
-				bool: resolve('--color-cyan-deep'),
-				nul: resolve('--color-cyan-deep'),
-				edge: resolve('--color-hairline-strong'),
-				sel: resolve('--color-cyan-deep'),
-				match: resolve('--color-warning-deep'),
+				bg: resolve('--graph-bg'),
+				dot: resolve('--graph-dot'),
+				nodeFill: resolve('--graph-node-fill'),
+				nodeStroke: resolve('--graph-node-stroke'),
+				fg: resolve('--surface-fg'),
+				key: resolve('--syntax-key'),
+				index: resolve('--surface-fg-muted'),
+				badge: resolve('--surface-fg-muted'),
+				str: resolve('--syntax-string'),
+				num: resolve('--syntax-number'),
+				bool: resolve('--syntax-bool'),
+				nul: resolve('--syntax-bool'),
+				edge: resolve('--graph-edge'),
+				sel: resolve('--surface-focus'),
+				match: resolve('--graph-match'),
 			};
 		}
-		let pal: Pal = makePal('dark');
+		let pal: Pal = makePal();
 		// Bumped whenever the palette changes (theme toggle) so cached cards, whose
 		// signature embeds it, are rebuilt with the new colors rather than reused.
 		let palVersion = 0;
@@ -1378,14 +1305,6 @@ const sample = `{
 				`</svg>`;
 			return { svg: out, w, h };
 		}
-		function downloadBlob(blob: Blob, name: string): void {
-			const url = URL.createObjectURL(blob);
-			const a = document.createElement('a');
-			a.href = url;
-			a.download = name;
-			a.click();
-			setTimeout(() => URL.revokeObjectURL(url), 1000);
-		}
 		function exportSvg(): void {
 			const s = serializeGraph();
 			if (!s) {
@@ -1434,23 +1353,11 @@ const sample = `{
 		}
 
 		// ── Status + overlay ──────────────────────────────────────────────────────────
-		function setStatus(state: 'ok' | 'error' | 'idle', text: string): void {
-			if (!dotStatus || !statusLabel) return;
-			const colors: Record<string, string> = {
-				ok: 'var(--color-success)',
-				error: 'var(--color-error)',
-				idle: 'var(--color-mute)',
-			};
-			dotStatus.style.backgroundColor = colors[state] ?? colors.idle;
-			statusLabel.textContent = text;
-			statusLabel.style.color = state === 'error' ? 'var(--color-error-deep)' : 'var(--color-ink)';
-		}
 		function setStats(chars: number, summary: string | null): void {
-			if (!statsEl) return;
 			const parts = [`${chars.toLocaleString()} chars`];
 			if (summary) parts.unshift(summary);
 			if (graph && graph.nodes.length) parts.push(`${graph.nodes.length.toLocaleString()} nodes`);
-			statsEl.textContent = parts.join(' · ');
+			statusBar.stats(parts.join(' · '));
 		}
 		function topSummary(value: JsonValue): string {
 			if (isArray(value)) {
@@ -1475,12 +1382,6 @@ const sample = `{
 			if (truncated && graph) {
 				setStatus('ok', `Showing ${graph.nodes.length} nodes — collapse branches to explore more`);
 			}
-		}
-		let flashTimer = 0;
-		function flashStatus(state: 'ok' | 'error', text: string): void {
-			setStatus(state, text);
-			clearTimeout(flashTimer);
-			flashTimer = window.setTimeout(refreshStatus, 1400);
 		}
 		function refreshStatus(): void {
 			const text = input.value;
@@ -1575,8 +1476,10 @@ const sample = `{
 
 			const themeCtl = initThemeToggle({
 			root,
-			onApply: (m) => {
-				pal = makePal(m);
+			// Runs after `.jb-theme-light` is toggled on <html>, so re-reading
+			// the tokens here picks up the new theme.
+			onApply: () => {
+				pal = makePal();
 				palVersion++;
 				if (graph) {
 					draw(graph);
@@ -1654,11 +1557,7 @@ const sample = `{
 			}
 		});
 
-		let inputTimer = 0;
-		input.addEventListener('input', () => {
-			clearTimeout(inputTimer);
-			inputTimer = window.setTimeout(applyInput, 320);
-		});
+		input.addEventListener('input', debounce(applyInput));
 
 		// Keep the minimap viewport box honest when the pane resizes.
 		if ('ResizeObserver' in window) {

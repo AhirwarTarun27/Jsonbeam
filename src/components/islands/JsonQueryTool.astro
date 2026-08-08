@@ -1,4 +1,10 @@
 ---
+// Surface + syntax tokens for the workbench. Imported per-island (not from
+// global.css) so content routes never ship them. See styles/workbench.css.
+import '../../styles/workbench.css';
+import '../../styles/components/controls.css';
+import PrivacyNote from '../ui/PrivacyNote.astro';
+import '../../styles/workbench/query.css';
 // NOTE: sample JSON is defined in the <script> block below (not here) because
 // Astro frontmatter is server-side only and cannot be referenced by client scripts.
 /**
@@ -418,140 +424,20 @@
 			<span class="h-2 w-2 rounded-full bg-mute" data-dot></span>
 			<span data-label>Ready</span>
 		</span>
-		<span class="ml-auto inline-flex items-center gap-1.5 text-caption text-mute">
-			<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-				<path d="M8 1.5 3 3.5v3.2c0 3 2.1 5.8 5 6.8 2.9-1 5-3.8 5-6.8V3.5L8 1.5Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"></path>
-			</svg>
-			Processed locally — nothing uploaded
-		</span>
+		<PrivacyNote />
 	</div>
 </div>
 
-<style>
-/* The JSON input pane's surface + syntax highlighting come from the shared
-   `.jb-hl*` overlay (global.css). */
-/* ── Result pane ────────────────────────────────────────────────────────────── */
-#jb-qt-result {
-	background-color: var(--color-editor-bg);
-	color: var(--color-editor-fg);
-}
-#jb-qt-empty, #jb-qt-loading {
-	display: flex;
-	height: 100%;
-	align-items: center;
-	justify-content: center;
-}
-/* ── Result value syntax colours (dark) ─────────────────────────────────────── */
-:global(#jb-qt-out .jb-q-s)  { color: var(--color-cyan); }
-:global(#jb-qt-out .jb-q-n)  { color: var(--color-violet-soft); }
-:global(#jb-qt-out .jb-q-b)  { color: var(--color-warning); }
-:global(#jb-qt-out .jb-q-nl) { color: var(--color-mute); }
-:global(#jb-qt-out .jb-q-k)  { color: var(--color-editor-fg); font-weight: 500; }
-:global(#jb-qt-out .jb-q-p)  { color: var(--color-hairline-strong); }
-:global(#jb-qt-out .jb-q-idx){ color: var(--color-mute); user-select: none; font-size: 11px; padding-right: 8px; }
-:global(#jb-qt-out .jb-q-sep){ display: block; border-top: 1px solid rgba(255,255,255,0.06); margin: 2px 0; }
-/* ── Snippet cards ──────────────────────────────────────────────────────────── */
-.jb-snip {
-	display: flex;
-	flex-direction: column;
-	align-items: flex-start;
-	gap: 2px;
-	padding: 8px 10px;
-	border-radius: var(--radius-sm);
-	border: 1px solid var(--color-hairline);
-	background: var(--color-canvas-soft);
-	cursor: pointer;
-	text-align: left;
-	transition: background-color 0.1s ease, border-color 0.1s ease;
-}
-.jb-snip:hover {
-	background: var(--color-canvas-soft-2);
-	border-color: var(--color-link);
-}
-.jb-snip code {
-	font-family: var(--font-mono);
-	font-size: 12px;
-	color: var(--color-link);
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-	max-width: 100%;
-	display: block;
-}
-.jb-snip span {
-	font-size: var(--text-caption);
-	color: var(--color-mute);
-}
-/* ── Code menu ──────────────────────────────────────────────────────────────── */
-.jb-code-opt {
-	display: block;
-	width: 100%;
-	padding: 6px 12px;
-	text-align: left;
-	font-size: var(--text-body-sm);
-	color: var(--color-ink);
-	transition: background-color 0.1s;
-}
-.jb-code-opt:hover { background: var(--color-canvas-soft); }
-/* ── History chips ───────────────────────────────────────────────────────────── */
-:global(.jb-qt-chip) {
-	display: inline-flex;
-	align-items: center;
-	height: 22px;
-	padding: 0 8px;
-	border-radius: 100px;
-	border: 1px solid var(--color-hairline);
-	background: var(--color-canvas);
-	font-family: var(--font-mono);
-	font-size: 11px;
-	color: var(--color-body);
-	cursor: pointer;
-	max-width: 180px;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-	transition: border-color 0.1s;
-}
-:global(.jb-qt-chip:hover) { border-color: var(--color-link); color: var(--color-link); }
-/* ── Active tab within query tool ────────────────────────────────────────────── */
-:global(#jb-qt [role="tab"][aria-selected="true"]) {
-	background: var(--color-ink);
-	color: var(--color-on-primary);
-	border-color: var(--color-ink);
-}
-/* ── Snippet arrow animation ─────────────────────────────────────────────────── */
-#jb-qt-snippets[open] #jb-qt-snip-arrow { transform: rotate(90deg); }
-/* ── Light theme overrides ───────────────────────────────────────────────────── */
-:global(html.jb-theme-light #jb-qt #jb-qt-result) {
-	background-color: var(--color-canvas);
-	color: var(--color-ink);
-}
-:global(html.jb-theme-light #jb-qt #jb-qt-out .jb-q-s)  { color: var(--color-cyan-deep); }
-:global(html.jb-theme-light #jb-qt #jb-qt-out .jb-q-n)  { color: var(--color-violet); }
-:global(html.jb-theme-light #jb-qt #jb-qt-out .jb-q-b)  { color: var(--color-warning-deep); }
-:global(html.jb-theme-light #jb-qt #jb-qt-out .jb-q-nl) { color: var(--color-mute); }
-:global(html.jb-theme-light #jb-qt #jb-qt-out .jb-q-k)  { color: var(--color-ink); }
-:global(html.jb-theme-light #jb-qt #jb-qt-out .jb-q-p)  { color: var(--color-mute); }
-:global(html.jb-theme-light #jb-qt #jb-qt-out .jb-q-sep){ border-top-color: var(--color-hairline); }
-/* ── Text selection in the result pane (input selection handled by .jb-hl) ───── */
-/* Dark mode: desaturated-blue tint — visible on the dark editor surface */
-:global(#jb-qt-out *::selection) {
-	background-color: var(--color-editor-sel-dark);
-	color: var(--color-editor-fg);
-}
-/* Light mode: soft blue tint — visible on the light canvas */
-:global(html.jb-theme-light #jb-qt #jb-qt-out *::selection) {
-	background-color: var(--color-editor-sel-light);
-	color: var(--color-ink);
-}
-</style>
 
 <script>
-import { loadDoc, saveDoc } from '../lib/doc-store';
-import { initThemeToggle } from '../lib/island-theme';
-import { initFullscreen } from '../lib/island-fullscreen';
-import { copyToClipboard } from '../lib/island-clipboard';
-import { attachHighlight } from '../lib/island-highlight';
+import { loadDoc, saveDoc } from '../../lib/doc-store';
+import { initThemeToggle } from '../../lib/workbench/theme';
+import { initFullscreen } from '../../lib/workbench/fullscreen';
+import { copyToClipboard } from '../../lib/workbench/clipboard';
+import { attachHighlight } from '../../lib/workbench/highlight';
+import { downloadText } from '../../lib/workbench/download';
+import { createStatusBar } from '../../lib/workbench/status-bar';
+import { debounce } from '../../lib/workbench/timing';
 
 const sample = `{
   "store": {
@@ -607,7 +493,6 @@ const errorBox   = errorEl;
 const loading    = loadingEl;
 const count      = countEl;
 const evalMs     = evalMsEl;
-const status     = statusEl;
 const inputStat  = inputStatusEl;
 const codeMenu   = codeMenuEl;
 const history    = historyEl;
@@ -621,8 +506,6 @@ const hl = attachHighlight(input);
 let lang: Lang = 'jsonpath';
 let mode: Mode = 'pretty';
 let lastResult: unknown[] = [];
-let debounceTimer = 0;
-const DEBOUNCE = 300;
 
 // ─── History ─────────────────────────────────────────────────────────────────
 
@@ -711,15 +594,7 @@ function switchMode(newMode: Mode) {
 
 // ─── Status helpers ───────────────────────────────────────────────────────────
 
-function setStatus(label: string, color: 'mute' | 'ok' | 'err' | 'run') {
-	const dot = status.querySelector<HTMLElement>('[data-dot]');
-	const lbl = status.querySelector<HTMLElement>('[data-label]');
-	if (dot) {
-		dot.className = 'h-2 w-2 rounded-full';
-		dot.classList.add(color === 'ok' ? 'bg-success' : color === 'err' ? 'bg-error' : color === 'run' ? 'bg-warning' : 'bg-mute');
-	}
-	if (lbl) lbl.textContent = label;
-}
+const setStatus = createStatusBar(root).set;
 
 function setPanel(which: 'out' | 'empty' | 'error' | 'loading') {
 	out.classList.toggle('hidden', which !== 'out');
@@ -910,7 +785,7 @@ async function evalJMESPath(data: unknown, q: string): Promise<unknown[]> {
 }
 
 async function evalJq(data: unknown, q: string): Promise<{ values: unknown[]; truncated: boolean }> {
-	const { runJq } = await import('../lib/jq');
+	const { runJq } = await import('../../lib/json/jq');
 	const r = runJq(data, q);
 	if (!r.ok) throw new Error(r.error);
 	return { values: r.values, truncated: r.truncated };
@@ -926,12 +801,12 @@ async function runQuery() {
 		setPanel('empty');
 		count.textContent = '';
 		if (evalMs) evalMs.textContent = '';
-		setStatus('Ready', 'mute');
+		setStatus('idle', 'Ready');
 		return;
 	}
 
 	setPanel('loading');
-	setStatus('Evaluating…', 'run');
+	setStatus('busy', 'Evaluating…');
 
 	try {
 		const t0 = performance.now();
@@ -952,7 +827,7 @@ async function runQuery() {
 		if (evalMs) evalMs.textContent = `${ms.toFixed(1)} ms`;
 
 		renderResult(values, truncated);
-		setStatus(`${values.length} value${values.length !== 1 ? 's' : ''}`, 'ok');
+		setStatus('ok', `${values.length} value${values.length !== 1 ? 's' : ''}`);
 		saveHistory(lang, q);
 		saveDoc(input.value);
 
@@ -964,7 +839,7 @@ async function runQuery() {
 		if (errHint) errHint.textContent = getErrorHint(lang, q, msg);
 		setPanel('error');
 		count.textContent = 'error';
-		setStatus('Error', 'err');
+		setStatus('error', 'Error');
 	}
 }
 
@@ -977,10 +852,7 @@ function getErrorHint(l: Lang, q: string, msg: string): string {
 	return '';
 }
 
-function scheduleQuery() {
-	clearTimeout(debounceTimer);
-	debounceTimer = window.setTimeout(runQuery, DEBOUNCE);
-}
+const scheduleQuery = debounce(runQuery);
 
 // ─── Copy as code ─────────────────────────────────────────────────────────────
 
@@ -1037,7 +909,7 @@ function init() {
 					out.replaceChildren();
 					setPanel('empty');
 					count.textContent = '';
-					setStatus('Ready', 'mute');
+					setStatus('idle', 'Ready');
 					inputStat.textContent = '';
 					saveDoc('');
 					break;
@@ -1058,12 +930,7 @@ function init() {
 				}
 				case 'download-result': {
 					const text = JSON.stringify(lastResult.length === 1 ? lastResult[0] : lastResult, null, 2);
-					const blob = new Blob([text], { type: 'application/json' });
-					const a = document.createElement('a');
-					a.href = URL.createObjectURL(blob);
-					a.download = 'query-result.json';
-					a.click();
-					URL.revokeObjectURL(a.href);
+					downloadText(text, 'query-result.json', 'application/json');
 					break;
 				}
 				case 'copy-code': {

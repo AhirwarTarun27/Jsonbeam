@@ -12,9 +12,11 @@
     "astro": "astro",
     "check": "astro check",
     "check:budget": "node scripts/check-budget.mjs",
+    "check:tokens": "node scripts/check-tokens.mjs",
+    "check:structure": "node scripts/check-structure.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
-    "ci": "astro check && astro build && node scripts/check-budget.mjs && vitest run",
+    "ci": "astro check && node scripts/check-structure.mjs && node scripts/check-tokens.mjs && astro build && node scripts/check-budget.mjs && vitest run",
     "check:env": "node scripts/check-deploy-env.mjs",
     "deploy": "npm run check:env && astro build && wrangler deploy",
     "cf:preview": "astro build && wrangler dev"
@@ -39,6 +41,7 @@
   "devDependencies": {
     "@astrojs/check": "^0.9.9",
     "@types/jmespath": "^0.15.2",
+    "jsdom": "^29.1.1",
     "playwright": "^1.61.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.9",

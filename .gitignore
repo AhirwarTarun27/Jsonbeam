@@ -30,11 +30,7 @@ pnpm-debug.log*
 #claude
 CLAUDE.md
 .claude
-
-# agent skills: content is regenerated from skills-lock.json via `npx skills`.
-# Commit skills-lock.json (source of truth); ignore the generated content + local links.
-.agents/skills/
-.claude/skills/
+.agents
 
 BUILD_PROMPT.md
 

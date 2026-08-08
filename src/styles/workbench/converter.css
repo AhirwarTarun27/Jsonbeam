@@ -1,0 +1,161 @@
+/* ============================================================================
+   Converter island — code output pane, CSV spreadsheet preview, option controls.
+   Serves all four targets (/json-to-typescript, -go, -yaml, -csv) from the one
+   island; the target is chosen by `data-target`, not by a stylesheet.
+   ----------------------------------------------------------------------------
+   WHY THIS IS A FILE AND NOT A SCOPED <style>: the spreadsheet preview is built
+   at runtime (`table.className = 'jb-cv-table'`), and Astro's scoped styles are
+   compiled to `.jb-cv-table[data-astro-cid-…] th[data-astro-cid-…]`. Runtime
+   nodes never carry that attribute, so every one of those rules was dead — the
+   CSV preview shipped with no borders, no sticky header and no monospace. The
+   selection/`:global()`-wrapped rules in the same block worked, which is why the
+   gap went unnoticed. External CSS is unscoped by construction, so the whole
+   class of bug is gone; the `jb-cv-` prefix does the isolating instead.
+   ========================================================================== */
+
+@layer workbench {
+	/* ── Code output — shares the dark editor surface. (The JSON input pane's
+	   surface + syntax highlighting come from the `.jb-hl` overlay.) ───────── */
+	#jb-cv-output {
+		background-color: var(--surface-bg);
+		color: var(--surface-fg);
+	}
+	#jb-cv-code {
+		white-space: pre;
+		color: var(--surface-fg);
+	}
+	#jb-cv-code::selection {
+		background-color: var(--surface-sel-bg);
+		color: var(--surface-sel-fg);
+	}
+
+	#jb-cv-empty,
+	#jb-cv-error {
+		display: none;
+	}
+	#jb-cv-empty.is-on,
+	#jb-cv-error.is-on {
+		display: flex;
+		flex-direction: column;
+	}
+	#jb-cv-empty.is-on {
+		height: 100%;
+		align-items: center;
+		justify-content: center;
+	}
+
+	/* ── CSV spreadsheet preview. Deliberately a light surface in both themes:
+	   it is imitating a spreadsheet, not the editor. ────────────────────────── */
+	#jb-cv-table-wrap {
+		background: var(--color-canvas);
+	}
+	.jb-cv-table {
+		border-collapse: collapse;
+		font-family: var(--font-mono);
+		font-size: var(--text-caption);
+		width: max-content;
+		min-width: 100%;
+		color: var(--color-ink);
+	}
+	.jb-cv-table th {
+		position: sticky;
+		top: 0;
+		z-index: 1;
+		text-align: left;
+		background: var(--color-canvas-soft-2);
+		color: var(--color-body);
+		font-weight: 600;
+		padding: 5px 12px;
+		border-bottom: 1px solid var(--color-hairline-strong);
+		white-space: nowrap;
+	}
+	.jb-cv-table td {
+		padding: 4px 12px;
+		border-top: 1px solid var(--color-hairline);
+		white-space: nowrap;
+		max-width: 280px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.jb-cv-table tr:hover td {
+		background: var(--color-canvas-soft);
+	}
+	.jb-cv-rownum {
+		color: var(--color-mute);
+		user-select: none;
+		text-align: right;
+	}
+	.jb-cv-note {
+		padding: 8px 12px;
+		font-family: var(--font-mono);
+		font-size: var(--text-micro);
+		color: var(--color-mute);
+	}
+
+	/* ── Option controls (toolbar chrome — light in both themes) ────────────── */
+	.jb-cv-ctl,
+	.jb-cv-check {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		font-size: var(--text-body-sm);
+		color: var(--color-body);
+		white-space: nowrap;
+	}
+	.jb-cv-check {
+		cursor: pointer;
+	}
+	.jb-cv-check input {
+		width: 15px;
+		height: 15px;
+		accent-color: var(--color-ink);
+		cursor: pointer;
+	}
+
+	.jb-cv-select,
+	.jb-cv-text {
+		height: 30px;
+		border-radius: var(--radius-sm);
+		border: 1px solid var(--color-hairline);
+		background: var(--color-canvas);
+		color: var(--color-ink);
+		font-size: var(--text-body-sm);
+		padding: 0 8px;
+	}
+	.jb-cv-text {
+		width: 96px;
+		font-family: var(--font-mono);
+	}
+	.jb-cv-select:focus,
+	.jb-cv-text:focus {
+		outline: none;
+		border-color: var(--color-link);
+		box-shadow: 0 0 0 1px var(--color-link);
+	}
+
+	/* ── CSV view toggle (raw / table) ──────────────────────────────────────── */
+	.jb-cv-viewbtn {
+		height: 24px;
+		padding: 0 10px;
+		border-radius: var(--radius-sm);
+		font-size: var(--text-caption);
+		font-weight: 500;
+		color: var(--color-body);
+	}
+	.jb-cv-viewbtn[aria-pressed='true'] {
+		background: var(--color-ink);
+		color: var(--color-on-primary);
+	}
+
+	@media (pointer: coarse) {
+		.jb-cv-select,
+		.jb-cv-text,
+		.jb-cv-viewbtn {
+			height: 44px;
+		}
+		.jb-cv-check input {
+			width: 20px;
+			height: 20px;
+		}
+	}
+}

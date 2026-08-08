@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { runJq } from '../src/lib/jq';
+import { runJq } from '../src/lib/json/jq';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 

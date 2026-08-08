@@ -11,7 +11,7 @@
  * size gate — so it costs nothing on small inputs and nothing against any
  * island's initial-JS budget.
  */
-import { runEngineOp, type EngineReq, type EngineResult } from './json-engine-core';
+import { runEngineOp, type EngineReq, type EngineResult } from './engine-core';
 
 type Req = EngineReq & { id: number };
 type Res = EngineResult & { id: number };

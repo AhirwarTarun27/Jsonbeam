@@ -9,10 +9,10 @@
  * A content route: 0 KB app JS (only inline ld+json). Prose typography comes
  * from the shared ../styles/prose.css (also used by ContentPage).
  */
-import Layout from '../layouts/Layout.astro';
-import { SITE_URL, withSlash } from '../consts';
-import { article, breadcrumbs } from '../lib/jsonld';
-import '../styles/prose.css';
+import Layout from '../../layouts/Layout.astro';
+import { SITE_URL, withSlash } from '../../consts';
+import { article, breadcrumbs } from '../../lib/seo/jsonld';
+import '../../styles/prose.css';
 
 export interface RelatedTool {
 	name: string;

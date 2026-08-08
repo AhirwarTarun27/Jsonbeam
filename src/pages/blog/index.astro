@@ -2,7 +2,7 @@
 import Layout from '../../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
 import { SITE_URL } from '../../consts';
-import { webPage, breadcrumbs } from '../../lib/jsonld';
+import { webPage, breadcrumbs } from '../../lib/seo/jsonld';
 
 const guides = (await getCollection('guides'))
 	.filter((e) => !e.data.draft)

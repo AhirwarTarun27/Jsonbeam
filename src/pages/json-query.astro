@@ -1,8 +1,8 @@
 ---
-import ToolPage from '../components/ToolPage.astro';
-import JsonQueryTool from '../components/JsonQueryTool.astro';
-import type { FaqItem } from '../lib/jsonld';
-import type { RelatedTool } from '../components/ToolPage.astro';
+import ToolPage from '../components/layout/ToolPage.astro';
+import JsonQueryTool from '../components/islands/JsonQueryTool.astro';
+import type { FaqItem } from '../lib/seo/jsonld';
+import type { RelatedTool } from '../components/layout/ToolPage.astro';
 
 const steps = [
 	{ title: 'Paste your JSON', body: 'Drop it into the left editor. It is parsed entirely in your browser — nothing is ever uploaded.' },

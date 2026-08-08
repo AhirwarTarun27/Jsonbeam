@@ -1,8 +1,8 @@
 ---
-import ToolPage from '../components/ToolPage.astro';
-import JsonConverter from '../components/JsonConverter.astro';
-import type { FaqItem } from '../lib/jsonld';
-import type { RelatedTool } from '../components/ToolPage.astro';
+import ToolPage from '../components/layout/ToolPage.astro';
+import JsonConverter from '../components/islands/JsonConverter.astro';
+import type { FaqItem } from '../lib/seo/jsonld';
+import type { RelatedTool } from '../components/layout/ToolPage.astro';
 
 const steps = [
 	{ title: 'Paste your JSON', body: 'Any valid JSON — config, an API response, a manifest. It is parsed in your browser; nothing is uploaded.' },

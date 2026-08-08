@@ -3,7 +3,7 @@
  * should be exemplary. Each builder returns a plain object serialised into a
  * <script type="application/ld+json"> tag by BaseHead.
  */
-import { SITE_NAME, SITE_URL, SITE_LOGO, AUTHOR_NAME } from '../consts';
+import { SITE_NAME, SITE_URL, SITE_LOGO, AUTHOR_NAME } from '../../consts';
 
 type Json = Record<string, unknown>;
 

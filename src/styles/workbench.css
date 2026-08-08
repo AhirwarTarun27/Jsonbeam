@@ -1,0 +1,31 @@
+/* ============================================================================
+   Workbench stylesheet — imported by tool islands ONLY.
+   ----------------------------------------------------------------------------
+   Every island imports this from its frontmatter:
+
+       import '../styles/workbench.css';
+
+   Astro bundles a component's CSS into the routes that render it, so content
+   routes (blog, legal, about) never download any of it.
+
+   ── Why this file only imports workbench-exclusive parts ─────────────────────
+   CSS `@import` INLINES its target — it does not dedupe. Two CSS entries that
+   both `@import "./components/controls.css"` ship two copies of it. (Measured:
+   doing exactly that cost every tool route ~1 KB gzipped.)
+
+   Astro/Vite component imports DO dedupe, because they are one module in the
+   module graph. So anything shared with non-island components — `controls.css`
+   above all — is imported by each *component* that uses it, never pulled in
+   here. Only styles that literally nothing outside an island can use belong in
+   this file.
+   ========================================================================== */
+
+/* The surface + syntax roles every island is written against. Plain custom
+   properties — no Tailwind context required, so this works as its own entry. */
+@import "./tokens/semantic.css";
+
+/* The syntax-highlight overlay behind every <textarea> JSON input. */
+@import "./workbench/highlight.css";
+
+/* The shared "Full screen" expand mode. */
+@import "./workbench/fullscreen.css";

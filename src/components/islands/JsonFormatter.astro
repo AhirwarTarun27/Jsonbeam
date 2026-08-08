@@ -1,4 +1,9 @@
 ---
+// Surface + syntax tokens for the workbench. Imported per-island (not from
+// global.css) so content routes never ship them. See styles/workbench.css.
+import '../../styles/workbench.css';
+import '../../styles/components/controls.css';
+import PrivacyNote from '../ui/PrivacyNote.astro';
 /**
  * The shared JSON workbench island. Framework-free: markup + a single
  * client-side module that mounts CodeMirror 6. Does format / minify / repair /
@@ -10,7 +15,7 @@
  * (ink) toolbar button, what Ctrl+S runs, and — for repair — a broken default
  * document so the payoff is one click away.
  */
-import type { ToolVariant } from '../consts';
+import type { ToolVariant } from '../../consts';
 
 interface Props {
 	variant?: ToolVariant;
@@ -79,12 +84,7 @@ const primaryAction: 'format' | 'minify' | 'validate' | 'repair' =
 			<span data-label>Ready</span>
 		</span>
 		<span id="jb-stats" class="font-mono text-caption text-mute">0 lines · 0 chars</span>
-		<span class="ml-auto inline-flex items-center gap-1.5 text-caption text-mute">
-			<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-				<path d="M8 1.5 3 3.5v3.2c0 3 2.1 5.8 5 6.8 2.9-1 5-3.8 5-6.8V3.5L8 1.5Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"></path>
-			</svg>
-			Processed locally — nothing uploaded
-		</span>
+		<PrivacyNote />
 	</div>
 </div>
 
@@ -107,12 +107,8 @@ const primaryAction: 'format' | 'minify' | 'validate' | 'repair' =
 	 * JSON always stays readable (default = dark editor).
 	 */
 	:global(#jb-editor .cm-editor ::selection) {
-		color: var(--color-on-primary);
-		background-color: var(--color-editor-sel-dark);
-	}
-	:global(html.jb-theme-light #jb-editor .cm-editor ::selection) {
-		color: var(--color-ink);
-		background-color: var(--color-editor-sel-light);
+		color: var(--surface-sel-fg);
+		background-color: var(--surface-sel-bg);
 	}
 
 	/* .jb-btn / .jb-btn-icon coarse-pointer inflation is global; only the
@@ -130,11 +126,14 @@ const primaryAction: 'format' | 'minify' | 'validate' | 'repair' =
 	import { syntaxHighlighting, HighlightStyle, bracketMatching, foldGutter, foldKeymap, indentUnit, indentOnInput } from '@codemirror/language';
 	import { tags as t } from '@lezer/highlight';
 	import { lintGutter, linter, type Diagnostic } from '@codemirror/lint';
-	import { checkJson } from '../lib/json';
-	import { loadDoc, saveDoc } from '../lib/doc-store';
-	import { initThemeToggle, getTheme } from '../lib/island-theme';
-	import { copyToClipboard } from '../lib/island-clipboard';
-	import { initFullscreen } from '../lib/island-fullscreen';
+	import { checkJson } from '../../lib/json/parse';
+	import { loadDoc, saveDoc } from '../../lib/doc-store';
+	import { initThemeToggle, getTheme } from '../../lib/workbench/theme';
+	import { copyToClipboard } from '../../lib/workbench/clipboard';
+	import { initFullscreen } from '../../lib/workbench/fullscreen';
+	import { downloadText } from '../../lib/workbench/download';
+	import { createStatusBar } from '../../lib/workbench/status-bar';
+	import { debounce } from '../../lib/workbench/timing';
 	// jsonrepair is lazy-loaded on first Repair click (kept out of the initial bundle).
 
 	const root = document.getElementById('jb-formatter');
@@ -245,25 +244,22 @@ const primaryAction: 'format' | 'minify' | 'validate' | 'repair' =
 			return [{ from, to: Math.max(to, from), severity: 'error', message: res.message }];
 		}
 
-		// ── Status bar ───────────────────────────────────────────────────────
-		const dot = root.querySelector<HTMLElement>('#jb-status [data-dot]');
-		const label = root.querySelector<HTMLElement>('#jb-status [data-label]');
-		const statsEl = root.querySelector<HTMLElement>('#jb-stats');
-		let statusTimer = 0;
-
-		function setStatus(state: 'ok' | 'error' | 'idle', text: string) {
-			if (!dot || !label) return;
-			const colors: Record<string, string> = { ok: 'var(--color-success)', error: 'var(--color-error)', idle: 'var(--color-mute)' };
-			dot.style.backgroundColor = colors[state] || colors.idle;
-			label.textContent = text;
-			label.style.color = state === 'error' ? 'var(--color-error-deep)' : 'var(--color-ink)';
-		}
+		// ── Status bar (lib/workbench/status-bar) ─────────────────────────────
+		const statusBar = createStatusBar(root, { refresh: () => refreshStatus() });
+		const setStatus = statusBar.set;
+		const flashStatus = statusBar.flash;
+		// Debounced doc-changed work, on the shared workbench cadence.
+		const onDocChanged = debounce(() => {
+			refreshStatus();
+			// Carry the working doc to the next tool page (sessionStorage only).
+			saveDoc(view.state.doc.toString());
+		});
 
 		function refreshStatus() {
 			const text = view.state.doc.toString();
 			const lines = view.state.doc.lines;
 			const chars = view.state.doc.length;
-			if (statsEl) statsEl.textContent = `${lines} lines · ${chars.toLocaleString()} chars`;
+			statusBar.stats(`${lines} lines · ${chars.toLocaleString()} chars`);
 			if (text.trim() === '') {
 				setStatus('idle', 'Empty');
 				return;
@@ -302,14 +298,7 @@ const primaryAction: 'format' | 'minify' | 'validate' | 'repair' =
 				keymap.of([...defaultKeymap, ...historyKeymap, ...foldKeymap, indentWithTab]),
 				EditorView.contentAttributes.of({ 'aria-label': 'JSON editor', spellcheck: 'false' }),
 				EditorView.updateListener.of((u) => {
-					if (u.docChanged) {
-						clearTimeout(statusTimer);
-						statusTimer = window.setTimeout(() => {
-							refreshStatus();
-							// Carry the working doc to the next tool page (sessionStorage only).
-							saveDoc(view.state.doc.toString());
-						}, 250);
-					}
+					if (u.docChanged) onDocChanged();
 				}),
 				// Ctrl/Cmd+S runs the page's primary action (format/minify/repair/validate).
 				keymap.of([{ key: 'Mod-s', preventDefault: true, run: () => { runPrimary(); return true; } }]),
@@ -326,6 +315,7 @@ const primaryAction: 'format' | 'minify' | 'validate' | 'repair' =
 		}
 		function shakeLabel() {
 			const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+			const label = statusBar.label;
 			if (label && !reduce) {
 				label.animate(
 					[{ transform: 'translateX(0)' }, { transform: 'translateX(-3px)' }, { transform: 'translateX(3px)' }, { transform: 'translateX(0)' }],
@@ -359,7 +349,7 @@ const primaryAction: 'format' | 'minify' | 'validate' | 'repair' =
 			editorEl.setAttribute('aria-busy', 'true');
 			setStatus('idle', space === null ? 'Minifying…' : 'Formatting…');
 			try {
-				const eng = await import('../lib/json-engine');
+				const eng = await import('../../lib/json/engine');
 				setText(space === null ? await eng.minifyJson(text) : await eng.formatJson(text, space));
 			} catch {
 				setStatus('error', 'Invalid JSON');
@@ -389,20 +379,13 @@ const primaryAction: 'format' | 'minify' | 'validate' | 'repair' =
 		}
 		async function doCopy() {
 			if (await copyToClipboard(getText())) {
-				setStatus('ok', 'Copied to clipboard');
-				setTimeout(refreshStatus, 1200);
+				flashStatus('ok', 'Copied to clipboard');
 			} else {
 				setStatus('error', 'Clipboard unavailable');
 			}
 		}
 		function doDownload() {
-			const blob = new Blob([getText()], { type: 'application/json' });
-			const url = URL.createObjectURL(blob);
-			const a = document.createElement('a');
-			a.href = url;
-			a.download = 'data.json';
-			a.click();
-			URL.revokeObjectURL(url);
+			downloadText(getText(), 'data.json', 'application/json');
 		}
 		// The variant's headline action, fired by Ctrl/Cmd+S.
 		function runPrimary() {

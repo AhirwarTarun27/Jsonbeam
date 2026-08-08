@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { runEngineOp } from '../src/lib/json-engine-core';
+import { runEngineOp } from '../src/lib/json/engine-core';
 
 describe('json-engine-core · runEngineOp', () => {
 	it('formats with a numeric indent', () => {

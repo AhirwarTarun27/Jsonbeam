@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { jsonToCsv } from '../src/lib/convert-csv';
-import { jsonToYaml } from '../src/lib/convert-yaml';
-import { inferSchema } from '../src/lib/infer';
-import { emitTypeScript } from '../src/lib/emit-typescript';
-import { emitGo } from '../src/lib/emit-go';
+import { jsonToCsv } from '../src/lib/convert/csv';
+import { jsonToYaml } from '../src/lib/convert/yaml';
+import { inferSchema } from '../src/lib/convert/infer';
+import { emitTypeScript } from '../src/lib/convert/emit-typescript';
+import { emitGo } from '../src/lib/convert/emit-go';
 
 // ── CSV ──────────────────────────────────────────────────────────────────────
 

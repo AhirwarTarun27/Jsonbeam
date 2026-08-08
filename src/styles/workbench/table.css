@@ -1,0 +1,139 @@
+/* ============================================================================
+   Table island — the flattened-rows grid at /json-table-viewer.
+   ----------------------------------------------------------------------------
+   The whole grid is built at runtime, so every rule here previously needed a
+   `:global()` wrapper to escape Astro's scoping. As an external stylesheet it
+   is global by construction; the `#jb-tv-` anchor does the isolating.
+
+   Layered into `workbench` so these rules hold over the utility classes the
+   markup carries on the same elements.
+   ========================================================================== */
+
+@layer workbench {
+	#jb-tv-wrap {
+		background-color: var(--surface-bg);
+	}
+
+	/* The site-wide ::selection is an ink block — invisible against the dark
+	   pane, so the surface tokens take over here in BOTH themes. */
+	#jb-tv-table *::selection {
+		background-color: var(--surface-sel-bg);
+		color: var(--surface-sel-fg);
+	}
+
+	/* ── Header row ─────────────────────────────────────────────────────────── */
+	#jb-tv-table thead tr {
+		background-color: var(--surface-bg-head);
+	}
+	#jb-tv-table th {
+		font-family: var(--font-mono);
+		font-size: var(--text-micro);
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		font-weight: 400;
+		color: var(--surface-fg-muted);
+		padding: 7px 12px;
+		white-space: nowrap;
+		cursor: pointer;
+		user-select: none;
+		border-right: 1px solid var(--surface-line-grid);
+		position: relative;
+	}
+	#jb-tv-table th.jb-tv-th-rownum {
+		cursor: default;
+		color: var(--color-mute);
+		min-width: 40px;
+		text-align: right;
+	}
+	#jb-tv-table th:hover:not(.jb-tv-th-rownum) {
+		color: var(--surface-fg);
+	}
+	#jb-tv-table th[aria-sort='ascending'],
+	#jb-tv-table th[aria-sort='descending'] {
+		color: var(--surface-accent);
+	}
+
+	/* ── Body cells ─────────────────────────────────────────────────────────── */
+	#jb-tv-table td {
+		font-family: var(--font-mono);
+		font-size: var(--text-code);
+		padding: 6px 12px;
+		border-bottom: 1px solid var(--surface-line-grid);
+		border-right: 1px solid var(--surface-line-faint);
+		white-space: nowrap;
+		max-width: 260px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		cursor: pointer;
+	}
+	#jb-tv-table td.jb-tv-td-rownum {
+		color: var(--color-mute);
+		font-size: var(--text-micro);
+		text-align: right;
+		cursor: default;
+		min-width: 40px;
+	}
+	#jb-tv-table tbody tr:hover td {
+		background: var(--surface-bg-row-hover);
+	}
+	#jb-tv-table td.jb-tv-selected {
+		outline: 1px solid var(--color-link);
+		outline-offset: -1px;
+	}
+
+	/* ── Type colours. Shared syntax tokens, so no light-theme twin.
+	   `null` is muted rather than keyword-coloured: in a table cell it means
+	   "absent", not "the null literal". Same for `object`/`missing`, which read
+	   identically in both themes and so stay on primitives. ─────────────────── */
+	#jb-tv-table .jb-tc-string {
+		color: var(--syntax-string);
+	}
+	#jb-tv-table .jb-tc-number {
+		color: var(--syntax-number);
+	}
+	#jb-tv-table .jb-tc-bool {
+		color: var(--syntax-bool);
+	}
+	#jb-tv-table .jb-tc-null {
+		color: var(--color-mute);
+		font-style: italic;
+	}
+	#jb-tv-table .jb-tc-object {
+		color: var(--color-hairline-strong);
+		font-style: italic;
+	}
+	#jb-tv-table .jb-tc-missing {
+		color: var(--color-mute);
+	}
+
+	/* ── Per-column filter row ──────────────────────────────────────────────── */
+	#jb-tv-table .jb-tv-filter-row td {
+		padding: 4px 6px;
+		background-color: var(--surface-bg-inset);
+		cursor: default;
+	}
+	.jb-tv-filter-input {
+		width: 100%;
+		min-width: 60px;
+		background: var(--surface-field-bg);
+		border: 1px solid var(--surface-field-line);
+		border-radius: var(--radius-xs);
+		color: var(--surface-fg);
+		font-family: var(--font-mono);
+		font-size: var(--text-caption);
+		padding: 2px 6px;
+		outline: none;
+	}
+	.jb-tv-filter-input:focus {
+		border-color: var(--color-link);
+	}
+	.jb-tv-filter-input::placeholder {
+		color: var(--color-mute);
+	}
+
+	/* ── Search match highlight ─────────────────────────────────────────────── */
+	#jb-tv-table .jb-tc-match {
+		background: var(--surface-match-bg);
+		border-radius: 2px;
+	}
+}

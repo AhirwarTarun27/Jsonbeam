@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { webSite, softwareApplication, faqPage, breadcrumbs } from '../src/lib/jsonld';
+import { webSite, softwareApplication, faqPage, breadcrumbs } from '../src/lib/seo/jsonld';
 
 describe('webSite', () => {
 	it('is a WebSite with a SearchAction', () => {

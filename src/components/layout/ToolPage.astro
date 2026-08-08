@@ -11,13 +11,13 @@
  *
  * Content pages stay 0-JS except the island itself (CLAUDE.md perf contract).
  */
-import Layout from '../layouts/Layout.astro';
-import JsonFormatter from './JsonFormatter.astro';
+import Layout from '../../layouts/Layout.astro';
+import JsonFormatter from '../islands/JsonFormatter.astro';
 import ToolSwitcher from './ToolSwitcher.astro';
 import NextSteps from './NextSteps.astro';
-import CommandPalette from './CommandPalette.astro';
-import { SITE_URL, TOOL_GUIDES, withSlash, type ToolVariant } from '../consts';
-import { softwareApplication, faqPage, breadcrumbs, howTo, type FaqItem } from '../lib/jsonld';
+import CommandPalette from '../islands/CommandPalette.astro';
+import { SITE_URL, TOOL_GUIDES, withSlash, type ToolVariant } from '../../consts';
+import { softwareApplication, faqPage, breadcrumbs, howTo, type FaqItem } from '../../lib/seo/jsonld';
 
 export interface RelatedTool {
 	name: string;

@@ -9,10 +9,15 @@
  * Included once per tool page (via ToolPage). Never on marketing/content pages —
  * those keep the 0-JS contract. The visible affordance lives in ToolSwitcher.
  */
+
+// The dialog's DOM is built at runtime, so it cannot be Astro-scoped — its
+// styles are global by necessity, but importing them HERE keeps them bound to
+// the only component that can render the palette, so content routes skip them.
+import '../../styles/components/command-palette.css';
 ---
 
 <script>
-	import type { PaletteApi } from '../lib/command-palette';
+	import type { PaletteApi } from '../../lib/command-palette';
 
 	let api: PaletteApi | null = null;
 	let loading: Promise<PaletteApi> | null = null;
@@ -20,7 +25,7 @@
 	async function ensure(): Promise<PaletteApi> {
 		if (api) return api;
 		if (!loading) {
-			loading = import('../lib/command-palette').then((m) => {
+			loading = import('../../lib/command-palette').then((m) => {
 				api = m.createPalette();
 				return api;
 			});

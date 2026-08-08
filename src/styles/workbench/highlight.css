@@ -1,0 +1,96 @@
+/* ----------------------------------------------------------------------------
+   Layered into `workbench`, the last layer declared in global.css. That is
+   deliberate: these rules must win over Tailwind utilities (a full-screen
+   island has to beat `h-[62vh]`; the coarse-pointer touch floor has to beat
+   `h-8`). Before the split they achieved this by being UNLAYERED, which
+   worked by accident. The layer makes the intent explicit and keeps them
+   overridable by anything later.
+   -------------------------------------------------------------------------- */
+
+@layer workbench {
+	/* ============================================================================
+	   Syntax-highlight overlay for <textarea> JSON inputs (lib/island-highlight.ts).
+	   A transparent textarea sits over a colour-tokenised <pre> mirror, so the JSON
+	   a user types is highlighted to match the formatter — within the lean routes'
+	   40 KB budget (no CodeMirror). Global (the wrapper is injected at runtime, so it
+	   isn't reached by Astro's scoped hashing). Themed entirely through the
+	   semantic surface/syntax tokens, so there is no light-mode block here.
+	   ========================================================================== */
+	.jb-hl {
+	  position: relative;
+	  display: block;
+	  width: 100%;
+	  overflow: hidden;
+	  background-color: var(--surface-bg);
+	}
+
+	/* Shared metrics — the textarea and its mirror MUST match every box-affecting
+	   property exactly, or the caret drifts off the glyphs. Edit them together. */
+	.jb-hl-input,
+	.jb-hl-mirror {
+	  margin: 0;
+	  padding: 12px 14px;
+	  border: 0;
+	  font-family: var(--font-mono);
+	  font-size: var(--text-code);
+	  line-height: 1.6;
+	  letter-spacing: 0;
+	  tab-size: 2;
+	  white-space: pre;
+	}
+
+	.jb-hl-mirror {
+	  position: absolute;
+	  inset: 0;
+	  z-index: 0;
+	  overflow: hidden;
+	  pointer-events: none;
+	  color: var(--surface-fg);
+	  background: transparent;
+	}
+
+	.jb-hl-input {
+	  position: relative;
+	  z-index: 1;
+	  display: block;
+	  width: 100%;
+	  resize: none;
+	  overflow: auto;
+	  background: transparent;
+	  /* Glyphs are painted by the mirror beneath — only the caret shows here. */
+	  color: transparent;
+	  caret-color: var(--surface-fg);
+	  -webkit-text-fill-color: transparent; /* Safari honours this over `color` */
+	}
+	.jb-hl-input::placeholder {
+	  color: var(--color-mute);
+	  -webkit-text-fill-color: var(--color-mute);
+	}
+	.jb-hl-input:focus-visible {
+	  outline: 2px solid var(--color-link);
+	  outline-offset: -2px; /* inset, so the wrapper's overflow:hidden never clips it */
+	}
+	/* A semi-transparent selection band lets the mirror's coloured glyphs show
+	   through (the textarea's own text is transparent). */
+	.jb-hl-input::selection {
+	  background-color: var(--surface-sel-bg-soft);
+	  color: transparent;
+	  -webkit-text-fill-color: transparent;
+	}
+
+	/* Large-input fallback (lib caps the mirror): paint the textarea's own text. */
+	.jb-hl--plain .jb-hl-input {
+	  color: var(--surface-fg);
+	  -webkit-text-fill-color: var(--surface-fg);
+	}
+
+	/* Tokens. `kw` covers true/false AND null — in a JSON document those read as
+	   value keywords, so they share `--syntax-bool`. (A table cell is the other
+	   case: there `null` means absence and renders muted. See semantic.css.)
+	   There is no light-theme twin below — the tokens swap themselves. */
+	.jb-hl-key { color: var(--syntax-key); font-weight: 500; }
+	.jb-hl-str { color: var(--syntax-string); }
+	.jb-hl-num { color: var(--syntax-number); }
+	.jb-hl-kw { color: var(--syntax-bool); }
+	.jb-hl-punct { color: var(--syntax-punct); }
+}

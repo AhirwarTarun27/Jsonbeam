@@ -1,0 +1,149 @@
+/* ============================================================================
+   Layer 0 — PRIMITIVE TOKENS (the brand palette)
+   ----------------------------------------------------------------------------
+   Bound to DESIGN.md: the Vercel-inspired language. These are absolute values —
+   they never change between themes. A role that DOES change between themes is
+   not a primitive; it belongs in `semantic.css`.
+
+   Registered with a plain `@theme` (not `inline`) because each value is a
+   literal, not a reference to another variable. That makes every entry here a
+   Tailwind utility: `bg-canvas`, `text-ink`, `rounded-md`, `shadow-e3`, …
+
+   Every value below is the visual law; do not introduce a sixth accent, a heavy
+   drop-shadow, or a weight-700 display.
+   ========================================================================== */
+
+@theme {
+	/* ── Type faces ───────────────────────────────────────────────────────── */
+	--font-sans: "Geist", "Inter", system-ui, -apple-system, BlinkMacSystemFont,
+		"Segoe UI", sans-serif;
+	--font-mono: "Geist Mono", ui-monospace, SFMono-Regular, "JetBrains Mono",
+		Menlo, Monaco, "Liberation Mono", monospace;
+
+	/* ── Color — ink + gray + the four-pair gradient palette ──────────────── */
+	--color-ink: #171717;
+	--color-body: #4d4d4d;
+	--color-mute: #888888;
+	--color-hairline: #ebebeb;
+	--color-hairline-strong: #a1a1a1;
+	--color-canvas: #ffffff;
+	--color-canvas-soft: #fafafa;
+	--color-canvas-soft-2: #f5f5f5;
+	--color-on-primary: #ffffff;
+
+	/* Ink hover — the single lightened-ink state shared by .jb-btn-primary,
+	   .jb-tab-active:hover and the header CTA. */
+	--color-ink-hover: #2a2a2a;
+	/* The near-white used by ::selection on the ink block. */
+	--color-on-ink: #f2f2f2;
+
+	--color-link: #0070f3;
+	--color-link-deep: #0761d1;
+	--color-link-bg-soft: #d3e5ff;
+
+	--color-success: #0070f3;
+	--color-error: #ee0000;
+	--color-error-soft: #f7d4d6;
+	--color-error-deep: #c50000;
+	--color-warning: #f5a623;
+	--color-warning-soft: #ffefcf;
+	--color-warning-deep: #ab570a;
+
+	--color-violet: #7928ca;
+	--color-violet-soft: #d8ccf1;
+	--color-violet-deep: #4c2889;
+	--color-cyan: #50e3c2;
+	--color-cyan-soft: #aaffec;
+	--color-cyan-deep: #29bc9b;
+	--color-highlight-pink: #ff0080;
+	--color-highlight-magenta: #eb367f;
+
+	/* ── Editor surfaces — the dark code workbench (= DESIGN.md
+	   `code-editor-mockup`, {colors.primary}) plus its light variant. These are
+	   the raw ingredients; `semantic.css` decides which one a theme uses. ───── */
+	--color-editor-bg: #171717;        /* dark code surface */
+	--color-editor-fg: #ededed;        /* soft near-white keys/text (matches the hero mockup) */
+	--color-editor-line: #1e1e1e;      /* active-line tint on dark */
+	--color-editor-sel-dark: #2d4a63;  /* calm desaturated-blue selection on dark */
+	--color-editor-sel-light: #dbe7fb; /* calm selection on the light canvas */
+	/* Two steps darker than `editor-bg`, for chrome that must sit BEHIND the code
+	   surface — the homepage mockup's window frame and its inset panels. */
+	--color-editor-chrome: #141414;
+	--color-editor-chrome-2: #1c1c1c;
+	/* Dimmest legible grey on the dark surface. `--color-mute` (#888) is tuned
+	   for the light canvas and reads too hot here. */
+	--color-editor-mute: #6f6f6f;
+
+	/* Brand mesh-gradient stops (hero scale only — never miniaturised) */
+	--color-grad-develop-start: #007cf0;
+	--color-grad-develop-end: #00dfd8;
+	--color-grad-preview-start: #7928ca;
+	--color-grad-preview-end: #ff0080;
+	--color-grad-ship-start: #ff4d4d;
+	--color-grad-ship-end: #f9cb28;
+
+	/* ── Type ramp — Geist 600 display ceiling, aggressive negative tracking ─ */
+	--text-display-xl: 48px;
+	--text-display-xl--line-height: 48px;
+	--text-display-xl--letter-spacing: -2.4px;
+	--text-display-xl--font-weight: 600;
+
+	--text-display-lg: 32px;
+	--text-display-lg--line-height: 40px;
+	--text-display-lg--letter-spacing: -1.28px;
+	--text-display-lg--font-weight: 600;
+
+	--text-display-md: 24px;
+	--text-display-md--line-height: 32px;
+	--text-display-md--letter-spacing: -0.96px;
+	--text-display-md--font-weight: 600;
+
+	--text-display-sm: 20px;
+	--text-display-sm--line-height: 28px;
+	--text-display-sm--letter-spacing: -0.6px;
+	--text-display-sm--font-weight: 600;
+
+	--text-body-lg: 18px;
+	--text-body-lg--line-height: 28px;
+
+	--text-body-md: 16px;
+	--text-body-md--line-height: 24px;
+
+	--text-body-sm: 14px;
+	--text-body-sm--line-height: 20px;
+	--text-body-sm--letter-spacing: -0.28px;
+
+	--text-caption: 12px;
+	--text-caption--line-height: 16px;
+
+	--text-code: 13px;
+	--text-code--line-height: 20px;
+
+	/* The dense in-app label size — mono eyebrows, kbd chips, table headers.
+	   One step below `caption`; below the body ramp on purpose. */
+	--text-micro: 11px;
+	--text-micro--line-height: 16px;
+
+	/* ── Radius scale ─────────────────────────────────────────────────────── */
+	--radius-xs: 4px;
+	--radius-sm: 6px;
+	--radius-md: 8px;
+	--radius-lg: 12px;
+	--radius-xl: 16px;
+	--radius-pill-sm: 64px;
+	--radius-pill: 100px;
+
+	/* ── Elevation — stacked offsets + inset hairline ring (never one drop) ── */
+	--shadow-e1: inset 0 0 0 1px #00000014;
+	--shadow-e2: 0 1px 1px #00000005, 0 2px 2px #0000000a, inset 0 0 0 1px #00000014;
+	--shadow-e3: 0 2px 2px #0000000a, 0 8px 8px -8px #0000000a,
+		inset 0 0 0 1px #00000014;
+	--shadow-e4: 0 2px 2px #0000000a, 0 8px 16px -4px #0000000a,
+		inset 0 0 0 1px #00000014;
+	--shadow-e5: 0 1px 1px #00000005, 0 8px 16px -4px #0000000a,
+		0 24px 32px -8px #0000000f, inset 0 0 0 1px #00000014;
+
+	/* ── Containers ───────────────────────────────────────────────────────── */
+	--container-page: 1200px;
+	--container-wide: 1400px;
+}

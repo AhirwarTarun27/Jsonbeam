@@ -23,7 +23,7 @@ const pending = new Map<number, Pending>();
 
 function ensureWorker(): Worker {
 	if (worker) return worker;
-	const w = new Worker(new URL('./json-worker.ts', import.meta.url), { type: 'module' });
+	const w = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
 	w.onmessage = (e: MessageEvent<WorkerRes>) => {
 		const { id, ok, result, error } = e.data;
 		const p = pending.get(id);

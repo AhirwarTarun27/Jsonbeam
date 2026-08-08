@@ -1,4 +1,10 @@
 ---
+// Surface + syntax tokens for the workbench. Imported per-island (not from
+// global.css) so content routes never ship them. See styles/workbench.css.
+import '../../styles/workbench.css';
+import '../../styles/components/controls.css';
+import PrivacyNote from '../ui/PrivacyNote.astro';
+import '../../styles/workbench/table.css';
 /**
  * JSON Table Viewer island — displays JSON as a sortable, filterable, searchable table.
  *
@@ -155,184 +161,21 @@ const sample = `[
 		</span>
 		<span data-stats class="font-mono text-caption text-mute"></span>
 		<span id="jb-tv-path" class="max-w-[36%] truncate font-mono text-caption text-link" aria-live="polite"></span>
-		<span class="ml-auto inline-flex items-center gap-1.5 text-caption text-mute">
-			<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-				<path d="M8 1.5 3 3.5v3.2c0 3 2.1 5.8 5 6.8 2.9-1 5-3.8 5-6.8V3.5L8 1.5Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"></path>
-			</svg>
-			Processed locally — nothing uploaded
-		</span>
+		<PrivacyNote />
 	</div>
 </div>
 
-<style>
-	/* The input pane's surface + syntax highlighting come from the shared
-	   `.jb-hl*` overlay (global.css); the table pane is styled below. */
-	#jb-tv-wrap {
-		background-color: var(--color-editor-bg);
-	}
-	:global(#jb-tv-table thead tr) {
-		background-color: var(--color-editor-line);
-	}
-	:global(#jb-tv-table th) {
-		font-family: var(--font-mono);
-		font-size: 11px;
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
-		font-weight: 400;
-		color: var(--color-hairline-strong);
-		padding: 7px 12px;
-		white-space: nowrap;
-		cursor: pointer;
-		user-select: none;
-		border-right: 1px solid rgba(255, 255, 255, 0.06);
-		position: relative;
-	}
-	:global(#jb-tv-table th.jb-tv-th-rownum) {
-		cursor: default;
-		color: var(--color-mute);
-		min-width: 40px;
-		text-align: right;
-	}
-	:global(#jb-tv-table th:hover:not(.jb-tv-th-rownum)) {
-		color: var(--color-editor-fg);
-	}
-	:global(#jb-tv-table th[aria-sort='ascending']),
-	:global(#jb-tv-table th[aria-sort='descending']) {
-		color: var(--color-cyan);
-	}
-	:global(#jb-tv-table td) {
-		font-family: var(--font-mono);
-		font-size: 13px;
-		padding: 6px 12px;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-		border-right: 1px solid rgba(255, 255, 255, 0.04);
-		white-space: nowrap;
-		max-width: 260px;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		cursor: pointer;
-	}
-	:global(#jb-tv-table td.jb-tv-td-rownum) {
-		color: var(--color-mute);
-		font-size: 11px;
-		text-align: right;
-		cursor: default;
-		min-width: 40px;
-	}
-	:global(#jb-tv-table tbody tr:hover td) {
-		background: rgba(255, 255, 255, 0.04);
-	}
-	:global(#jb-tv-table td.jb-tv-selected) {
-		outline: 1px solid var(--color-link);
-		outline-offset: -1px;
-	}
-
-	/* ── Type colours — dark surface ──────────────────────────────────────── */
-	:global(#jb-tv-table .jb-tc-string)  { color: var(--color-cyan); }
-	:global(#jb-tv-table .jb-tc-number)  { color: var(--color-violet-soft); }
-	:global(#jb-tv-table .jb-tc-bool)    { color: var(--color-warning); }
-	:global(#jb-tv-table .jb-tc-null)    { color: var(--color-mute); font-style: italic; }
-	:global(#jb-tv-table .jb-tc-object)  { color: var(--color-hairline-strong); font-style: italic; }
-	:global(#jb-tv-table .jb-tc-missing) { color: var(--color-mute); }
-
-	/* ── Filter row ────────────────────────────────────────────────────────── */
-	:global(#jb-tv-table .jb-tv-filter-row td) {
-		padding: 4px 6px;
-		background-color: rgba(255, 255, 255, 0.02);
-		cursor: default;
-	}
-	:global(.jb-tv-filter-input) {
-		width: 100%;
-		min-width: 60px;
-		background: rgba(255, 255, 255, 0.06);
-		border: 1px solid rgba(255, 255, 255, 0.1);
-		border-radius: var(--radius-xs);
-		color: var(--color-editor-fg);
-		font-family: var(--font-mono);
-		font-size: 12px;
-		padding: 2px 6px;
-		outline: none;
-	}
-	:global(.jb-tv-filter-input:focus) {
-		border-color: var(--color-link);
-	}
-	:global(.jb-tv-filter-input::placeholder) {
-		color: var(--color-mute);
-	}
-
-	/* ── Search match highlight ────────────────────────────────────────────── */
-	:global(#jb-tv-table .jb-tc-match) {
-		background: rgba(80, 227, 194, 0.15);
-		border-radius: 2px;
-	}
-
-	/* ── Light theme — toggled by .jb-theme-light on #jb-tv ──────────────── */
-	:global(html.jb-theme-light #jb-tv #jb-tv-wrap) {
-		background-color: var(--color-canvas);
-	}
-	:global(html.jb-theme-light #jb-tv #jb-tv-table thead tr) {
-		background-color: var(--color-canvas-soft);
-	}
-	:global(html.jb-theme-light #jb-tv #jb-tv-table th) {
-		color: var(--color-mute);
-		border-right-color: var(--color-hairline);
-	}
-	:global(html.jb-theme-light #jb-tv #jb-tv-table th:hover:not(.jb-tv-th-rownum)) {
-		color: var(--color-ink);
-	}
-	:global(html.jb-theme-light #jb-tv #jb-tv-table th[aria-sort='ascending']),
-	:global(html.jb-theme-light #jb-tv #jb-tv-table th[aria-sort='descending']) {
-		color: var(--color-link);
-	}
-	:global(html.jb-theme-light #jb-tv #jb-tv-table td) {
-		border-bottom-color: var(--color-hairline);
-		border-right-color: rgba(0, 0, 0, 0.03);
-	}
-	:global(html.jb-theme-light #jb-tv #jb-tv-table tbody tr:hover td) {
-		background: var(--color-canvas-soft);
-	}
-	:global(html.jb-theme-light #jb-tv #jb-tv-table .jb-tc-string)  { color: var(--color-link-deep); }
-	:global(html.jb-theme-light #jb-tv #jb-tv-table .jb-tc-number)  { color: var(--color-violet); }
-	:global(html.jb-theme-light #jb-tv #jb-tv-table .jb-tc-bool)    { color: var(--color-cyan-deep); }
-	:global(html.jb-theme-light #jb-tv #jb-tv-table .jb-tc-null)    { color: var(--color-mute); }
-	:global(html.jb-theme-light #jb-tv #jb-tv-table .jb-tc-object)  { color: var(--color-hairline-strong); }
-	:global(html.jb-theme-light #jb-tv #jb-tv-table .jb-tv-filter-row td) {
-		background-color: var(--color-canvas-soft-2);
-	}
-	:global(html.jb-theme-light #jb-tv .jb-tv-filter-input) {
-		background: var(--color-canvas);
-		border-color: var(--color-hairline);
-		color: var(--color-ink);
-	}
-	:global(html.jb-theme-light #jb-tv #jb-tv-table .jb-tc-match) {
-		background: var(--color-link-bg-soft);
-	}
-
-	/* Coarse pointers: inflate touch targets on the filter inputs */
-	@media (pointer: coarse) {
-		:global(.jb-tv-filter-input) { height: 32px; }
-	}
-
-	/* ── Text selection (input selection handled by .jb-hl) ─────────────────── */
-	/* Dark mode: blue-tinted selection visible on the dark editor surface */
-	:global(#jb-tv-table *::selection) {
-		background-color: var(--color-editor-sel-dark);
-		color: var(--color-editor-fg);
-	}
-	/* Light mode: soft-blue selection visible on the light canvas */
-	:global(html.jb-theme-light #jb-tv #jb-tv-table *::selection) {
-		background-color: var(--color-editor-sel-light);
-		color: var(--color-ink);
-	}
-</style>
 
 <script>
-	import { checkJson } from '../lib/json';
-	import { loadDoc, saveDoc } from '../lib/doc-store';
-	import { initThemeToggle } from '../lib/island-theme';
-	import { initFullscreen } from '../lib/island-fullscreen';
-	import { copyToClipboard } from '../lib/island-clipboard';
-	import { attachHighlight } from '../lib/island-highlight';
+	import { checkJson } from '../../lib/json/parse';
+	import { loadDoc, saveDoc } from '../../lib/doc-store';
+	import { initThemeToggle } from '../../lib/workbench/theme';
+	import { initFullscreen } from '../../lib/workbench/fullscreen';
+	import { copyToClipboard } from '../../lib/workbench/clipboard';
+	import { attachHighlight } from '../../lib/workbench/highlight';
+	import { downloadText } from '../../lib/workbench/download';
+	import { createStatusBar } from '../../lib/workbench/status-bar';
+	import { debounce } from '../../lib/workbench/timing';
 
 	// ── Types ───────────────────────────────────────────────────────────────
 	type JsonValue = string | number | boolean | null | JsonValue[] | { [k: string]: JsonValue };
@@ -378,8 +221,6 @@ const sample = `[
 		root && inputEl && infoEl && wrapEl && theadEl &&
 		tbodyEl && moreBtn && emptyEl && searchEl && statusEl && pathEl && statsEl
 	) {
-		const dot   = statusEl.querySelector<HTMLElement>('[data-dot]')!;
-		const label = statusEl.querySelector<HTMLElement>('[data-label]')!;
 
 		// Non-null aliases so closures see non-nullable types (TypeScript CFA limitation)
 		const input  = inputEl;
@@ -391,7 +232,6 @@ const sample = `[
 		const empty  = emptyEl;
 		const search = searchEl;
 		const spath  = pathEl;
-		const sstat  = statsEl;
 
 		// Syntax-highlight the input JSON (shared overlay — matches the formatter).
 		const hl = attachHighlight(input);
@@ -718,27 +558,12 @@ const sample = `[
 			if (p) p.textContent = msg;
 		}
 
-		// ── Status bar ──────────────────────────────────────────────────────
-		type StatusState = 'ok' | 'error' | 'idle';
-		const statusColors: Record<StatusState, string> = {
-			ok: 'var(--color-success)',
-			error: 'var(--color-error)',
-			idle: 'var(--color-mute)',
-		};
-		function setStatus(state: StatusState, text: string): void {
-			dot.style.backgroundColor = statusColors[state];
-			label.textContent = text;
-			label.style.color = state === 'error' ? 'var(--color-error-deep)' : 'var(--color-ink)';
-		}
+		// ── Status bar (lib/workbench/status-bar) ───────────────────────────
+		const statusBar = createStatusBar(root, { refresh: () => refreshStatus() });
+		const setStatus = statusBar.set;
+		const flashStatus = statusBar.flash;
 		function setStats(chars: number, extra?: string): void {
-			sstat.textContent = extra ? `${chars.toLocaleString()} chars · ${extra}` : `${chars.toLocaleString()} chars`;
-		}
-
-		let flashTimer = 0;
-		function flashStatus(state: StatusState, text: string): void {
-			setStatus(state, text);
-			clearTimeout(flashTimer);
-			flashTimer = window.setTimeout(refreshStatus, 1400);
+			statusBar.stats(extra ? `${chars.toLocaleString()} chars · ${extra}` : `${chars.toLocaleString()} chars`);
 		}
 
 		// ── Parse + render ──────────────────────────────────────────────────
@@ -834,16 +659,7 @@ const sample = `[
 		}
 
 		function downloadCsv(): void {
-			const csv = buildCsv();
-			const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-			const url = URL.createObjectURL(blob);
-			const a = document.createElement('a');
-			a.href = url;
-			a.download = 'data.csv';
-			document.body.appendChild(a);
-			a.click();
-			a.remove();
-			URL.revokeObjectURL(url);
+			downloadText(buildCsv(), 'data.csv', 'text/csv;charset=utf-8;');
 			flashStatus('ok', `Exported ${filteredRows.length.toLocaleString()} rows`);
 		}
 
@@ -946,11 +762,7 @@ const sample = `[
 		});
 
 		// ── Input debounce ───────────────────────────────────────────────────
-		let inputTimer = 0;
-		input.addEventListener('input', () => {
-			clearTimeout(inputTimer);
-			inputTimer = window.setTimeout(applyInput, 300);
-		});
+		input.addEventListener('input', debounce(applyInput));
 
 		// ── Init ─────────────────────────────────────────────────────────────
 		const carried = loadDoc();

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { checkJson, positionFromMessage } from '../src/lib/json';
+import { checkJson, positionFromMessage } from '../src/lib/json/parse';
 
 describe('checkJson', () => {
 	it('accepts valid JSON', () => {
