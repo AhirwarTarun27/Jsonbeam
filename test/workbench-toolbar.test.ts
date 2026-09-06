@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, afterEach } from 'vitest';
-import { bindActions } from '../src/lib/workbench/toolbar';
+import { bindActions, flashLabel } from '../src/lib/workbench/toolbar';
+import { FLASH_MS } from '../src/lib/workbench/timing';
 
 afterEach(() => {
 	document.body.innerHTML = '';
+	vi.useRealTimers();
 });
 
 function mount(html: string): HTMLElement {
@@ -102,5 +104,68 @@ describe('bindActions', () => {
 		unbind();
 		click(root.querySelector('button')!);
 		expect(copy).not.toHaveBeenCalled();
+	});
+});
+
+describe('flashLabel', () => {
+	const button = (text: string): HTMLElement => {
+		const el = document.createElement('button');
+		el.textContent = text;
+		document.body.appendChild(el);
+		return el;
+	};
+
+	it('swaps the label and restores it after the flash window', () => {
+		vi.useFakeTimers();
+		const el = button('Copy');
+
+		flashLabel(el, 'Copied!');
+		expect(el.textContent).toBe('Copied!');
+
+		vi.advanceTimersByTime(FLASH_MS - 1);
+		expect(el.textContent).toBe('Copied!');
+
+		vi.advanceTimersByTime(1);
+		expect(el.textContent).toBe('Copy');
+	});
+
+	it('restores the FIRST label when flashed again mid-flash', () => {
+		// The bug in all three inline copies: a second click read the already-
+		// swapped text as the "original", so the button said Copied! forever.
+		vi.useFakeTimers();
+		const el = button('Copy');
+
+		flashLabel(el, 'Copied!');
+		vi.advanceTimersByTime(FLASH_MS / 2);
+		flashLabel(el, 'Copied!');
+
+		// The first timer's deadline passes — it must not restore early either.
+		vi.advanceTimersByTime(FLASH_MS / 2);
+		expect(el.textContent).toBe('Copied!');
+
+		vi.advanceTimersByTime(FLASH_MS / 2);
+		expect(el.textContent).toBe('Copy');
+	});
+
+	it('keeps each control’s label independent', () => {
+		vi.useFakeTimers();
+		const copy = button('Copy');
+		const download = button('Download');
+
+		flashLabel(copy, 'Copied!');
+		flashLabel(download, 'Saved');
+		vi.advanceTimersByTime(FLASH_MS);
+
+		expect(copy.textContent).toBe('Copy');
+		expect(download.textContent).toBe('Download');
+	});
+
+	it('accepts a custom duration', () => {
+		vi.useFakeTimers();
+		const el = button('Copy');
+
+		flashLabel(el, 'Copied!', 100);
+		vi.advanceTimersByTime(100);
+		expect(el.textContent).toBe('Copy');
 	});
 });

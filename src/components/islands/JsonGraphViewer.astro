@@ -136,10 +136,10 @@ const sample = `{
 				autocomplete="off"
 				autocapitalize="off"
 				aria-label="JSON input"
-				class="h-[34vh] min-h-[220px] w-full lg:h-[72vh]"
+				class="jb-pane-input w-full"
 			>{sample}</textarea>
 		</div>
-		<div id="jb-gstage" class="relative h-[56vh] min-h-[340px] overflow-hidden lg:h-[72vh]">
+		<div id="jb-gstage" class="jb-pane-output relative overflow-hidden">
 			<svg
 				id="jb-gsvg"
 				class="h-full w-full touch-none select-none"
@@ -193,6 +193,7 @@ const sample = `{
 	import { attachHighlight } from '../../lib/workbench/highlight';
 	import { downloadBlob } from '../../lib/workbench/download';
 	import { createStatusBar } from '../../lib/workbench/status-bar';
+	import { bindActions } from '../../lib/workbench/toolbar';
 	import { debounce } from '../../lib/workbench/timing';
 
 	const root = document.getElementById('jb-graph-viewer');
@@ -1532,14 +1533,7 @@ const sample = `{
 				input.focus();
 			},
 		};
-		root.querySelectorAll('[data-action]').forEach((btn) => {
-			const action = btn.getAttribute('data-action');
-			if (!action) return;
-			btn.addEventListener('click', () => {
-				const fn = actions[action];
-				if (fn) void fn();
-			});
-		});
+		bindActions(root, actions);
 
 		let searchTimer = 0;
 		searchInput?.addEventListener('input', () => {

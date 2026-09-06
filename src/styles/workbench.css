@@ -27,5 +27,9 @@
 /* The syntax-highlight overlay behind every <textarea> JSON input. */
 @import "./workbench/highlight.css";
 
+/* The named pane-height scale. Imported BEFORE fullscreen.css so that mode's
+   overrides win on an equal-specificity tie. */
+@import "./workbench/panes.css";
+
 /* The shared "Full screen" expand mode. */
 @import "./workbench/fullscreen.css";

@@ -113,7 +113,7 @@ const sampleB = `{
 				autocomplete="off"
 				autocapitalize="off"
 				aria-label="JSON A — original document"
-				class="h-[28vh] min-h-[180px] w-full"
+				class="jb-pane-input-half w-full"
 			>{sampleA}</textarea>
 		</div>
 		<div>
@@ -129,7 +129,7 @@ const sampleB = `{
 				autocomplete="off"
 				autocapitalize="off"
 				aria-label="JSON B — modified document"
-				class="h-[28vh] min-h-[180px] w-full"
+				class="jb-pane-input-half w-full"
 			>{sampleB}</textarea>
 		</div>
 	</div>
@@ -174,7 +174,7 @@ const sampleB = `{
 	<div
 		data-jb-fill
 		id="jb-dv-tree"
-		class="h-[44vh] min-h-[320px] overflow-auto"
+		class="jb-pane-output-half overflow-auto"
 		tabindex="0"
 		role="region"
 		aria-label="JSON diff output — press n for next change, p for previous"
@@ -210,6 +210,7 @@ const sampleB = `{
 	import { attachHighlight } from '../../lib/workbench/highlight';
 	import { downloadText } from '../../lib/workbench/download';
 	import { createStatusBar } from '../../lib/workbench/status-bar';
+	import { bindActions } from '../../lib/workbench/toolbar';
 	import { debounce } from '../../lib/workbench/timing';
 
 	// ── Types ───────────────────────────────────────────────────────────────
@@ -1008,11 +1009,7 @@ const sampleB = `{
 			next: () => navigateTo(changeIdx < 0 ? 0 : changeIdx + 1),
 		};
 
-		root.querySelectorAll('[data-action]').forEach(btn => {
-			const act = btn.getAttribute('data-action');
-			if (!act) return;
-			btn.addEventListener('click', () => { const fn = actions[act]; if (fn) fn(); });
-		});
+		bindActions(root, actions);
 
 		// Keyboard shortcuts while diff tree is focused
 		tree.addEventListener('keydown', (e: KeyboardEvent) => {

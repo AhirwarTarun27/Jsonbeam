@@ -108,12 +108,12 @@ const sample = `[
 				autocomplete="off"
 				autocapitalize="off"
 				aria-label="JSON input"
-				class="h-[40vh] min-h-[240px] w-full lg:h-[70vh]"
+				class="jb-pane-input w-full"
 			>{sample}</textarea>
 		</div>
 
 		<!-- Table pane -->
-		<div class="flex flex-col h-[56vh] min-h-[320px] lg:h-[70vh]">
+		<div class="jb-pane-output flex flex-col">
 			<!-- Info bar: "42 objects · 8 columns · 42 rows" -->
 			<div
 				id="jb-tv-info"
@@ -175,6 +175,7 @@ const sample = `[
 	import { attachHighlight } from '../../lib/workbench/highlight';
 	import { downloadText } from '../../lib/workbench/download';
 	import { createStatusBar } from '../../lib/workbench/status-bar';
+	import { bindActions } from '../../lib/workbench/toolbar';
 	import { debounce } from '../../lib/workbench/timing';
 
 	// ── Types ───────────────────────────────────────────────────────────────
@@ -745,11 +746,7 @@ const sample = `[
 			clear: () => { input.value = ''; applyInput(); input.focus(); },
 		};
 
-		root.querySelectorAll('[data-action]').forEach(btn => {
-			const act = btn.getAttribute('data-action');
-			if (!act) return;
-			btn.addEventListener('click', () => { const fn = actions[act]; if (fn) void fn(); });
-		});
+		bindActions(root, actions);
 
 		// ── Search ──────────────────────────────────────────────────────────
 		let searchTimer = 0;

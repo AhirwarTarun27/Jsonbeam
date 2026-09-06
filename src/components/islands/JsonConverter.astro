@@ -162,7 +162,7 @@ const OUTPUT_LABEL: Record<ConvertTarget, string> = {
 	</div>
 
 	<!-- Two-pane content -->
-	<div data-jb-split class="grid grid-cols-1 lg:grid-cols-2">
+	<div data-jb-split class="jb-split-dense grid grid-cols-1 lg:grid-cols-2">
 		<!-- Left: JSON input -->
 		<div class="border-b border-hairline lg:border-b-0 lg:border-r">
 			<div class="flex items-center gap-2 border-b border-hairline bg-canvas-soft px-3 py-1">
@@ -176,7 +176,7 @@ const OUTPUT_LABEL: Record<ConvertTarget, string> = {
 				autocomplete="off"
 				autocapitalize="off"
 				aria-label="JSON input document"
-				class="h-[40vh] min-h-[240px] w-full lg:h-[62vh] lg:min-h-[360px]"
+				class="jb-pane-input w-full"
 			></textarea>
 		</div>
 
@@ -192,7 +192,7 @@ const OUTPUT_LABEL: Record<ConvertTarget, string> = {
 				)}
 				<span id="jb-cv-meta" class="ml-auto font-mono text-caption text-mute" aria-live="polite"></span>
 			</div>
-			<div data-jb-fill id="jb-cv-output" class="relative h-[54vh] min-h-[320px] overflow-auto lg:h-[62vh] lg:min-h-[360px]" role="region" aria-label="Conversion output">
+			<div data-jb-fill id="jb-cv-output" class="jb-pane-output relative overflow-auto" role="region" aria-label="Conversion output">
 				<pre id="jb-cv-code" class="hidden m-0 px-3 py-3 font-mono text-code" aria-live="polite"></pre>
 				<div id="jb-cv-table-wrap" class="hidden"></div>
 				<div id="jb-cv-empty" class="hidden flex-col items-center justify-center gap-2 px-6 py-12 text-center">
@@ -229,6 +229,8 @@ import type { TsOptions } from '../../lib/convert/emit-typescript';
 import type { GoOptions } from '../../lib/convert/emit-go';
 import { downloadText } from '../../lib/workbench/download';
 import { createStatusBar } from '../../lib/workbench/status-bar';
+import { bindActions, flashLabel } from '../../lib/workbench/toolbar';
+import { debounce } from '../../lib/workbench/timing';
 
 type ConvertTarget = 'csv' | 'yaml' | 'typescript' | 'go';
 
@@ -292,8 +294,6 @@ const hl = attachHighlight(input);
 let lastText = '';
 let lastCsv: CsvResult | null = null;
 let csvView: 'table' | 'csv' = 'table';
-let debounceTimer = 0;
-const DEBOUNCE = 250;
 const TABLE_ROW_CAP = 1000;
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
@@ -529,10 +529,7 @@ async function convert(): Promise<void> {
 	}
 }
 
-function schedule(): void {
-	clearTimeout(debounceTimer);
-	debounceTimer = window.setTimeout(convert, DEBOUNCE);
-}
+const schedule = debounce(convert);
 
 // ─── Download ─────────────────────────────────────────────────────────────────
 
@@ -565,42 +562,32 @@ function init(): void {
 	hl.refresh();
 	convert();
 
-	document.querySelectorAll<HTMLElement>('[data-action]').forEach((btn) => {
-		btn.addEventListener('click', async () => {
-			switch (btn.dataset['action']) {
-				case 'sample':
-					input.value = sample;
-					hl.refresh();
-					convert();
-					break;
-				case 'clear':
-					input.value = '';
-					hl.refresh();
-					saveDoc('');
-					convert();
-					break;
-				case 'copy': {
-					if (!lastText) return;
-					const orig = btn.textContent;
-					btn.textContent = (await copyToClipboard(lastText)) ? 'Copied!' : 'Clipboard blocked';
-					setTimeout(() => { btn.textContent = orig; }, 1200);
-					break;
-				}
-				case 'download':
-					download();
-					break;
-				case 'theme':
-					themeCtl.toggle();
-					break;
-			}
-		});
+	bindActions(root, {
+		sample: () => {
+			input.value = sample;
+			hl.refresh();
+			convert();
+		},
+		clear: () => {
+			input.value = '';
+			hl.refresh();
+			saveDoc('');
+			convert();
+		},
+		copy: async (btn) => {
+			if (!lastText) return;
+			flashLabel(btn, (await copyToClipboard(lastText)) ? 'Copied!' : 'Clipboard blocked');
+		},
+		download,
+		theme: () => themeCtl.toggle(),
 	});
 
 	// CSV view toggle
-	document.querySelectorAll<HTMLElement>('[data-view]').forEach((btn) => {
+	const viewBtns = root.querySelectorAll<HTMLElement>('[data-view]');
+	viewBtns.forEach((btn) => {
 		btn.addEventListener('click', () => {
 			csvView = btn.dataset['view'] as 'table' | 'csv';
-			document.querySelectorAll<HTMLElement>('[data-view]').forEach((b) => {
+			viewBtns.forEach((b) => {
 				b.setAttribute('aria-pressed', b.dataset['view'] === csvView ? 'true' : 'false');
 			});
 			renderCsv();

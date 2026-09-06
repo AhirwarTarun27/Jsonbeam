@@ -70,15 +70,15 @@ const sample = `{
 				autocomplete="off"
 				autocapitalize="off"
 				aria-label="JSON input"
-				class="h-[40vh] min-h-[240px] w-full lg:h-[74vh]"
+				class="jb-pane-input w-full"
 			>{sample}</textarea>
 		</div>
 		<div
 			id="jb-tree"
 			data-jb-tree
 			role="tree"
-			aria-label="JSON tree"
-			class="h-[54vh] min-h-[320px] overflow-auto lg:h-[74vh]"
+			aria-label="JSON tree — use arrow keys to navigate"
+			class="jb-pane-output overflow-auto"
 		></div>
 	</div>
 
@@ -120,7 +120,9 @@ const sample = `{
 	import { copyToClipboard } from '../../lib/workbench/clipboard';
 	import { attachHighlight } from '../../lib/workbench/highlight';
 	import { createStatusBar } from '../../lib/workbench/status-bar';
+	import { bindActions } from '../../lib/workbench/toolbar';
 	import { debounce } from '../../lib/workbench/timing';
+	import { createJsonTree, topSummary, type JsonValue } from '../../lib/workbench/json-tree';
 
 	const root = document.getElementById('jb-viewer');
 	const inputEl = document.getElementById('jb-input') as HTMLTextAreaElement | null;
@@ -128,10 +130,6 @@ const sample = `{
 
 	if (root && inputEl && treeEl) {
 		const input = inputEl;
-		const tree = treeEl;
-
-		type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
-		type JsonObject = { [key: string]: JsonValue };
 
 		// Captured once so the Sample button can restore the starting document.
 		const SAMPLE = input.value;
@@ -152,236 +150,20 @@ const sample = `{
 		const setStatus = statusBar.set;
 		const flashStatus = statusBar.flash;
 
-		// Per-container build closures — children are materialised lazily on first
-		// expand (the large-file safety valve).
-		const builders = new WeakMap<HTMLElement, () => void>();
-
-		// Build the caret SVG once and clone it per node — re-parsing innerHTML for
-		// every row is a real cost when a document has thousands of nodes.
-		const chevronHost = document.createElement('span');
-		chevronHost.innerHTML =
-			'<svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
-		const CHEVRON_NODE = chevronHost.firstElementChild;
-
-		// Auto-expand the first level only when the root is small enough that doing
-		// so won't materialise a huge subtree (keeps the lazy strategy honest).
-		const AUTO_EXPAND_MAX = 100;
-
-		// Never build more than this many sibling rows in one synchronous pass — wide
-		// arrays/objects render the first chunk and a "Show more" control for the rest,
-		// so a single render can't freeze the tab regardless of breadth.
-		const CHUNK = 1000;
-
-		const IDENT = /^[A-Za-z_$][\w$]*$/;
-
-		function isObject(v: JsonValue): v is JsonObject {
-			return typeof v === 'object' && v !== null && !Array.isArray(v);
-		}
-		function isArray(v: JsonValue): v is JsonValue[] {
-			return Array.isArray(v);
+		async function copyPath(path: string): Promise<void> {
+			if (!path) return;
+			if (await copyToClipboard(path)) flashStatus('ok', `Copied path: ${path}`);
+			else flashStatus('error', 'Clipboard unavailable');
 		}
 
-		function childPath(parent: string, key: string | number): string {
-			if (typeof key === 'number') return `${parent}[${key}]`;
-			return IDENT.test(key) ? `${parent}.${key}` : `${parent}[${JSON.stringify(key)}]`;
-		}
-
-		function entriesOf(value: JsonObject | JsonValue[]): [string | number, JsonValue][] {
-			return isArray(value)
-				? value.map((v, i) => [i, v] as [number, JsonValue])
-				: Object.entries(value);
-		}
-
-		function punct(text: string): HTMLElement {
-			const span = document.createElement('span');
-			span.className = 'jb-punct';
-			span.textContent = text;
-			return span;
-		}
-
-		function keySpan(key: string | number, path: string): HTMLElement {
-			const span = document.createElement('span');
-			span.className = 'jb-key';
-			span.textContent = typeof key === 'number' ? String(key) : key;
-			span.setAttribute('data-copy-path', '');
-			span.setAttribute('data-path', path);
-			span.setAttribute('title', `Copy path: ${path}`);
-			return span;
-		}
-
-		function valueSpan(value: string | number | boolean | null): HTMLElement {
-			const span = document.createElement('span');
-			span.className = 'jb-val';
-			if (typeof value === 'string') span.classList.add('jb-string');
-			else if (typeof value === 'number') span.classList.add('jb-number');
-			else if (typeof value === 'boolean') span.classList.add('jb-bool');
-			else span.classList.add('jb-null');
-			span.textContent = JSON.stringify(value);
-			return span;
-		}
-
-		function summarySpan(value: JsonObject | JsonValue[]): HTMLElement {
-			const span = document.createElement('span');
-			span.className = 'jb-summary';
-			span.setAttribute('data-toggle', '');
-			if (isArray(value)) {
-				const n = value.length;
-				span.textContent = n === 0 ? '[ ]' : `[ ${n} ${n === 1 ? 'item' : 'items'} ]`;
-			} else {
-				const n = Object.keys(value).length;
-				span.textContent = n === 0 ? '{ }' : `{ ${n} ${n === 1 ? 'key' : 'keys'} }`;
-			}
-			return span;
-		}
-
-		// Render entries [start, start+CHUNK) into a container; if more remain, add a
-		// "Show more" button that renders the next chunk on demand.
-		function appendChildren(
-			container: HTMLElement,
-			entries: [string | number, JsonValue][],
-			parentPath: string,
-			start: number,
-		): void {
-			const end = Math.min(start + CHUNK, entries.length);
-			const frag = document.createDocumentFragment();
-			for (let i = start; i < end; i++) {
-				const entry = entries[i];
-				frag.appendChild(createItem(entry[0], entry[1], parentPath));
-			}
-			container.appendChild(frag);
-			if (end < entries.length) {
-				const remaining = entries.length - end;
-				const more = document.createElement('button');
-				more.type = 'button';
-				more.className = 'jb-more';
-				more.textContent = `Show ${Math.min(CHUNK, remaining)} more — ${remaining.toLocaleString()} left`;
-				more.addEventListener('click', () => {
-					more.remove();
-					appendChildren(container, entries, parentPath, end);
-				});
-				container.appendChild(more);
-			}
-		}
-
-		function createItem(key: string | number | null, value: JsonValue, parentPath: string): HTMLElement {
-			const path = key === null ? parentPath : childPath(parentPath, key);
-			const item = document.createElement('div');
-			item.setAttribute('role', 'treeitem');
-			const row = document.createElement('div');
-			row.className = 'jb-row';
-
-			if (isObject(value) || isArray(value)) {
-				item.setAttribute('aria-expanded', 'false');
-				const toggle = document.createElement('button');
-				toggle.type = 'button';
-				toggle.className = 'jb-toggle';
-				toggle.setAttribute('data-toggle', '');
-				toggle.setAttribute('aria-label', 'Expand');
-				if (CHEVRON_NODE) toggle.appendChild(CHEVRON_NODE.cloneNode(true));
-				row.appendChild(toggle);
-				if (key !== null) {
-					row.appendChild(keySpan(key, path));
-					row.appendChild(punct(':'));
-				}
-				row.appendChild(summarySpan(value));
-
-				const group = document.createElement('div');
-				group.className = 'jb-children';
-				group.setAttribute('role', 'group');
-				group.hidden = true;
-
-				item.appendChild(row);
-				item.appendChild(group);
-
-				const container = value;
-				let built = false;
-				builders.set(item, () => {
-					if (built) return;
-					built = true;
-					appendChildren(group, entriesOf(container), path, 0);
-				});
-			} else {
-				const leaf = document.createElement('span');
-				leaf.className = 'jb-toggle jb-toggle--leaf';
-				row.appendChild(leaf);
-				if (key !== null) {
-					row.appendChild(keySpan(key, path));
-					row.appendChild(punct(':'));
-				}
-				row.appendChild(valueSpan(value));
-				item.appendChild(row);
-			}
-			return item;
-		}
-
-		function toggleItem(item: HTMLElement, expand?: boolean): void {
-			const group = item.querySelector<HTMLElement>(':scope > .jb-children');
-			if (!group) return;
-			const isExpanded = item.getAttribute('aria-expanded') === 'true';
-			const next = expand === undefined ? !isExpanded : expand;
-			if (next) builders.get(item)?.();
-			group.hidden = !next;
-			item.setAttribute('aria-expanded', String(next));
-			const toggle = item.querySelector<HTMLElement>(':scope > .jb-row > .jb-toggle');
-			toggle?.setAttribute('aria-label', next ? 'Collapse' : 'Expand');
-		}
-
-		function expandTopLevel(): void {
-			tree
-				.querySelectorAll<HTMLElement>(':scope > [role="treeitem"][aria-expanded="false"]')
-				.forEach((item) => toggleItem(item, true));
-		}
-
-		function expandAll(): void {
-			let guard = 0;
-			while (guard < 100000) {
-				const collapsed = tree.querySelectorAll<HTMLElement>('[role="treeitem"][aria-expanded="false"]');
-				if (collapsed.length === 0) break;
-				collapsed.forEach((item) => toggleItem(item, true));
-				guard++;
-			}
-		}
-
-		function collapseAll(): void {
-			tree
-				.querySelectorAll<HTMLElement>('[role="treeitem"][aria-expanded="true"]')
-				.forEach((item) => toggleItem(item, false));
-		}
-
-		function showPlaceholder(message: string): void {
-			tree.replaceChildren();
-			const p = document.createElement('div');
-			p.className = 'jb-placeholder';
-			p.textContent = message;
-			tree.appendChild(p);
-		}
-
-		function renderRoot(value: JsonValue): void {
-			tree.replaceChildren();
-			if (isObject(value) || isArray(value)) {
-				const entries = entriesOf(value);
-				if (entries.length === 0) {
-					showPlaceholder(isArray(value) ? 'Empty array — [ ]' : 'Empty object — { }');
-					return;
-				}
-				appendChildren(tree, entries, '$', 0);
-				if (entries.length <= AUTO_EXPAND_MAX) expandTopLevel();
-			} else {
-				tree.appendChild(createItem(null, value, '$'));
-			}
-		}
-
-		function topSummary(value: JsonValue): string {
-			if (isArray(value)) {
-				const n = value.length;
-				return `${n} ${n === 1 ? 'item' : 'items'}`;
-			}
-			if (isObject(value)) {
-				const n = Object.keys(value).length;
-				return `${n} ${n === 1 ? 'key' : 'keys'}`;
-			}
-			return 'scalar';
-		}
+		// The tree widget itself — renderer, expand/collapse, roving focus and the
+		// full ARIA keyboard pattern all live in lib/workbench/json-tree, shared
+		// byte-for-byte with /json-tree-viewer. This island has no breadcrumb, so
+		// it simply passes none.
+		const tree = createJsonTree({
+			tree: treeEl,
+			onCopyPath: (path) => void copyPath(path),
+		});
 
 		function setStats(chars: number, summary: string | null): void {
 			const parts = [`${chars.toLocaleString()} chars`];
@@ -417,14 +199,14 @@ const sample = `{
 			if (text.trim() === '') {
 				setStatus('idle', 'Empty');
 				setStats(text.length, null);
-				showPlaceholder('Paste JSON in the editor to explore it as a tree.');
+				tree.placeholder('Paste JSON in the editor to explore it as a tree.');
 				return;
 			}
 			const res = checkJson(text);
 			if (!res.ok) {
 				setStatus('error', res.message);
 				setStats(text.length, null);
-				showPlaceholder('Fix the JSON errors to see the tree.');
+				tree.placeholder('Fix the JSON errors to see the tree.');
 				return;
 			}
 			let parsed: JsonValue;
@@ -432,12 +214,12 @@ const sample = `{
 				parsed = JSON.parse(text) as JsonValue;
 			} catch {
 				setStatus('error', 'Invalid JSON');
-				showPlaceholder('Fix the JSON errors to see the tree.');
+				tree.placeholder('Fix the JSON errors to see the tree.');
 				return;
 			}
 			setStatus('ok', 'Valid JSON');
 			setStats(text.length, topSummary(parsed));
-			renderRoot(parsed);
+			tree.render(parsed);
 		}
 
 		// Re-render, then carry the working doc to the next tool page. Used for every
@@ -464,12 +246,6 @@ const sample = `{
 			else flashStatus('error', 'Clipboard unavailable');
 		}
 
-		async function copyPath(path: string): Promise<void> {
-			if (!path) return;
-			if (await copyToClipboard(path)) flashStatus('ok', `Copied path: ${path}`);
-			else flashStatus('error', 'Clipboard unavailable');
-		}
-
 		// ── Theme toggle — shared across every tool island (lib/island-theme). ───
 		const themeCtl = initThemeToggle({ root });
 		initFullscreen({
@@ -478,9 +254,9 @@ const sample = `{
 			onChange: () => window.dispatchEvent(new Event('resize')),
 		});
 
-		const actions: Record<string, () => void | Promise<void>> = {
-			expand: expandAll,
-			collapse: collapseAll,
+		bindActions(root, {
+			expand: () => tree.expandAll(),
+			collapse: () => tree.collapseAll(),
 			theme: () => themeCtl.toggle(),
 			sample: () => {
 				input.value = SAMPLE;
@@ -492,29 +268,6 @@ const sample = `{
 				applyInput();
 				input.focus();
 			},
-		};
-
-		root.querySelectorAll('[data-action]').forEach((btn) => {
-			const action = btn.getAttribute('data-action');
-			if (!action) return;
-			btn.addEventListener('click', () => {
-				const fn = actions[action];
-				if (fn) void fn();
-			});
-		});
-
-		// One delegated listener for the whole tree: copy-path beats toggle.
-		tree.addEventListener('click', (e) => {
-			const target = e.target as HTMLElement;
-			const copyEl = target.closest<HTMLElement>('[data-copy-path]');
-			if (copyEl) {
-				void copyPath(copyEl.getAttribute('data-path') ?? '');
-				return;
-			}
-			const toggleTarget = target.closest<HTMLElement>('[data-toggle]');
-			if (!toggleTarget) return;
-			const item = toggleTarget.closest<HTMLElement>('[role="treeitem"]');
-			if (item) toggleItem(item);
 		});
 
 		input.addEventListener('input', debounce(applyInput));

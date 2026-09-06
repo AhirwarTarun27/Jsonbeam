@@ -124,7 +124,7 @@ import '../../styles/workbench/query.css';
 	</div>
 
 	<!-- Main two-pane content -->
-	<div data-jb-split class="grid grid-cols-1 lg:grid-cols-2">
+	<div data-jb-split class="jb-split-dense grid grid-cols-1 lg:grid-cols-2">
 		<!-- Left: JSON input -->
 		<div class="border-b border-hairline lg:border-b-0 lg:border-r">
 			<div class="flex items-center gap-2 border-b border-hairline bg-canvas-soft px-3 py-1">
@@ -138,7 +138,7 @@ import '../../styles/workbench/query.css';
 				autocomplete="off"
 				autocapitalize="off"
 				aria-label="JSON input document"
-				class="h-[40vh] min-h-[240px] w-full lg:h-[62vh] lg:min-h-[360px]"
+				class="jb-pane-input w-full"
 			></textarea>
 		</div>
 
@@ -149,7 +149,7 @@ import '../../styles/workbench/query.css';
 				<span id="jb-qt-count" class="font-mono text-caption text-mute" aria-live="polite"></span>
 				<span id="jb-qt-eval-ms" class="ml-auto font-mono text-caption text-mute"></span>
 			</div>
-			<div data-jb-fill id="jb-qt-result" class="relative h-[54vh] min-h-[320px] overflow-auto lg:h-[62vh] lg:min-h-[360px]" role="region" aria-label="Query result">
+			<div data-jb-fill id="jb-qt-result" class="jb-pane-output relative overflow-auto" role="region" aria-label="Query result">
 				<div id="jb-qt-out"     class="hidden px-3 py-3 font-mono text-code" aria-live="polite"></div>
 				<div id="jb-qt-empty"   class="hidden flex-col items-center justify-center gap-2 px-6 py-12 text-center">
 					<p class="font-mono text-caption text-mute">Enter a query above and press Run.</p>
@@ -437,6 +437,7 @@ import { copyToClipboard } from '../../lib/workbench/clipboard';
 import { attachHighlight } from '../../lib/workbench/highlight';
 import { downloadText } from '../../lib/workbench/download';
 import { createStatusBar } from '../../lib/workbench/status-bar';
+import { bindActions, flashLabel } from '../../lib/workbench/toolbar';
 import { debounce } from '../../lib/workbench/timing';
 
 const sample = `{
@@ -892,92 +893,73 @@ function init() {
 	setPanel('empty');
 
 	// Wire all button actions
-	document.querySelectorAll<HTMLElement>('[data-action]').forEach(btn => {
-		btn.addEventListener('click', async e => {
-			const action = btn.dataset['action']!;
-			switch (action) {
-				case 'sample':
-					input.value = sample;
-					hl.refresh();
-					validateInput();
-					scheduleQuery();
-					break;
-				case 'clear':
-					input.value = '';
-					hl.refresh();
-					expr.value = '';
-					out.replaceChildren();
-					setPanel('empty');
-					count.textContent = '';
-					setStatus('idle', 'Ready');
-					inputStat.textContent = '';
-					saveDoc('');
-					break;
-				case 'run':
-					await runQuery();
-					break;
-				case 'mode':
-					switchMode(btn.dataset['mode'] as Mode);
-					break;
-				case 'copy-result': {
-					const text = lastResult.length === 1
-						? JSON.stringify(lastResult[0], null, 2)
-						: JSON.stringify(lastResult, null, 2);
-					const orig = btn.textContent;
-					btn.textContent = (await copyToClipboard(text)) ? 'Copied!' : 'Clipboard blocked';
-					setTimeout(() => { btn.textContent = orig; }, 1200);
-					break;
-				}
-				case 'download-result': {
-					const text = JSON.stringify(lastResult.length === 1 ? lastResult[0] : lastResult, null, 2);
-					downloadText(text, 'query-result.json', 'application/json');
-					break;
-				}
-				case 'copy-code': {
-					e.stopPropagation();
-					codeMenu.classList.toggle('hidden');
-					break;
-				}
-				case 'theme':
-					themeCtl.toggle();
-					break;
-			}
-		});
+	bindActions(root, {
+		sample: () => {
+			input.value = sample;
+			hl.refresh();
+			validateInput();
+			scheduleQuery();
+		},
+		clear: () => {
+			input.value = '';
+			hl.refresh();
+			expr.value = '';
+			out.replaceChildren();
+			setPanel('empty');
+			count.textContent = '';
+			setStatus('idle', 'Ready');
+			inputStat.textContent = '';
+			saveDoc('');
+		},
+		run: () => void runQuery(),
+		mode: (btn) => switchMode(btn.dataset['mode'] as Mode),
+		'copy-result': async (btn) => {
+			const text = lastResult.length === 1
+				? JSON.stringify(lastResult[0], null, 2)
+				: JSON.stringify(lastResult, null, 2);
+			flashLabel(btn, (await copyToClipboard(text)) ? 'Copied!' : 'Clipboard blocked');
+		},
+		'download-result': () => {
+			const text = JSON.stringify(lastResult.length === 1 ? lastResult[0] : lastResult, null, 2);
+			downloadText(text, 'query-result.json', 'application/json');
+		},
+		// Stop the bubble so the document-level "click outside closes the menu"
+		// handler below doesn't immediately undo this toggle.
+		'copy-code': (_btn, e) => {
+			e.stopPropagation();
+			codeMenu.classList.toggle('hidden');
+		},
+		theme: () => themeCtl.toggle(),
 	});
 
 	// Language tabs
-	document.querySelectorAll<HTMLElement>('[role="tab"][data-lang]').forEach(btn => {
+	root.querySelectorAll<HTMLElement>('[role="tab"][data-lang]').forEach(btn => {
 		btn.addEventListener('click', () => switchLang(btn.dataset['lang'] as Lang));
 	});
 
 	// Snippet panel sub-tabs
-	document.querySelectorAll<HTMLElement>('[role="tab"][data-snip-lang]').forEach(btn => {
+	root.querySelectorAll<HTMLElement>('[role="tab"][data-snip-lang]').forEach(btn => {
 		btn.addEventListener('click', () => switchLang(btn.dataset['snipLang'] as Lang));
 	});
 
 	// Snippet cards
-	document.querySelectorAll<HTMLElement>('[data-snip]').forEach(card => {
+	root.querySelectorAll<HTMLElement>('[data-snip]').forEach(card => {
 		card.addEventListener('click', () => {
 			const snipLang = card.dataset['snipLang'] as Lang;
 			const snip = card.dataset['snip']!;
 			if (snipLang !== lang) switchLang(snipLang);
 			expr.value = snip;
-			runQuery();
+			void runQuery();
 		});
 	});
 
 	// Code menu items
-	document.querySelectorAll<HTMLElement>('[data-lang-code]').forEach(item => {
+	const codeBtn = root.querySelector<HTMLElement>('[data-action="copy-code"]');
+	root.querySelectorAll<HTMLElement>('[data-lang-code]').forEach(item => {
 		item.addEventListener('click', async () => {
 			codeMenu.classList.add('hidden');
-			const snippet = codeSnippet(item.dataset['langCode']!);
-			const ok = await copyToClipboard(snippet);
-			const codeBtn = document.querySelector<HTMLElement>('[data-action="copy-code"]');
-			if (codeBtn) {
-				const orig = codeBtn.textContent;
-				codeBtn.textContent = ok ? 'Copied!' : 'Clipboard blocked';
-				setTimeout(() => { codeBtn.textContent = orig; }, 1400);
-			}
+			const ok = await copyToClipboard(codeSnippet(item.dataset['langCode']!));
+			if (codeBtn) flashLabel(codeBtn, ok ? 'Copied!' : 'Clipboard blocked');
 		});
 	});
 

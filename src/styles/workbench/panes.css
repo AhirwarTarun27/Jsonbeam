@@ -1,0 +1,79 @@
+/* ----------------------------------------------------------------------------
+   Workbench pane heights.
+
+   Every tool island sizes its editor and result panes the same way — a viewport
+   fraction with a pixel floor, bumped on desktop — and every island had written
+   that inline as arbitrary utilities. Across eight islands that produced twenty
+   distinct values for four roles:
+
+     input pane    40vh/240px, 34vh/220px, 28vh/180px
+     result pane   54vh/320px, 56vh/320px, 56vh/340px, 44vh/320px
+     desktop bump  62vh, 70vh, 72vh, 74vh
+
+   None of that spread was a decision. It is what happens when the next island
+   copies the last one and nudges a number: nothing states the intent, so there
+   is nothing to be consistent with. Naming the four roles gives the intent a
+   home — and makes "the panes feel short on laptops" a one-line change instead
+   of a sixteen-site search.
+
+   Layered into `workbench` (last, per global.css) so these beat Tailwind
+   utilities. Full-screen mode still wins: its overrides are either `!important`
+   or more specific (`.jb-expanded [data-jb-split] > *`), and this file is
+   imported before `fullscreen.css` so equal-specificity ties fall its way.
+   -------------------------------------------------------------------------- */
+
+@layer workbench {
+	/*
+	 * The desktop pane height, as one knob on the split container.
+	 *
+	 * 70vh is the house default. Islands that stack an options bar above the
+	 * split (the converter's format controls, the query tool's language tabs)
+	 * dial it down with `jb-split-dense`, so the status bar still lands above
+	 * the fold on a laptop. That is the only reason any island ever differed.
+	 */
+	[data-jb-split] {
+		--jb-pane-lg: 70vh;
+	}
+	[data-jb-split].jb-split-dense {
+		--jb-pane-lg: 62vh;
+	}
+
+	/* The JSON input side of a two-pane island. */
+	.jb-pane-input {
+		height: 40vh;
+		min-height: 240px;
+	}
+
+	/* The result side — tree, table, graph, converted output. Taller than the
+	   input on mobile, where the two panes stack and the result is the payoff. */
+	.jb-pane-output {
+		height: 54vh;
+		min-height: 320px;
+	}
+
+	@media (min-width: 1024px) {
+		.jb-pane-input,
+		.jb-pane-output {
+			height: var(--jb-pane-lg);
+			min-height: 360px;
+		}
+	}
+
+	/* The diff viewer: two inputs share one row and the output sits below them,
+	   so all three panes are shorter and none grows on desktop — at 70vh the
+	   output alone would push the whole comparison off screen. */
+	.jb-pane-input-half {
+		height: 28vh;
+		min-height: 180px;
+	}
+	.jb-pane-output-half {
+		height: 44vh;
+		min-height: 320px;
+	}
+
+	/* Single-pane islands (the formatter): no split, so one pane takes the lot. */
+	.jb-pane-solo {
+		height: 74vh;
+		min-height: 460px;
+	}
+}

@@ -75,7 +75,7 @@ const primaryAction: 'format' | 'minify' | 'validate' | 'repair' =
 	</div>
 
 	<!-- Editor -->
-	<div id="jb-editor" class="h-[74vh] min-h-[460px] w-full overflow-hidden"></div>
+	<div id="jb-editor" class="jb-pane-solo w-full overflow-hidden"></div>
 
 	<!-- Status bar -->
 	<div class="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-hairline bg-canvas-soft px-3 py-2 text-body-sm">
@@ -133,6 +133,7 @@ const primaryAction: 'format' | 'minify' | 'validate' | 'repair' =
 	import { initFullscreen } from '../../lib/workbench/fullscreen';
 	import { downloadText } from '../../lib/workbench/download';
 	import { createStatusBar } from '../../lib/workbench/status-bar';
+	import { bindActions } from '../../lib/workbench/toolbar';
 	import { debounce } from '../../lib/workbench/timing';
 	// jsonrepair is lazy-loaded on first Repair click (kept out of the initial bundle).
 
@@ -419,14 +420,7 @@ const primaryAction: 'format' | 'minify' | 'validate' | 'repair' =
 			theme: () => themeCtl.toggle(),
 		};
 
-		root.querySelectorAll('[data-action]').forEach((btn) => {
-			const action = btn.getAttribute('data-action');
-			if (!action) return;
-			btn.addEventListener('click', () => {
-				const fn = actions[action];
-				if (fn) fn();
-			});
-		});
+		bindActions(root, actions);
 
 		// ── Full-screen workbench (shared island core). Expand fills the viewport
 		// with the same editor instance; the mode carries across tools. ─────────

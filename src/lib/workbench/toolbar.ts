@@ -12,6 +12,7 @@
  * (the diff navigator, the table's filter row). Delegation covers those for
  * free, and costs one listener instead of N.
  */
+import { FLASH_MS } from './timing';
 
 export type ActionHandler = (el: HTMLElement, event: MouseEvent) => void;
 export type ActionMap = Record<string, ActionHandler>;
@@ -55,4 +56,40 @@ export function bindActions(root: HTMLElement, handlers: ActionMap, opts: BindAc
 
 	root.addEventListener('click', onClick);
 	return () => root.removeEventListener('click', onClick);
+}
+
+/**
+ * In-flight label flashes, keyed by the control. A WeakMap so a control removed
+ * from the DOM mid-flash is still collectable.
+ */
+const flashing = new WeakMap<HTMLElement, { original: string; timer: number }>();
+
+/**
+ * Briefly replace a control's own label, then restore it.
+ *
+ * Buttons that ARE the feedback — "Copy" → "Copied!" — rather than reporting
+ * through the status bar. Three islands wrote this inline, at 1200 / 1200 /
+ * 1400 ms, and all three had the same bug:
+ *
+ *     const orig = btn.textContent;              // "Copy"
+ *     btn.textContent = 'Copied!';
+ *     setTimeout(() => { btn.textContent = orig; }, 1200);
+ *
+ * Click twice inside the window and the second call captures "Copied!" as the
+ * original, so the button reads "Copied!" from then on. Tracking the flash per
+ * element fixes it: a re-entrant call keeps the first original and resets the
+ * clock, which is what a user pressing Copy twice actually means.
+ */
+export function flashLabel(el: HTMLElement, text: string, ms = FLASH_MS): void {
+	const active = flashing.get(el);
+	const original = active ? active.original : (el.textContent ?? '');
+	if (active) clearTimeout(active.timer);
+
+	el.textContent = text;
+	const timer = setTimeout(() => {
+		flashing.delete(el);
+		el.textContent = original;
+	}, ms) as unknown as number;
+
+	flashing.set(el, { original, timer });
 }
